@@ -1,4 +1,4 @@
-module github.com/katzenpost/catchat
+module github.com/katzenpost/katzen
 
 go 1.17
 

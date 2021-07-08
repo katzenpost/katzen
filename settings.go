@@ -101,7 +101,7 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 	}
 	if p.submit.Clicked() {
 		go func() {
-			if n, err := notify.Push("Restarting", "Catchat is restarting"); err == nil {
+			if n, err := notify.Push("Restarting", "Katzen is restarting"); err == nil {
 				<-time.After(notificationTimeout)
 				n.Cancel()
 			}

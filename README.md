@@ -1,35 +1,35 @@
-catchat
+katzen
 =======
 
-[![Build Status](https://github.com/katzenpost/catchat/actions/workflows/go.yml/badge.svg?branch=devel)](https://github.com/katzenpost/catchat/actions/workflows/go.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/katzenpost/catchat)](https://goreportcard.com/report/github.com/katzenpost/catchat)
-[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/katzenpost/catchat?tab=doc)
+[![Build Status](https://github.com/katzenpost/katzen/actions/workflows/go.yml/badge.svg?branch=devel)](https://github.com/katzenpost/katzen/actions/workflows/go.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/katzenpost/katzen)](https://goreportcard.com/report/github.com/katzenpost/katzen)
+[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/katzenpost/katzen?tab=doc)
 
-A chat client using catshadow.
+A multiplatform chat client using catshadow and gio
 
 ## Getting the source code
 
-    git clone https://github.com/katzenpost/catchat
-    cd catchat
+    git clone https://github.com/katzenpost/katzen
+    cd katzen
     git checkout devel
 
-## Building catchat for GNU/Linux
+## Building katzen for GNU/Linux
 
 ### Using docker
 
-The easiest way to build catchat is to use a self-contained docker environment.
+The easiest way to build katzen is to use a self-contained docker environment.
 
 Clone the repo as above, and then simply run `make` (or, if your user is not in
 the `docker` group, `sudo make`).
 
-This will build a `catchat` binary which you can run as `./catchat`.
+This will build a `katzen` binary which you can run as `./katzen`.
 
 To remove the docker images and containers created in this process, run `make
 docker-clean`. The `Makefile` contains targets which build intermediate images
 for the Debian and go module dependencies so that local changes can be built
 without the need for internet access. To also include local changes from the
 Katzenpost monorepo, add `replace github.com/katzenpost/katzenpost =>
-./katzenpost` to catchat's `go.mod` file and clone the monorepo in your catchat
+./katzenpost` to katzen's `go.mod` file and clone the monorepo in your katzen
 checkout.
 
 ### Building without docker
@@ -52,7 +52,7 @@ See the [install instructions](http://golang.org/doc/install.html).
 
    go mod download && go mod verify
 
-#### Build catchat
+#### Build katzen
 
     go build -trimpath -ldflags=-buildid=
 
@@ -95,7 +95,7 @@ Generate an Android signing key so you can update your app later:
 
 And then build the Android APK:
 
-    gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.catchat -version 1 -signkey sign.keystore -signpass YOURPASSWORD .
+    gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey sign.keystore -signpass YOURPASSWORD .
 
 To create the Docker build environment:
 
@@ -109,25 +109,25 @@ changes to test on android. Do not forget to update or remove the vendor path.
 
 To run the build, execute the following command while in this project root:
 
-    docker run -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.catchat -version 1 -signkey sign.keystore -signpass YOURPASSWORD ."
+    docker run -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass YOURPASSWORD ."
 
 Note that the contents of the local directory are copied into the docker environment - so your signing keystore ought to be in this path as well.
 
 To install on an Android device using `adb` run the following
 
-    adb install catchat.apk 
+    adb install katzen.apk
 
 Between versions you might need to install uninstall a previous build
 
-    adb uninstall org.mixnetworks.catchat
+    adb uninstall chat.katzen
 
 #### Verify build: To verify that your local build matches the CI-built apk, use the included reproducible.keystore to sign the apk:
 
-    docker run --rm -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.catchat -version 1 -signkey reproducible.keystore -signpass reproducible ."
+    docker run --rm -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
 
 ## Run it
 
-    Usage of ./deploy/linux/catchat:
+    Usage of ./deploy/linux/katzen:
       -f string
          Path to the client config file. (default to baked-in testnet configuration)
       -s string

@@ -39,7 +39,7 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 		return
 	}
 
-	// dir does not appear to point to ~/.config/catchat but rather ~/.config on linux?
+	// dir does not appear to point to ~/.config/katzen but rather ~/.config on linux?
 	// create directory for application data
 	datadir := filepath.Join(dir, dataDirName)
 	_, err = os.Stat(datadir)

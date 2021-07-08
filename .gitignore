@@ -13,10 +13,10 @@
 # Builds
 deploy/
 vendor/
-catchat
+katzen
 
 # Android
-catchat.apk
+katzen.apk
 sign.keystore
 
 # state files

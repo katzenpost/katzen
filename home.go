@@ -12,7 +12,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/hako/durafmt"
-	"github.com/katzenpost/catchat/assets"
+	"github.com/katzenpost/katzen/assets"
 	"github.com/katzenpost/katzenpost/catshadow"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"

@@ -184,7 +184,7 @@ func uiMain() {
 	go func() {
 		w := app.NewWindow(
 			app.Size(unit.Dp(400), unit.Dp(400)),
-			app.Title("Catchat"),
+			app.Title("Katzen"),
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
 		)
@@ -276,7 +276,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		if event.IsConnected {
 			isConnected = true
 			go func() {
-				if n, err := notify.Push("Connected", "Catchat has connected"); err == nil {
+				if n, err := notify.Push("Connected", "Katzen has connected"); err == nil {
 					<-time.After(notificationTimeout)
 					n.Cancel()
 				}
@@ -284,7 +284,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		} else {
 			isConnected = false
 			go func() {
-				if n, err := notify.Push("Disconnected", "Catchat has disconnected"); err == nil {
+				if n, err := notify.Push("Disconnected", "Katzen has disconnected"); err == nil {
 					<-time.After(notificationTimeout)
 					n.Cancel()
 				}
@@ -292,7 +292,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		}
 		if event.Err != nil {
 			go func() {
-				if n, err := notify.Push("Error", fmt.Sprintf("Catchat error: %s", event.Err)); err == nil {
+				if n, err := notify.Push("Error", fmt.Sprintf("Katzen error: %s", event.Err)); err == nil {
 					<-time.After(notificationTimeout)
 					n.Cancel()
 				}
