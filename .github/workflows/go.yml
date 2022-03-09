@@ -87,6 +87,8 @@ jobs:
           path: ./katzen-macos-arm64
 
   build_android:
+    env:
+      ndk_version: r23b
     strategy:
       matrix:
         go-version: [1.17.x]
@@ -96,13 +98,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build android_build docker image
+      - name: Build sdk docker image
         run: |
-          docker build --no-cache -t katzenpost/android_build -f Dockerfile.android .
+          docker volume create sdk && docker volume create ndk && docker build --no-cache -t sdk -f Dockerfile.android .
 
-      - name: Build katzen apk
+      - name: Extract sdk and ndk components into docker volumes
         run: |
-          docker run -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
+          docker run --rm -v sdk:/sdk -v ndk:/ndk sdk bash -c 'cp -ar /opt/android-sdk/* /sdk && cp -ar /opt/android-ndk/* /ndk && find /ndk -maxdepth 3'
+
+      - name: Clone fdroiddata
+        run: |
+          git clone https://github.com/katzenpost/fdroiddata && cd fdroiddata &&  git checkout add_katzen
+
+      - name: Init Fdroidserver
+        run: |
+          cd fdroiddata && docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
+          -e ANDROID_HOME:/opt/android-sdk -e ANDROID_NDK_HOME:/opt/android-sdk/ndk \
+          registry.gitlab.com/fdroid/docker-executable-fdroidserver:master \
+          init -v
+
+      - name: Build Katzen with Fdroidserver
+        run: |
+          cd fdroiddata && docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
+          -e ANDROID_HOME:/opt/android-sdk -e ANDROID_NDK_HOME:/opt/android-sdk/ndk \
+          registry.gitlab.com/fdroid/docker-executable-fdroidserver:master \
+          build chat.katzen:1 -v
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: chat.katzen_1.apk
+          path: unsigned/chat.katzen_1.apk
+
+      - name: Build Katzen with gogio
+        run: |
+          docker run -v "$(pwd)":/go/build/ sdk bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v2
