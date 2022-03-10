@@ -1,0 +1,47 @@
+Categories:
+  - Internet
+License: AGPL-3.0-or-later
+WebSite: https://katzenpost.mixnetworks.org
+SourceCode: https://github.com/katzenpost/katzen
+IssueTracker: https://github.com/katzenpost/katzen/issues
+OpenCollective: the-katzenpost-software-project
+
+AutoName: Katzen
+Summary: A Metadata Minimizing Messenger
+Description: |-
+    Katzen provides messaging with metadata privacy using the katzenpost mixnet to deliver messages to ephemeral inboxes and features asynchronous message delivery without revealing a users contacts to the service operators.
+    Katzenpost is designed to be run as a federation of message service providers; where members may announce services in the PKI and provide resources such as message storage. Katzen is built using katzenpost services that are published in the PKI, which are rendezvous services for contacts to key exchange and message storage services to store messages.
+
+    Contact discovery is provided by rendezvous services for the Reunion and PANDA protocols, so that a pair of contacts may asynchronously establish a communications channel.
+    Katzen contacts are added by using a shared secret (exchanged out-of-band) and choosing a name for the new contact. Protocol messages are exchanged using the rendezvous service and establish a PQ-Hybrid (ECDH and CSIDH) ratchet which protects the conversation from eavesdropping by the message storage provider and prevents the service from learning the identities of the contacts.
+
+    Messages are exchanged between contacts by exchanging a message drop locations where the other contact can send messages; each contact then periodically polls this location to retrieve any messages that have been delivered. This storage service is run by the providers and similarly published in the PKI.
+
+    While Katzen is connected to the network, it will periodically send and receive dummy messages, which means it may use more bandwidth than other messengers, so take care with mobile network quotas.
+
+    If Orbot is installed and running, Katzen will use the Tor network to connect to the katzenpost mixnet.
+
+    Many other types of services are possible. Katzen is a minimal implementation of a messenger application to demonstrate the technology and does not feature file transfer, group messaging, or emojii. Patches and feedback are very welcome.
+
+    Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.
+
+RepoType: git
+Repo: https://github.com/katzenpost/katzen
+
+Builds:
+  - versionName: 1.0.1
+    versionCode: 1
+    commit: a731020e04e7a449a1ed8bf86365ed84b4f2877d
+    output: katzen.apk
+    build:
+      - curl -Lso go.tar.gz https://golang.org/dl/go1.17.7.linux-amd64.tar.gz
+      - echo "02b111284bedbfa35a7e5b74a06082d18632eff824fd144312f6063943d49259  go.tar.gz" | sha256sum -c -
+      - tar xf go.tar.gz
+      - PATH="$PWD/go/bin:$HOME/go/bin:$PATH"
+      - go install gioui.org/cmd/gogio
+      - ANDROID_SDK_ROOT=$$SDK$$ ANDROID_NDK_ROOT=$$NDK$$ gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 .
+    ndk: r23b
+
+AutoUpdateMode: None
+UpdateCheckMode: None
+CurrentVersionCode: 1

@@ -106,20 +106,16 @@ jobs:
         run: |
           docker run --rm -v sdk:/sdk -v ndk:/ndk sdk bash -c 'cp -ar /opt/android-sdk/* /sdk && cp -ar /opt/android-ndk/* /ndk && find /ndk -maxdepth 3'
 
-      - name: Clone fdroiddata
-        run: |
-          git clone https://github.com/katzenpost/fdroiddata && cd fdroiddata &&  git checkout add_katzen
-
       - name: Init Fdroidserver
         run: |
-          cd fdroiddata && docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
+          docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
           -e ANDROID_HOME:/opt/android-sdk -e ANDROID_NDK_HOME:/opt/android-sdk/ndk \
           registry.gitlab.com/fdroid/docker-executable-fdroidserver:master \
           init -v
 
       - name: Build Katzen with Fdroidserver
         run: |
-          cd fdroiddata && docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
+          docker run --rm  -v sdk:/opt/android-sdk -v ndk:/opt/android-sdk/ndk/$ndk_version -v $(pwd):/repo \
           -e ANDROID_HOME:/opt/android-sdk -e ANDROID_NDK_HOME:/opt/android-sdk/ndk \
           registry.gitlab.com/fdroid/docker-executable-fdroidserver:master \
           build chat.katzen:1 -v
@@ -128,7 +124,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: chat.katzen_1.apk
-          path: fdroiddata/unsigned/chat.katzen_1.apk
+          path: unsigned/chat.katzen_1.apk
 
       - name: Build Katzen with gogio
         run: |
