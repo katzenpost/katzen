@@ -159,7 +159,7 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 		if e.Type == gesture.TypeClick {
 			ct := Contactal{}
 			ct.Reset()
-			sz := image.Point{X: gtx.Px(unit.Dp(96)), Y: gtx.Px(unit.Dp(96))}
+			sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
 			i := ct.Render(sz)
 			b := new(bytes.Buffer)
 			if err := png.Encode(b, i); err == nil {

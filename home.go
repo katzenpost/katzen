@@ -73,7 +73,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 			// show list of conversations
 			layout.Flexed(1, func(gtx C) D {
-				gtx.Constraints.Min.X = gtx.Px(unit.Dp(300))
+				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
 				// the contactList
 				return contactList.Layout(gtx, len(contacts), func(gtx C, i int) layout.Dimensions {
 					lastMsg := contacts[i].LastMessage
@@ -94,7 +94,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 							}),
 							// contact name and last message
 							layout.Flexed(1, func(gtx C) D {
-								gtx.Constraints.Max.Y = gtx.Px(unit.Dp(96))
+								gtx.Constraints.Max.Y = gtx.Dp(unit.Dp(96))
 								return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceBetween}.Layout(gtx,
 									layout.Rigid(func(gtx C) D {
 										return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start, Spacing: layout.SpaceBetween}.Layout(gtx,
@@ -162,7 +162,7 @@ func layoutAvatar(gtx C, c *catshadow.Client, nickname string) D {
 	return layout.Center.Layout(gtx, func(gtx C) D {
 		cc := clipCircle{}
 		return cc.Layout(gtx, func(gtx C) D {
-			sz := image.Point{X: gtx.Px(unit.Dp(42)), Y: gtx.Px(unit.Dp(42))}
+			sz := image.Point{X: gtx.Dp(unit.Dp(42)), Y: gtx.Dp(unit.Dp(42))}
 			gtx.Constraints = layout.Exact(gtx.Constraints.Constrain(sz))
 			if w, ok := avatars[nickname]; ok {
 				return w(gtx)

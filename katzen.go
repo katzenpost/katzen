@@ -352,18 +352,14 @@ func (a *App) handleGioEvents(e interface{}) error {
 				a.stack.Pop()
 				a.w.Invalidate()
 			}
-		}
-	case key.FocusEvent:
-		a.focus = e.Focus
-	case *system.CommandEvent:
-		switch e.Type {
-		case system.CommandBack:
+		case key.NameBack:
 			if a.stack.Len() > 1 {
 				a.stack.Pop()
-				e.Cancel = true
 				a.w.Invalidate()
 			}
 		}
+	case key.FocusEvent:
+		a.focus = e.Focus
 	case system.DestroyEvent:
 		return errors.New("system.DestroyEvent receieved")
 	case system.FrameEvent:

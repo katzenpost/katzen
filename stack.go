@@ -8,7 +8,6 @@ package main
 import (
 	"image"
 
-	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -30,7 +29,7 @@ type Page interface {
 
 type Background struct {
 	Color  color.NRGBA
-	Radius unit.Value
+	Radius unit.Dp
 	Inset  layout.Inset
 }
 
@@ -45,10 +44,9 @@ func (cc *clipCircle) Layout(gtx layout.Context, w layout.Widget) layout.Dimensi
 	if dy := dims.Size.Y; dy > max {
 		max = dy
 	}
-	szf := float32(max)
-	rr := szf * .5
+	rr := max >> 1
 	t := clip.RRect{
-		Rect: f32.Rectangle{Max: f32.Point{X: szf, Y: szf}},
+		Rect: image.Rectangle{Max: image.Point{X: max, Y: max}},
 		NE:   rr, NW: rr, SE: rr, SW: rr,
 	}.Push(gtx.Ops)
 	call.Add(gtx.Ops)
@@ -61,17 +59,16 @@ func (b *Background) Layout(gtx layout.Context, w layout.Widget) layout.Dimensio
 	dims := b.Inset.Layout(gtx, w)
 	call := macro.Stop()
 	size := dims.Size
-	width, height := float32(size.X), float32(size.Y)
-	if r := float32(gtx.Px(b.Radius)); r > 0 {
-		if r > width/2 {
-			r = width / 2
+	if r := gtx.Dp(b.Radius); r > 0 {
+		if r > size.X/2 {
+			r = size.X >> 1
 		}
-		if r > height/2 {
-			r = height / 2
+		if r > size.Y/2 {
+			r = size.Y >> 1
 		}
 		t := clip.RRect{
-			Rect: f32.Rectangle{Max: f32.Point{
-				X: width, Y: height,
+			Rect: image.Rectangle{Max: image.Point{
+				X: size.X, Y: size.Y,
 			}}, NW: r, NE: r, SW: r, SE: r,
 		}.Push(gtx.Ops)
 		defer t.Pop()
@@ -90,7 +87,7 @@ type fill struct {
 
 type icon struct {
 	src  []byte
-	size unit.Value
+	size unit.Dp
 
 	// Cached values.
 	op      paint.ImageOp

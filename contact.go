@@ -270,7 +270,7 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 
 		p.a.c.NewContact(p.nickname.Text(), []byte(p.secret.Text()))
 		b := &bytes.Buffer{}
-		sz := image.Point{X: gtx.Px(unit.Dp(96)), Y: gtx.Px(unit.Dp(96))}
+		sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
 		i := p.contactal.Render(sz)
 
 		if err := png.Encode(b, i); err == nil {
