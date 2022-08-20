@@ -11,26 +11,41 @@ A multiplatform chat client using catshadow and gio
 
     git clone https://github.com/katzenpost/katzen
     cd katzen
-    git checkout devel
 
 ## Building katzen for GNU/Linux
 
-### Using docker
+### Using docker or podman
 
-The easiest way to build katzen is to use a self-contained docker environment.
+The easiest way to build katzen is in a container managed by
+[podman](https://podman.io/) or
+[docker](https://en.wikipedia.org/wiki/Docker_(software)). (Podman is a docker
+replacement which has the advantage of not requiring root access or a daemon to
+operate.)
 
-Clone the repo as above, and then simply run `make` (or, if your user is not in
-the `docker` group, `sudo make`).
+There is a Makefile in this repository with targets to create a container image
+with the build environment and to create a container and build katzen.
 
-This will build a `katzen` binary which you can run as `./katzen`.
+If you have docker running and are in the `docker` group, you can simply run
+`make` to run the default make target (`docker-build-linux`) and you will have
+a `katzen` binary which you can run as `./katzen`. To use docker when you are
+not in the `docker` group, you must prefix the `make` command with `sudo`.
+
+Alternately, to use `podman`, you can add `docker=podman` after the `make`
+command.
+
+Other Makefile targets include `docker-build-windows` and
+`docker-build-android`, which build for those platforms, and `docker-shell`
+which puts you in a shell inside a build container.
 
 To remove the docker images and containers created in this process, run `make
-docker-clean`. The `Makefile` contains targets which build intermediate images
-for the Debian and go module dependencies so that local changes can be built
-without the need for internet access. To also include local changes from the
-Katzenpost monorepo, add `replace github.com/katzenpost/katzenpost =>
-./katzenpost` to katzen's `go.mod` file and clone the monorepo in your katzen
-checkout.
+docker-clean` (prefixing it with `sudo` if you used `sudo` previously). The
+Makefile contains targets which build intermediate images for the Debian and go
+module dependencies so that local changes can be built without the need for
+internet access.
+
+To also include local changes from the Katzenpost monorepo, add `replace
+github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod` file and
+clone the monorepo in your katzen checkout.
 
 ### Building without docker
 
