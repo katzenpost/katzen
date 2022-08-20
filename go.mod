@@ -2,12 +2,12 @@ module github.com/katzenpost/katzen
 
 go 1.17
 
-replace gioui.org => github.com/mixmasala/gio v0.0.0-20220813112957-48b3d195944c
+replace gioui.org => github.com/mixmasala/gio v0.0.0-20220813121312-042a5bf95221
 
-replace gioui.org/cmd => github.com/mixmasala/gio/cmd v0.0.0-20220308011930-67564b533c2a
+replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220813115908-81e14a3b6f9b
 
 require (
-	gioui.org v0.0.0-20220307121938-3e18a310af31
+	gioui.org v0.0.0-20220628163331-e21c665e70ae
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
