@@ -345,25 +345,27 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 
 func (a *App) handleGioEvents(e interface{}) error {
 	switch e := e.(type) {
-	case key.Event:
-		switch e.Name {
-		case key.NameEscape:
-			if a.stack.Len() > 1 {
-				a.stack.Pop()
-				a.w.Invalidate()
-			}
-		case key.NameBack:
-			if a.stack.Len() > 1 {
-				a.stack.Pop()
-				a.w.Invalidate()
-			}
-		}
 	case key.FocusEvent:
 		a.focus = e.Focus
 	case system.DestroyEvent:
 		return errors.New("system.DestroyEvent receieved")
 	case system.FrameEvent:
 		gtx := layout.NewContext(a.ops, e)
+		key.InputOp{Tag: a.w, Keys: key.NameEscape+"|"+key.NameBack}.Add(a.ops)
+		for _, e := range gtx.Events(a.w) {
+			switch e := e.(type) {
+			case key.Event:
+				if e.State == key.Release {
+					switch e.Name {
+					case key.NameEscape, key.NameBack:
+						if a.stack.Len() > 1 {
+							a.stack.Pop()
+							a.w.Invalidate()
+						}
+					}
+				}
+			}
+		}
 		a.Layout(gtx)
 		e.Frame(gtx.Ops)
 	case system.StageEvent:
