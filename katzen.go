@@ -351,17 +351,14 @@ func (a *App) handleGioEvents(e interface{}) error {
 		return errors.New("system.DestroyEvent receieved")
 	case system.FrameEvent:
 		gtx := layout.NewContext(a.ops, e)
-		key.InputOp{Tag: a.w, Keys: key.NameEscape+"|"+key.NameBack}.Add(a.ops)
+		key.InputOp{Tag: a.w, Keys: key.NameEscape + "|" + key.NameBack}.Add(a.ops)
 		for _, e := range gtx.Events(a.w) {
 			switch e := e.(type) {
 			case key.Event:
-				if e.State == key.Release {
-					switch e.Name {
-					case key.NameEscape, key.NameBack:
-						if a.stack.Len() > 1 {
-							a.stack.Pop()
-							a.w.Invalidate()
-						}
+				if (e.Name == key.NameEscape && e.State == key.Release) || e.Name == key.NameBack {
+					if a.stack.Len() > 1 {
+						a.stack.Pop()
+						a.w.Invalidate()
 					}
 				}
 			}
