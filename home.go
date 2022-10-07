@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"gioui.org/gesture"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -23,6 +24,8 @@ import (
 
 var (
 	contactList       = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
+	selectedIdx       = 0
+	kb                = false
 	connectIcon, _    = widget.NewIcon(icons.DeviceSignalWiFi4Bar)
 	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
@@ -51,6 +54,26 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
+
+	// bounds check to current contact list
+	if selectedIdx < 0 {
+		selectedIdx = len(contacts) - 1
+	} else {
+		selectedIdx = selectedIdx % len(contacts)
+	}
+
+	// re-center list view for keyboard contact selection
+	if kb {
+		if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
+			// list doesn't wrap around view to end, so do not give negative value for First
+			if selectedIdx < contactList.Position.Count-1 {
+				contactList.Position.First = 0
+			} else {
+				contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
+			}
+		}
+	}
+
 	return bg.Layout(gtx, func(gtx C) D {
 		// returns a flex consisting of the contacts list and add contact button
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
@@ -80,7 +103,16 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// inset each contact Flex
 					in := layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}
-					return in.Layout(gtx, func(gtx C) D {
+
+					// if the layout is selected, change background color
+					bg := Background{Inset: in}
+					if kb && i == selectedIdx {
+						bg.Color = th.ContrastBg
+					} else {
+						bg.Color = th.Bg
+					}
+
+					return bg.Layout(gtx, func(gtx C) D {
 						// returns Flex of contact icon, contact name, and last message received or sent
 						if _, ok := p.contactClicks[contacts[i].Nickname]; !ok {
 							c := new(gesture.Click)
@@ -228,6 +260,30 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 			}
 		}
 	}
+	// check for keypress events
+	key.InputOp{Tag: p, Keys: key.NameUpArrow + "|" + key.NameDownArrow + "|" + key.NameReturn + "|" + key.NameEscape}.Add(gtx.Ops)
+	for _, e := range gtx.Events(p) {
+		switch e := e.(type) {
+		case key.Event:
+			if e.Name == key.NameUpArrow && e.State == key.Release {
+				kb = true
+				selectedIdx = selectedIdx - 1
+			}
+			if e.Name == key.NameDownArrow && e.State == key.Release {
+				kb = true
+				selectedIdx = selectedIdx + 1
+			}
+			if e.Name == key.NameEscape && e.State == key.Release {
+				kb = false
+			}
+			if e.Name == key.NameReturn && e.State == key.Release {
+				contacts := getSortedContacts(p.a)
+				kb = false
+				return ChooseContactClick{nickname: contacts[selectedIdx].Nickname}
+			}
+		}
+	}
+
 	return nil
 }
 
