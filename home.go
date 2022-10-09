@@ -178,7 +178,7 @@ func getLogo() *widget.Image {
 		return nil
 	}
 	if m, _, err := image.Decode(bytes.NewReader(d)); err == nil {
-		return &widget.Image{Scale: 1.0, Src: paint.NewImageOp(m)}
+		return &widget.Image{Src: paint.NewImageOp(m)}
 	}
 	return nil
 }
@@ -186,6 +186,8 @@ func getLogo() *widget.Image {
 func layoutLogo(gtx C) D {
 	in := layout.Inset{Left: unit.Dp(12), Right: unit.Dp(12)}
 	return in.Layout(gtx, func(gtx C) D {
+		sz := gtx.Constraints.Max.X
+		logo.Scale = float32(sz) / float32(gtx.Dp(unit.Dp(float32(sz))))
 		return logo.Layout(gtx)
 	})
 }
@@ -194,16 +196,15 @@ func layoutAvatar(gtx C, c *catshadow.Client, nickname string) D {
 	return layout.Center.Layout(gtx, func(gtx C) D {
 		cc := clipCircle{}
 		return cc.Layout(gtx, func(gtx C) D {
-			sz := image.Point{X: gtx.Dp(unit.Dp(42)), Y: gtx.Dp(unit.Dp(42))}
+			sz := image.Point{X: gtx.Dp(42), Y: gtx.Dp(42)}
 			gtx.Constraints = layout.Exact(gtx.Constraints.Constrain(sz))
 			if w, ok := avatars[nickname]; ok {
 				return w(gtx)
 			} else {
 				if b, err := c.GetBlob("avatar://" + nickname); err == nil {
 					if m, _, err := image.Decode(bytes.NewReader(b)); err == nil {
-						scale := float32(sz.X) / float32(m.Bounds().Size().X)
 						w = func(gtx C) D {
-							return widget.Image{Scale: scale, Src: paint.NewImageOp(m)}.Layout(gtx)
+							return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(m)}.Layout(gtx)
 						}
 					}
 				} else {
@@ -214,7 +215,7 @@ func layoutAvatar(gtx C, c *catshadow.Client, nickname string) D {
 						c.AddBlob("avatar://"+nickname, b.Bytes())
 					}
 					w = func(gtx C) D {
-						return widget.Image{Scale: 1.0, Src: paint.NewImageOp(i)}.Layout(gtx)
+						return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
 					}
 				}
 				avatars[nickname] = w

@@ -34,6 +34,8 @@ type AvatarPicker struct {
 	clear    *widget.Clickable
 	up       *widget.Clickable
 	clicks   map[string]*gesture.Click
+	thumbs   map[string]layout.Widget
+	thsz     int
 }
 
 // Layout displays a file chooser for supported image types
@@ -111,33 +113,53 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 						p.clicks[fn.Name()].Add(gtx.Ops)
 						t.Pop()
 						return dims
-
 					} else {
+						sz := gtx.Constraints.Max.X
+						if p.thsz != sz || len(p.thumbs) > 20 {
+							// dump thumb cache when screen resized, or cache too large, it crashes on android...
+							p.thumbs = make(map[string]layout.Widget)
+							p.thsz = sz
+						}
+						t, ok := p.thumbs[filepath.Join(p.path, fn.Name())]
+						if ok {
+							return t(gtx)
+						}
 						nfn := strings.ToLower(fn.Name())
 						if strings.HasSuffix(nfn, ".png") || strings.HasSuffix(nfn, ".jpg") || strings.HasSuffix(nfn, ".jpeg") {
 							if f, err := os.Open(filepath.Join(p.path, fn.Name())); err == nil {
 								if m, _, err := image.Decode(f); err == nil {
-									in := layout.Inset{Top: unit.Dp(12), Bottom: unit.Dp(12), Left: unit.Dp(12), Right: unit.Dp(12)}
-									dims := in.Layout(gtx, func(gtx C) D {
-										sz := m.Bounds().Size()
-										scale := float32(gtx.Constraints.Max.X) / float32(sz.X)
-										return widget.Image{Scale: scale, Src: paint.NewImageOp(m)}.Layout(gtx)
-									})
-									a := clip.Rect(image.Rectangle{Max: dims.Size})
-									t := a.Push(gtx.Ops)
-									if _, ok := p.clicks[fn.Name()]; !ok {
-										c := new(gesture.Click)
-										p.clicks[fn.Name()] = c
+									sx, sy := m.Bounds().Max.X, m.Bounds().Max.Y
+									aspect := float32(sy) / float32(sx)
+									rz := image.Rectangle{Max: image.Point{X: gtx.Constraints.Max.X, Y: int(float32(gtx.Constraints.Max.X) * aspect)}}
+									resized := scale(m, rz, draw.NearestNeighbor)
+									sz := gtx.Constraints.Max.X
+									sc := float32(sz) / float32(gtx.Dp(unit.Dp(float32(sz))))
+									// allocate widget.Image once
+									tw := widget.Image{Scale: sc, Src: paint.NewImageOp(resized)}
+									t = func(ctx C) D {
+										// render thumb and attach the click handlers
+										in := layout.Inset{Top: unit.Dp(12), Bottom: unit.Dp(12), Left: unit.Dp(12), Right: unit.Dp(12)}
+										dims := in.Layout(gtx, func(gtx C) D {
+											return tw.Layout(gtx)
+										})
+										a := clip.Rect(image.Rectangle{Max: dims.Size})
+										t := a.Push(gtx.Ops)
+										if _, ok := p.clicks[fn.Name()]; !ok {
+											c := new(gesture.Click)
+											p.clicks[fn.Name()] = c
+										}
+										p.clicks[fn.Name()].Add(gtx.Ops)
+										t.Pop()
+										return dims
 									}
-									p.clicks[fn.Name()].Add(gtx.Ops)
-									t.Pop()
-									return dims
+									// cache this func and it's references to widget
+									p.thumbs[filepath.Join(p.path, fn.Name())] = t
+									return t(gtx)
 								}
 							}
 						}
 						return material.Body2(th, fn.Name()).Layout(gtx)
 					}
-
 				})
 			}),
 		)
@@ -159,7 +181,7 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 		if e.Type == gesture.TypeClick {
 			ct := Contactal{}
 			ct.Reset()
-			sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
+			sz := image.Point{X: gtx.Dp(96), Y: gtx.Dp(96)}
 			i := ct.Render(sz)
 			b := new(bytes.Buffer)
 			if err := png.Encode(b, i); err == nil {
@@ -206,6 +228,7 @@ func newAvatarPicker(a *App, nickname string) *AvatarPicker {
 		back:     &widget.Clickable{},
 		clear:    &widget.Clickable{},
 		clicks:   make(map[string]*gesture.Click),
+		thumbs:   make(map[string]layout.Widget),
 		path:     cwd}
 }
 
