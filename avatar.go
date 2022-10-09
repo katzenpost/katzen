@@ -35,6 +35,7 @@ type AvatarPicker struct {
 	up       *widget.Clickable
 	clicks   map[string]*gesture.Click
 	thumbs   map[string]layout.Widget
+	files    []os.FileInfo
 	thsz     int
 }
 
@@ -76,28 +77,9 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 			}),
 			// list contents
 			layout.Flexed(1, func(gtx C) D {
-				// get contents of directory at cwd
-				files, err := ioutil.ReadDir(p.path)
-				if err != nil {
-					return material.Body2(th, "Unable to open path").Layout(gtx)
-				}
-
-				ff := make([]os.FileInfo, 0, len(files))
-				// filter non image filesnames and hidden directories
-				for _, fn := range files {
-					n := strings.ToLower(fn.Name())
-					// skip .paths
-					if strings.HasPrefix(n, ".") {
-						continue
-					}
-					if fn.IsDir() || strings.HasSuffix(n, ".jpg") || strings.HasSuffix(n, ".png") || strings.HasSuffix(n, ".jpeg") {
-						ff = append(ff, fn)
-					}
-				}
-
 				// file item layout
-				return avatarPickerList.Layout(gtx, len(ff), func(gtx C, i int) D {
-					fn := ff[i]
+				return avatarPickerList.Layout(gtx, len(p.files), func(gtx C, i int) D {
+					fn := p.files[i]
 					if fn.IsDir() {
 						// is a directory, attach clickable that will update the path if clicked...
 						if _, ok := p.clicks[fn.Name()]; !ok {
@@ -170,6 +152,7 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 	if p.up.Clicked() {
 		if u, err := filepath.Abs(filepath.Join(p.path, "..")); err == nil {
 			p.path = u
+			p.scan()
 		}
 		return nil
 	}
@@ -201,6 +184,7 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 					if f, err := os.Stat(u); err == nil {
 						if f.IsDir() {
 							p.path = u
+							p.scan()
 						} else {
 							p.a.setAvatar(p.nickname, u)
 						}
@@ -215,13 +199,35 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 func (p *AvatarPicker) Start(stop <-chan struct{}) {
 }
 
+func (p *AvatarPicker) scan() {
+	// get contents of directory at cwd
+	files, err := ioutil.ReadDir(p.path)
+	if err != nil {
+		return
+	}
+
+	ff := make([]os.FileInfo, 0, len(files))
+	// filter non image filesnames and hidden directories
+	for _, fn := range files {
+		n := strings.ToLower(fn.Name())
+		// skip .paths
+		if strings.HasPrefix(n, ".") {
+			continue
+		}
+		if fn.IsDir() || strings.HasSuffix(n, ".jpg") || strings.HasSuffix(n, ".png") || strings.HasSuffix(n, ".jpeg") {
+			ff = append(ff, fn)
+		}
+	}
+	p.files = ff
+}
+
 func newAvatarPicker(a *App, nickname string) *AvatarPicker {
 	cwd, _ := app.DataDir() // XXX: select media/storage on android
 	if runtime.GOOS == "android" {
 		cwd = "/sdcard/"
 	}
 
-	return &AvatarPicker{up: &widget.Clickable{},
+	ap := &AvatarPicker{up: &widget.Clickable{},
 		a:        a,
 		avatar:   &gesture.Click{},
 		nickname: nickname,
@@ -229,7 +235,10 @@ func newAvatarPicker(a *App, nickname string) *AvatarPicker {
 		clear:    &widget.Clickable{},
 		clicks:   make(map[string]*gesture.Click),
 		thumbs:   make(map[string]layout.Widget),
+		files:    make([]os.FileInfo, 0),
 		path:     cwd}
+	ap.scan()
+	return ap
 }
 
 func scale(src image.Image, rect image.Rectangle, scale draw.Scaler) image.Image {
