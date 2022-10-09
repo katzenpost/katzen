@@ -259,8 +259,8 @@ github.com/mitchellh/gox v0.4.0/go.mod h1:Sd9lOJ0+aimLBi73mGofS1ycjY8lL3uZM3JPS4
 github.com/mitchellh/iochan v1.0.0/go.mod h1:JwYml1nuB7xOzsp52dPpHFffvOCDupsG0QubkSMEySY=
 github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
-github.com/mixmasala/gio v0.0.0-20220820160532-969090a0e510 h1:KahtXi+Ce9UEb+rEF3hpFYIaEVoDh/12P1cpkLZkWMs=
-github.com/mixmasala/gio v0.0.0-20220820160532-969090a0e510/go.mod h1:WHoHbUjH91BJS2xkfps2AhKxji+9o3xwfsphGsCBfnM=
+github.com/mixmasala/gio v0.0.0-20221008115529-61f8a00ed160 h1:ZtD4RcEv+BCwq2I5doOKbh09q1J+KHDxLwBTEtiaw2Y=
+github.com/mixmasala/gio v0.0.0-20221008115529-61f8a00ed160/go.mod h1:WHoHbUjH91BJS2xkfps2AhKxji+9o3xwfsphGsCBfnM=
 github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328 h1:6WtN+2fI6QGiyWsNwX3qxTKgy8m+y1EazZGZ0F6rAYk=
 github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328/go.mod h1:sOPHaz5lc8CQuJqPyX/YTFdcs5+XKNXXa03qxFIln6w=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

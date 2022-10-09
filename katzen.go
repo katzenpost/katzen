@@ -56,7 +56,7 @@ var (
 )
 
 type App struct {
-	fg    chan struct{}
+	endBg func()
 	w     *app.Window
 	ops   *op.Ops
 	c     *catshadow.Client
@@ -374,9 +374,15 @@ func (a *App) handleGioEvents(e interface{}) error {
 			}
 		}
 		if e.Stage == system.StagePaused {
-			foreground.Start("Is running in the background", "")
+			var err error
+			a.endBg, err = foreground.Start("Is running in the background", "")
+			if err != nil {
+				return err
+			}
 		} else {
-			foreground.Stop()
+			if a.endBg != nil {
+				a.endBg()
+			}
 		}
 	}
 	return nil
