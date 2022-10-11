@@ -33,6 +33,14 @@ var (
 	logo              = getLogo()
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
 	avatars           = make(map[string]layout.Widget)
+	shortcuts         = key.Set(key.NameUpArrow + "|" +
+		key.NameDownArrow + "|" +
+		key.NameReturn + "|" +
+		key.NameEscape + "|" +
+		key.NameF1 + "|" +
+		key.NameF2 + "|" +
+		key.NameF3 + "|" +
+		key.NameF4)
 )
 
 type HomePage struct {
@@ -262,10 +270,24 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	// check for keypress events
-	key.InputOp{Tag: p, Keys: key.NameUpArrow + "|" + key.NameDownArrow + "|" + key.NameReturn + "|" + key.NameEscape}.Add(gtx.Ops)
+	key.InputOp{Tag: p, Keys: shortcuts}.Add(gtx.Ops)
 	for _, e := range gtx.Events(p) {
 		switch e := e.(type) {
 		case key.Event:
+			if e.Name == key.NameF1 && e.State == key.Release {
+			}
+			if e.Name == key.NameF2 && e.State == key.Release {
+				return AddContactClick{}
+			}
+			if e.Name == key.NameF3 && e.State == key.Release {
+				return ShowSettingsClick{}
+			}
+			if e.Name == key.NameF4 && e.State == key.Release {
+				if !isConnected {
+					return OnlineClick{}
+				}
+				return OfflineClick{}
+			}
 			if e.Name == key.NameUpArrow && e.State == key.Release {
 				kb = true
 				selectedIdx = selectedIdx - 1
