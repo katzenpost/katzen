@@ -36,6 +36,7 @@ var (
 	dataDirName      = "catshadow"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
+	debug            = flag.Bool("d", false, "Enable golang debug service.")
 
 	minPasswordLen = 5 // XXX pick something reasonable
 
@@ -175,6 +176,14 @@ func (a *App) run() error {
 func main() {
 	flag.Parse()
 	fmt.Println("Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.")
+
+	if *debug {
+		go func() {
+			http.ListenAndServe("localhost:8080", nil)
+		}()
+		runtime.SetMutexProfileFraction(1)
+		runtime.SetBlockProfileRate(1)
+	}
 
 	// Start graphical user interface.
 	uiMain()
@@ -386,12 +395,4 @@ func (a *App) handleGioEvents(e interface{}) error {
 		}
 	}
 	return nil
-}
-
-func init() {
-	go func() {
-		http.ListenAndServe("localhost:8080", nil)
-	}()
-	runtime.SetMutexProfileFraction(1)
-	runtime.SetBlockProfileRate(1)
 }
