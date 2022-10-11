@@ -25,10 +25,6 @@ var (
 	messageField = &widget.Editor{SingleLine: true}
 	backIcon, _  = widget.NewIcon(icons.NavigationChevronLeft)
 	sendIcon, _  = widget.NewIcon(icons.NavigationChevronRight)
-	msgNav       = key.Set(key.NameUpArrow + "|" +
-		key.NameDownArrow + "|" +
-		key.NamePageUp + "|" +
-		key.NamePageDown)
 )
 
 type conversationPage struct {
@@ -77,10 +73,16 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			c.compose.Focus()
 		}
 	}
-	key.InputOp{Tag: c, Keys: msgNav}.Add(gtx.Ops)
+	key.InputOp{Tag: c, Keys: shortcuts}.Add(gtx.Ops)
 	for _, e := range gtx.Events(c) {
 		switch e := e.(type) {
 		case key.Event:
+			if e.Name == key.NameEscape && e.State == key.Release {
+				return BackEvent{}
+			}
+			if e.Name == key.NameF5 && e.State == key.Release {
+				return EditContact{nickname: c.nickname}
+			}
 			if e.Name == key.NameUpArrow && e.State == key.Release {
 				messageList.ScrollToEnd = false
 				if messageList.Position.First > 0 {

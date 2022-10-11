@@ -35,12 +35,15 @@ var (
 	avatars           = make(map[string]layout.Widget)
 	shortcuts         = key.Set(key.NameUpArrow + "|" +
 		key.NameDownArrow + "|" +
+		key.NamePageUp + "|" +
+		key.NamePageDown + "|" +
 		key.NameReturn + "|" +
 		key.NameEscape + "|" +
-		key.NameF1 + "|" +
-		key.NameF2 + "|" +
-		key.NameF3 + "|" +
-		key.NameF4)
+		key.NameF1 + "|" + // show help page (not implemented)
+		key.NameF2 + "|" + // add contact
+		key.NameF3 + "|" + // show client settings
+		key.NameF4 + "|" + // toggle connection status
+		key.NameF5) // edit contact
 )
 
 type HomePage struct {
