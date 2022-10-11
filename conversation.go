@@ -11,6 +11,7 @@ import (
 
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -24,6 +25,10 @@ var (
 	messageField = &widget.Editor{SingleLine: true}
 	backIcon, _  = widget.NewIcon(icons.NavigationChevronLeft)
 	sendIcon, _  = widget.NewIcon(icons.NavigationChevronRight)
+	msgNav       = key.Set(key.NameUpArrow + "|" +
+		key.NameDownArrow + "|" +
+		key.NamePageUp + "|" +
+		key.NamePageDown)
 )
 
 type conversationPage struct {
@@ -72,15 +77,43 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			c.compose.Focus()
 		}
 	}
+	key.InputOp{Tag: c, Keys: msgNav}.Add(gtx.Ops)
 	for _, e := range gtx.Events(c) {
-		ce := e.(clipboard.Event)
-		if c.compose.SelectionLen() > 0 {
-			c.compose.Delete(1) // deletes the selection as a single rune
+		switch e := e.(type) {
+		case key.Event:
+			if e.Name == key.NameUpArrow && e.State == key.Release {
+				messageList.ScrollToEnd = false
+				if messageList.Position.First > 0 {
+					messageList.Position.First = messageList.Position.First - 1
+				}
+
+			}
+			if e.Name == key.NameDownArrow && e.State == key.Release {
+				messageList.ScrollToEnd = true
+				messageList.Position.First = messageList.Position.First + 1
+			}
+			if e.Name == key.NamePageUp && e.State == key.Release {
+				messageList.ScrollToEnd = false
+				if messageList.Position.First-messageList.Position.Count > 0 {
+					messageList.Position.First = messageList.Position.First - messageList.Position.Count
+				}
+
+			}
+			if e.Name == key.NamePageDown && e.State == key.Release {
+				messageList.ScrollToEnd = true
+				messageList.Position.First = messageList.Position.First + messageList.Position.Count
+			}
+			return RedrawEvent{}
+
+		case clipboard.Event:
+			if c.compose.SelectionLen() > 0 {
+				c.compose.Delete(1) // deletes the selection as a single rune
+			}
+			start, _ := c.compose.Selection()
+			txt := c.compose.Text()
+			c.compose.SetText(txt[:start] + e.Text + txt[start:])
+			c.compose.Focus()
 		}
-		start, _ := c.compose.Selection()
-		txt := c.compose.Text()
-		c.compose.SetText(txt[:start] + ce.Text + txt[start:])
-		c.compose.Focus()
 	}
 
 	if c.send.Clicked() {
