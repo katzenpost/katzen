@@ -103,6 +103,9 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 	if p.remove.Clicked() {
 		// TODO: confirmation dialog
 		p.a.c.RemoveContact(p.nickname)
+		p.a.c.DeleteBlob("avatar://" + p.nickname)
+		// remove avatar cache
+		delete(avatars, p.nickname)
 		return EditContactComplete{nickname: p.nickname}
 	}
 	if p.apply.Clicked() {
