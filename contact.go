@@ -100,7 +100,7 @@ func (c *Contactal) Layout(gtx C) D {
 
 			gtx.Constraints = layout.Exact(gtx.Constraints.Constrain(sz))
 			i := c.Render(sz)
-			return widget.Image{Scale: float32(1), Src: paint.NewImageOp(i)}.Layout(gtx)
+			return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
 		})
 	})
 }
