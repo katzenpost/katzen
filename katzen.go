@@ -109,6 +109,7 @@ func (a *App) update(gtx layout.Context) {
 		case OfflineClick:
 			go a.c.Offline()
 			isConnected = false
+			isConnecting = false
 		case OnlineClick:
 			isConnecting = true
 			go func() {

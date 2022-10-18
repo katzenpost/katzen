@@ -253,10 +253,10 @@ type OfflineClick struct {
 // Event returns a ChooseContactClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
 	if p.connect.Clicked() {
-		if isConnected {
-			return OfflineClick{}
+		if !isConnected && !isConnecting {
+			return OnlineClick{}
 		}
-		return OnlineClick{}
+		return OfflineClick{}
 	}
 	// listen for pointer right click events on the addContact widget
 	if p.addContact.Clicked() {
