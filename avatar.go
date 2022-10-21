@@ -315,10 +315,10 @@ func (p *AvatarPicker) scan() {
 
 func newAvatarPicker(a *App, nickname string, path string) *AvatarPicker {
 	if path == "" {
-		path, _ = app.DataDir() // XXX: select media/storage on android
-	}
-	if runtime.GOOS == "android" {
-		path = "/sdcard/"
+		path, _ = app.DataDir()
+		if runtime.GOOS == "android" {
+			path = "/sdcard/"
+		}
 	}
 
 	ap := &AvatarPicker{up: &widget.Clickable{},
