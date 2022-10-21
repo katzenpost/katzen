@@ -126,7 +126,10 @@ func (a *App) update(gtx layout.Context) {
 		case ChooseContactClick:
 			a.stack.Push(newConversationPage(a, e.nickname))
 		case ChooseAvatar:
-			a.stack.Push(newAvatarPicker(a, e.nickname))
+			a.stack.Push(newAvatarPicker(a, e.nickname, ""))
+		case ChooseAvatarPath:
+			a.stack.Pop()
+			a.stack.Push(newAvatarPicker(a, e.nickname, e.path))
 		case RenameContact:
 			a.stack.Push(newRenameContactPage(a, e.nickname))
 		case EditContact:

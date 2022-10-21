@@ -50,7 +50,6 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
-
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 			// back to Edit Contact
@@ -201,10 +200,8 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 func (p *AvatarPicker) Event(gtx C) interface{} {
 	if p.up.Clicked() {
 		if u, err := filepath.Abs(filepath.Join(p.path, "..")); err == nil {
-			p.path = u
-			p.scan()
+			return ChooseAvatarPath{nickname: p.nickname, path: u}
 		}
-		return nil
 	}
 	if p.back.Clicked() {
 		return BackEvent{}
@@ -233,8 +230,8 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 				if u, err := filepath.Abs(filepath.Join(p.path, filename)); err == nil {
 					if f, err := os.Stat(u); err == nil {
 						if f.IsDir() {
+							return ChooseAvatarPath{nickname: p.nickname, path: u}
 							p.path = u
-							p.scan()
 						} else {
 							p.a.setAvatar(p.nickname, u)
 						}
@@ -244,6 +241,11 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 		}
 	}
 	return nil
+}
+
+type ChooseAvatarPath struct {
+	nickname string
+	path     string
 }
 
 type opThumb struct {
@@ -305,16 +307,18 @@ func (p *AvatarPicker) scan() {
 			ff = append(ff, fn)
 		}
 	}
-	p.files = ff
 	p.tl.Lock()
+	p.files = ff
 	p.thumbs = make(map[os.FileInfo]*image.Image)
 	p.tl.Unlock()
 }
 
-func newAvatarPicker(a *App, nickname string) *AvatarPicker {
-	cwd, _ := app.DataDir() // XXX: select media/storage on android
+func newAvatarPicker(a *App, nickname string, path string) *AvatarPicker {
+	if path == "" {
+		path, _ = app.DataDir() // XXX: select media/storage on android
+	}
 	if runtime.GOOS == "android" {
-		cwd = "/sdcard/"
+		path = "/sdcard/"
 	}
 
 	ap := &AvatarPicker{up: &widget.Clickable{},
@@ -327,7 +331,7 @@ func newAvatarPicker(a *App, nickname string) *AvatarPicker {
 		thumbs:   make(map[os.FileInfo]*image.Image),
 		files:    make([]os.FileInfo, 0),
 		tl:       new(sync.Mutex),
-		path:     cwd}
+		path:     path}
 	ap.scan()
 	return ap
 }
