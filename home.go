@@ -66,8 +66,9 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 		Inset: layout.Inset{},
 	}
 
-	// bounds check to current contact list
-	if selectedIdx < 0 {
+	if len(contacts) == 0 {
+		selectedIdx = 0
+	} else if selectedIdx < 0 {
 		selectedIdx = len(contacts) - 1
 	} else {
 		selectedIdx = selectedIdx % len(contacts)
