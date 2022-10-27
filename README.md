@@ -11,7 +11,6 @@ A multiplatform chat client using catshadow and gio
 
     git clone https://github.com/katzenpost/katzen
     cd katzen
-    git checkout devel
 
 ## Building katzen for GNU/Linux
 
@@ -133,4 +132,16 @@ Between versions you might need to install uninstall a previous build
       -s string
          The catshadow state file path. (default "catshadow_statefile")
 
+## supported by
 
+[![NGI](https://katzenpost.mixnetworks.org/_static/images/eu-flag-tiny.jpg)](https://www.ngi.eu/about/)
+<a href="https://nlnet.nl"><img src="https://nlnet.nl/logo/banner.svg" width="160"alt="NLnet Foundation"/></a>
+<a href="https://nlnet.nl/assure"><img src="https://nlnet.nl/logos/NGIAssure_tag.svg" width="160" alt="NGI Assure"/></a>
+<a href="https://nlnet.nl/NGI0"><img src="https://nlnet.nl/logos/NGI0PET_tag.svg" width="160" alt="NGI Zero PET"/></a>
+
+This project has received funding from:
+
+* European Union’s Horizon 2020 research and innovation programme under the Grant Agreement No 653497, Privacy and Accountability in Networks via Optimized Randomized Mix-nets (Panoramix).
+* The Samsung Next Stack Zero grant.
+* NGI0 PET Fund, a fund established by NLnet with financial support from the European Commission's Next Generation Internet programme, under the aegis of DG Communications Networks, Content and Technology under grant agreement No 825310.
+* NGI Assure Fund, a fund established by NLnet with financial support from the European Commission's Next Generation Internet programme, under the aegis of DG Communications Networks, Content and Technology under grant agreement No 957073.
