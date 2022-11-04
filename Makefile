@@ -6,7 +6,7 @@ docker-build-windows: docker-go-mod
 
 docker-debian-base:
 	if ! docker images|grep katzen/debian_base; then \
-		docker run --name katzen_debian_base golang:bullseye bash -c 'apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev' \
+		docker run --volume /usr/local/lib/libsphincsplus.so:/libsphincsplus.so --volume /usr/local/include/sphincsplus:/sphincsplusinclude --name katzen_debian_base golang:bullseye bash -c 'apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev && cp /libsphincsplus.so /usr/local/lib && ldconfig && cp -a /sphincsplusinclude /usr/local/include/sphincsplus' \
 		&& docker commit katzen_debian_base katzen/debian_base \
 		&& docker rm katzen_debian_base; \
 	fi
