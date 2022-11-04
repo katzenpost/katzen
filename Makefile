@@ -6,7 +6,7 @@ docker-build-windows: docker-go-mod
 
 docker-debian-base:
 	if ! docker images|grep katzen/debian_base; then \
-		docker run --name katzen_debian_base golang:buster bash -c 'apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev' \
+		docker run --name katzen_debian_base golang:bullseye bash -c 'apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev' \
 		&& docker commit katzen_debian_base katzen/debian_base \
 		&& docker rm katzen_debian_base; \
 	fi
@@ -14,14 +14,14 @@ docker-debian-base:
 docker-go-mod: docker-debian-base
 	if ! docker images|grep katzen/go_mod; then \
 		docker run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/debian_base \
-			bash -c 'cd /go/katzen; go mod tidy -compat=1.17' \
+			bash -c 'cd /go/katzen; go mod tidy' \
 		&& docker commit katzen_go_mod katzen/go_mod \
 		&& docker rm katzen_go_mod; \
 	fi
 
 docker-go-mod-update: docker-go-mod
 	docker run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/go_mod \
-			bash -c 'cd /go/katzen; go mod tidy -compat=1.17' \
+			bash -c 'cd /go/katzen; go mod tidy' \
 		&& docker commit katzen_go_mod katzen/go_mod \
 		&& docker rm katzen_go_mod
 

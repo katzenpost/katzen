@@ -1,4 +1,4 @@
-FROM golang:buster AS builder
+FROM golang:bullseye AS builder
 
 LABEL authors="Masala: masala@riseup.net"
 
