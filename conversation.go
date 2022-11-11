@@ -21,10 +21,14 @@ import (
 )
 
 var (
-	messageList  = &layout.List{Axis: layout.Vertical, ScrollToEnd: true}
-	messageField = &widget.Editor{SingleLine: true}
-	backIcon, _  = widget.NewIcon(icons.NavigationChevronLeft)
-	sendIcon, _  = widget.NewIcon(icons.NavigationChevronRight)
+	messageList      = &layout.List{Axis: layout.Vertical, ScrollToEnd: true}
+	messageField     = &widget.Editor{SingleLine: true}
+	backIcon, _      = widget.NewIcon(icons.NavigationChevronLeft)
+	sendIcon, _      = widget.NewIcon(icons.NavigationChevronRight)
+	queuedIcon, _    = widget.NewIcon(icons.NotificationSync)
+	sentIcon, _      = widget.NewIcon(icons.ActionDone)
+	deliveredIcon, _ = widget.NewIcon(icons.ActionDoneAll)
+	pandaIcon, _     = widget.NewIcon(icons.ActionPets)
 )
 
 type conversationPage struct {
@@ -168,14 +172,17 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 
 func layoutMessage(gtx C, msg *catshadow.Message, isSelected bool, expires time.Duration) D {
 
-	status := ""
+	var statusIcon *widget.Icon
 	if msg.Outbound == true {
-		status = "queued"
-		if msg.Sent {
-			status = "sending"
-		}
-		if msg.Delivered {
-			status = "sent"
+		statusIcon = queuedIcon
+		switch {
+		case !msg.Sent:
+			statusIcon = queuedIcon
+		case msg.Sent && !msg.Delivered:
+			statusIcon = sentIcon
+		case msg.Delivered:
+			statusIcon = deliveredIcon
+		default:
 		}
 	}
 
@@ -199,11 +206,21 @@ func layoutMessage(gtx C, msg *catshadow.Message, isSelected bool, expires time.
 						timeLabel = "Received: " + timeLabel
 					}
 				}
-				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
-					layout.Rigid(material.Caption(th, timeLabel).Layout),
-					layout.Rigid(material.Caption(th, whenExpires).Layout),
-					layout.Rigid(material.Caption(th, status).Layout),
-				)
+				if msg.Outbound {
+					return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
+						layout.Rigid(material.Caption(th, timeLabel).Layout),
+						layout.Rigid(material.Caption(th, whenExpires).Layout),
+						layout.Rigid(func(gtx C) D {
+							return statusIcon.Layout(gtx, th.Palette.ContrastFg)
+						}),
+					)
+					// do not show delivery status for received messages, instead show received timestamp
+				} else {
+					return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
+						layout.Rigid(material.Caption(th, timeLabel).Layout),
+						layout.Rigid(material.Caption(th, whenExpires).Layout),
+					)
+				}
 			})
 		}),
 	)
@@ -238,6 +255,12 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 						return dims
 					}),
 					layout.Rigid(material.Caption(th, c.nickname).Layout),
+					layout.Rigid(func(gtx C) D {
+						if contact.IsPending {
+							return pandaIcon.Layout(gtx, th.Palette.ContrastFg)
+						}
+						return layout.Dimensions{}
+					}),
 					layout.Flexed(1, fill{th.Bg}.Layout),
 				)
 			},
@@ -315,9 +338,6 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			bg := Background{
 				Color: th.ContrastBg,
 				Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(12), Right: unit.Dp(12)},
-			}
-			if contact.IsPending {
-				return bg.Layout(gtx, material.Caption(th, "Contact pending key exchange").Layout)
 			}
 			// return the menu laid out for message actions
 			if c.messageClicked != nil {

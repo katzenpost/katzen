@@ -148,13 +148,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 												return in.Layout(gtx, ContactStyle(th, contacts[i].Nickname).Layout)
 											}),
 											layout.Rigid(func(gtx C) D {
-												// timestamp
-												if lastMsg != nil {
-													messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
-													return material.Caption(th, messageAge).Layout(gtx)
-												}
-												return fill{th.Bg}.Layout(gtx)
-											}),
+												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
+												layout.Rigid(func(gtx C) D {
+													if contacts[i].IsPending {
+														return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
+													}
+													return fill{th.Bg}.Layout(gtx)
+												}),
+												layout.Rigid(func(gtx C) D {
+													// timestamp
+													if lastMsg != nil {
+														messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+														return material.Caption(th, messageAge).Layout(gtx)
+													}
+													return fill{th.Bg}.Layout(gtx)
+												}),
+											)}),
 										)
 									}),
 									// last message
