@@ -1,3 +1,18 @@
+KEYPASS?=password
+
+docker-android-base:
+	if ! docker images|grep katzen/android_sdk; then \
+		docker build --no-cache -t katzen/android_sdk -f Dockerfile.android .; \
+	fi
+
+android-signing-key: docker-android-base
+	if [ -e /go/katzen/sign.keystore ]; then \
+		docker run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "keytool -genkey -keystore sign.keystore -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"; \
+	fi
+
+docker-build-android: android-signing-key
+	docker run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
+
 docker-build-linux: docker-go-mod
 	docker run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; go build -trimpath -ldflags=-buildid='
 
@@ -37,3 +52,4 @@ docker-shell: docker-debian-base
 docker-clean:
 	docker rm  katzen_debian_base katzen_go_mod || true
 	docker rmi katzen/debian_base katzen/go_mod || true
+	docker rmi katzen/android_sdk katzen/go_mod || true
