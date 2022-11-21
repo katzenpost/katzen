@@ -6,7 +6,7 @@ docker-android-base:
 	fi
 
 android-signing-key: docker-android-base
-	if [ -e /go/katzen/sign.keystore ]; then \
+	if [ -e /go/build/sign.keystore ]; then \
 		docker run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "keytool -genkey -keystore sign.keystore -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"; \
 	fi
 
