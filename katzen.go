@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"gioui.org/app"
-	"gioui.org/app/permission/foreground"
+	_ "gioui.org/app/permission/foreground"
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
@@ -388,7 +388,7 @@ func (a *App) handleGioEvents(e interface{}) error {
 		}
 		if e.Stage == system.StagePaused {
 			var err error
-			a.endBg, err = foreground.Start("Is running in the background", "")
+			a.endBg, err = app.Start("Is running in the background", "")
 			if err != nil {
 				return err
 			}
