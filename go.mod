@@ -13,8 +13,8 @@ require (
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/katzenpost/katzenpost v0.0.12
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	golang.org/x/exp/shiny v0.0.0-20220307200941-a1099baf94bf
-	golang.org/x/image v0.0.0-20220302094943-723b81ca9867
+	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
+	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
 )
 
 require (
@@ -25,12 +25,12 @@ require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/awnumar/memcall v0.1.2 // indirect
 	github.com/awnumar/memguard v0.22.2 // indirect
-	github.com/benoitkugler/textlayout v0.1.1 // indirect
+	github.com/benoitkugler/textlayout v0.1.3 // indirect
 	github.com/cloudflare/circl v1.2.1-0.20220831060716-4cf0150356fc // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/esiqveland/notify v0.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
-	github.com/gioui/uax v0.2.1-0.20220325163150-e3d987515a12 // indirect
+	github.com/gioui/uax v0.2.1-0.20220819135011-cda973fac06d // indirect
 	github.com/go-text/typesetting v0.0.0-20220411150340-35994bc27a7b // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
