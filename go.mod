@@ -1,6 +1,6 @@
 module github.com/katzenpost/katzen
 
-go 1.17
+go 1.19
 
 replace gioui.org => github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a
 
