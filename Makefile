@@ -1,4 +1,18 @@
 docker := docker
+KEYPASS?=password
+
+docker-android-base:
+	if ! docker images|grep katzen/android_sdk; then \
+		docker build --no-cache -t katzen/android_sdk -f Dockerfile.android .; \
+	fi
+
+android-signing-key: docker-android-base
+	if [ -e /go/build/sign.keystore ]; then \
+		docker run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "keytool -genkey -keystore sign.keystore -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"; \
+	fi
+
+docker-build-android: android-signing-key
+	docker run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
 
 docker-build-linux: docker-go-mod
 	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; go build -trimpath -ldflags=-buildid='
@@ -33,20 +47,12 @@ docker-go-mod-upgrade: docker-go-mod
 		&& $(docker) commit katzen_go_mod katzen/go_mod \
 		&& $(docker) rm katzen_go_mod
 
-docker-android-base:
-	if ! $(docker) images|grep katzen/android_build; then \
-		$(docker) build --no-cache -t katzenpost/android_build -f Dockerfile.android . ; \
-	fi
-
-docker-build-android: docker-android-base
-	$(docker) run -v "$(shell readlink -f .)":/go/build/ katzen/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
-
 docker-shell: docker-debian-base
 	$(docker) run -v "$(shell readlink -f .)":/go/katzen --rm -it katzen/go_mod bash
 
 docker-android-shell: docker-android-base
-	$(docker) run -v "$(shell readlink -f .)":/go/build --rm -it katzen/android_build bash
+	$(docker) run -v "$(shell readlink -f .)":/go/build --rm -it katzen/android_sdk bash
 
 docker-clean:
 	$(docker) rm  katzen_debian_base katzen_go_mod || true
-	$(docker) rmi katzen/debian_base katzen/go_mod || true
+	$(docker) rmi katzen/debian_base katzen/go_mod katzen/android_sdk || true

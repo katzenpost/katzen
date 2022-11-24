@@ -47,6 +47,9 @@ To also include local changes from the Katzenpost monorepo, add `replace
 github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod` file and
 clone the monorepo in your katzen checkout.
 
+To build an apk for Anroid, use the makefile target docker-build-android,
+ `make docker-build-android`
+
 ### Building without docker
 
 Make sure you have a working Go environment (Go 1.16 or higher is required; on

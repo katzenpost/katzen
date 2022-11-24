@@ -96,13 +96,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build android_build docker image
-        run: |
-          docker build --no-cache -t katzenpost/android_build -f Dockerfile.android .
-
-      - name: Build katzen apk
-        run: |
-          docker run -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
+      - name: Build for linux
+        run: sudo make docker-build-android
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v2
