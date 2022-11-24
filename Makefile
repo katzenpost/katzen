@@ -42,7 +42,7 @@ docker-build-android: docker-android-base
 	$(docker) run -v "$(shell readlink -f .)":/go/build/ katzen/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
 
 docker-shell: docker-debian-base
-	$(docker) run -v "$(shell readlink -f .)":/go/katzen --rm -it katzen/debian_base bash
+	$(docker) run -v "$(shell readlink -f .)":/go/katzen --rm -it katzen/go_mod bash
 
 docker-android-shell: docker-android-base
 	$(docker) run -v "$(shell readlink -f .)":/go/build --rm -it katzen/android_build bash
