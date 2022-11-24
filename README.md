@@ -19,36 +19,35 @@ A multiplatform chat client using catshadow and gio
 The easiest way to build katzen is in a container managed by
 [podman](https://podman.io/) or
 [docker](https://en.wikipedia.org/wiki/Docker_(software)). (Podman is a docker
-replacement which has the advantage of not requiring root access or a daemon to
+replacement which has the advantages of not requiring root access or a daemon to
 operate.)
 
-There is a Makefile in this repository with targets to create a container image
-with the build environment and to create a container and build katzen.
+The Makefile in this repository has targets to create a container image with
+the build environment, and to create a container with that image, and build
+katzen in the container.
 
-If you have docker running and are in the `docker` group, you can simply run
-`make` to run the default make target (`docker-build-linux`) and you will have
-a `katzen` binary which you can run as `./katzen`. To use docker when you are
-not in the `docker` group, you must prefix the `make` command with `sudo`.
+Although the make target names are prefixed with `docker-`, podman will be used
+by default if it is installed. If you have both podman and docker installed
+and want to force the use of docker, or if you want to specify the path to a
+different docker/podman compatible binary, you can specify `docker=docker` as
+the first argument to the `make` command.
 
-Alternately, to use `podman`, you can add `docker=podman` after the `make`
-command.
-
+The default target is `docker-build-linux` which will produce a linux binary.
 Other Makefile targets include `docker-build-windows` and
 `docker-build-android`, which build for those platforms, and `docker-shell`
-which puts you in a shell inside a build container.
+which puts you in a shell inside an ephemeral build container with your local
+checkout mounted at `/go/katzen`.
 
-To remove the docker images and containers created in this process, run `make
-docker-clean` (prefixing it with `sudo` if you used `sudo` previously). The
-Makefile contains targets which build intermediate images for the Debian and go
-module dependencies so that local changes can be built without the need for
-internet access.
+To remove the docker images and containers created by the Makefile, run `make
+docker-clean`. The Makefile contains targets which build intermediate images
+for the Debian and go module dependencies, so that local changes can be built
+without the need for internet access.
 
-To also include local changes from the Katzenpost monorepo, add `replace
-github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod` file and
-clone the monorepo in your katzen checkout.
-
-To build an apk for Anroid, use the makefile target docker-build-android,
- `make docker-build-android`
+To build using local uncomitted changes from the Katzenpost monorepo, add
+`replace github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod`
+file and clone the monorepo in your katzen checkout. (Note: this workflow is
+currently hampered by the need to manually build the libsphincsplus.a library
+in the local checkout of katzenpost.)
 
 ### Building without docker
 
