@@ -2,9 +2,9 @@ module github.com/katzenpost/katzen
 
 go 1.17
 
-replace gioui.org => github.com/mixmasala/gio v0.0.0-20220820160532-969090a0e510
+replace gioui.org => github.com/mixmasala/gio v0.0.0-20221008115529-61f8a00ed160
 
-replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220820151047-8545defe9994
+replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328
 
 require (
 	gioui.org v0.0.0-20220628163331-e21c665e70ae
@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	gioui.org/cmd v0.0.0-20220820151047-8545defe9994 // indirect
+	gioui.org/cmd v0.0.0-20220818080936-02068d6340fc // indirect
 	gioui.org/cpu v0.0.0-20220307141130-bd82e69a82aa // indirect
 	gioui.org/shader v1.0.6 // indirect
 	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect

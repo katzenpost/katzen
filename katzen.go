@@ -36,6 +36,7 @@ var (
 	dataDirName      = "catshadow"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
+	debug            = flag.Bool("d", false, "Enable golang debug service.")
 
 	minPasswordLen = 5 // XXX pick something reasonable
 
@@ -56,7 +57,7 @@ var (
 )
 
 type App struct {
-	fg    chan struct{}
+	endBg func()
 	w     *app.Window
 	ops   *op.Ops
 	c     *catshadow.Client
@@ -108,6 +109,7 @@ func (a *App) update(gtx layout.Context) {
 		case OfflineClick:
 			go a.c.Offline()
 			isConnected = false
+			isConnecting = false
 		case OnlineClick:
 			isConnecting = true
 			go func() {
@@ -124,7 +126,10 @@ func (a *App) update(gtx layout.Context) {
 		case ChooseContactClick:
 			a.stack.Push(newConversationPage(a, e.nickname))
 		case ChooseAvatar:
-			a.stack.Push(newAvatarPicker(a, e.nickname))
+			a.stack.Push(newAvatarPicker(a, e.nickname, ""))
+		case ChooseAvatarPath:
+			a.stack.Pop()
+			a.stack.Push(newAvatarPicker(a, e.nickname, e.path))
 		case RenameContact:
 			a.stack.Push(newRenameContactPage(a, e.nickname))
 		case EditContact:
@@ -175,6 +180,14 @@ func (a *App) run() error {
 func main() {
 	flag.Parse()
 	fmt.Println("Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.")
+
+	if *debug {
+		go func() {
+			http.ListenAndServe("localhost:8080", nil)
+		}()
+		runtime.SetMutexProfileFraction(1)
+		runtime.SetBlockProfileRate(1)
+	}
 
 	// Start graphical user interface.
 	uiMain()
@@ -351,17 +364,14 @@ func (a *App) handleGioEvents(e interface{}) error {
 		return errors.New("system.DestroyEvent receieved")
 	case system.FrameEvent:
 		gtx := layout.NewContext(a.ops, e)
-		key.InputOp{Tag: a.w, Keys: key.NameEscape+"|"+key.NameBack}.Add(a.ops)
+		key.InputOp{Tag: a.w, Keys: key.NameEscape + "|" + key.NameBack}.Add(a.ops)
 		for _, e := range gtx.Events(a.w) {
 			switch e := e.(type) {
 			case key.Event:
-				if e.State == key.Release {
-					switch e.Name {
-					case key.NameEscape, key.NameBack:
-						if a.stack.Len() > 1 {
-							a.stack.Pop()
-							a.w.Invalidate()
-						}
+				if (e.Name == key.NameEscape && e.State == key.Release) || e.Name == key.NameBack {
+					if a.stack.Len() > 1 {
+						a.stack.Pop()
+						a.w.Invalidate()
 					}
 				}
 			}
@@ -377,18 +387,16 @@ func (a *App) handleGioEvents(e interface{}) error {
 			}
 		}
 		if e.Stage == system.StagePaused {
-			foreground.Start("Is running in the background", "")
+			var err error
+			a.endBg, err = foreground.Start("Is running in the background", "")
+			if err != nil {
+				return err
+			}
 		} else {
-			foreground.Stop()
+			if a.endBg != nil {
+				a.endBg()
+			}
 		}
 	}
 	return nil
-}
-
-func init() {
-	go func() {
-		http.ListenAndServe("localhost:8080", nil)
-	}()
-	runtime.SetMutexProfileFraction(1)
-	runtime.SetBlockProfileRate(1)
 }
