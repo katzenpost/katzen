@@ -39,12 +39,18 @@ docker-go-mod: docker-debian-base
 	fi
 
 # this will run go mod tidy, and save a new katzen/go_mod image
+# this is for running after manually editing go.mod, and will update go.mod and
+# go.sum to reflect all of the indirect dependency changes required by the
+# manual change.
 docker-go-mod-update: docker-go-mod
 	$(docker) run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/go_mod \
 			bash -c 'cd /go/katzen; go mod tidy -compat=1.19' \
 		&& $(docker) commit katzen_go_mod katzen/go_mod \
 		&& $(docker) rm katzen_go_mod
 
+# this will run go get, and save a new katzen/go_mod image
+# This will upgrade all of katzen's dependency pins, and modify go.mod and
+# go.sum accordingly.
 docker-go-mod-upgrade: docker-go-mod
 	$(docker) run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/go_mod \
 			bash -c 'cd /go/katzen; go get -d -u' \
