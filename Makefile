@@ -33,7 +33,7 @@ docker-debian-base:
 docker-go-mod: docker-debian-base
 	if ! $(docker) images|grep katzen/go_mod; then \
 		$(docker) run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/debian_base \
-			bash -c 'cd /go/katzen; go mod tidy -compat=1.19' \
+			bash -c 'cd /go/katzen; go mod tidy -compat=1.19; cd /go/pkg/mod/github.com/katzenpost/katzenpost*/sphincsplus/ref; make libsphincsplus.a' \
 		&& $(docker) commit katzen_go_mod katzen/go_mod \
 		&& $(docker) rm katzen_go_mod; \
 	fi
