@@ -66,3 +66,7 @@ docker-android-shell: docker-android-base
 docker-clean:
 	$(docker) rm  katzen_debian_base katzen_go_mod || true
 	$(docker) rmi katzen/debian_base katzen/go_mod katzen/android_sdk || true
+
+docker-clean-go-mod:
+	$(docker) rm katzen_go_mod || true
+	$(docker) rmi katzen/go_mod || true
