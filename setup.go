@@ -68,7 +68,7 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 			return
 		}
 	} else {
-		cfg, err = getConfigNoTor()
+		cfg, err = config.Load(cfgWithoutTor)
 		if err != nil {
 			result <- err
 			return
@@ -126,7 +126,7 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 			// disable autoconnect
 			delete(state.Blob, "AutoConnect")
 		} else {
-			cfg, err = getDefaultConfig()
+			cfg, err = config.Load(cfgWithTor)
 			if err != nil {
 				result <- err
 				return
