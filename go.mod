@@ -15,11 +15,9 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
-	golang.org/x/term v0.1.0
 )
 
 require (
-	gioui.org/cmd v0.0.0-20220818080936-02068d6340fc // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	gioui.org/cpu v0.0.0-20220307141130-bd82e69a82aa // indirect
 	gioui.org/shader v1.0.6 // indirect
