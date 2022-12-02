@@ -6,8 +6,8 @@ jobs:
     steps:
       - name: Install Build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get --no-install-recommends -y make podman
+          sudo apt update
+          sudo apt install --no-install-recommends -y make podman
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -24,6 +24,11 @@ jobs:
   build_windows:
     runs-on: ubuntu-22.04
     steps:
+      - name: Install Build dependencies
+        run: |
+          sudo apt update
+          sudo apt install --no-install-recommends -y make podman
+
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -75,8 +80,8 @@ jobs:
     steps:
       - name: Install podman
         run: |
-          sudo apt-get update
-          sudo apt-get --no-install-recommends install podman make
+          sudo apt update
+          sudo apt install --no-install-recommends podman make
 
       - name: Checkout code
         uses: actions/checkout@v2
