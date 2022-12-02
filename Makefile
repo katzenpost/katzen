@@ -3,10 +3,10 @@ docker := $(shell if which podman|grep . >/dev/null; then echo podman; else echo
 KEYPASS?=password
 
 docker-build-linux: docker-go-mod
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; go build -trimpath -ldflags=-buildid='
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags=-buildid='
 
 docker-build-windows: docker-go-mod
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; GOOS=windows go build -trimpath -ldflags="-H windowsgui -buildid=" -o katzen.exe'
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui -buildid=" -o katzen.exe'
 
 docker-android-base:
 	if ! $(docker) images|grep katzen/android_sdk; then \
@@ -19,12 +19,12 @@ android-signing-key: docker-android-base
 	fi
 
 docker-build-android: android-signing-key
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio@latest && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio@latest && CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base:
 	if ! $(docker) images|grep katzen/debian_base; then \
-		$(docker) run --name katzen_debian_base docker.io/golang:bullseye bash -c "echo 'deb https://deb.debian.org/debian bullseye main\ndeb https://deb.debian.org/debian bullseye-updates main\ndeb https://deb.debian.org/debian-security bullseye-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list && apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev" \
+		$(docker) run --name katzen_debian_base docker.io/golang:bullseye bash -c "echo 'deb https://deb.debian.org/debian bullseye main\ndeb https://deb.debian.org/debian bullseye-updates main\ndeb https://deb.debian.org/debian-security bullseye-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list && apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev gcc-mingw-w64-x86-64" \
 		&& $(docker) commit katzen_debian_base katzen/debian_base \
 		&& $(docker) rm katzen_debian_base; \
 	fi
@@ -33,7 +33,7 @@ docker-debian-base:
 docker-go-mod: docker-debian-base
 	if ! $(docker) images|grep katzen/go_mod; then \
 		$(docker) run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/debian_base \
-			bash -c 'cd /go/katzen; go mod tidy -compat=1.19; cd /go/pkg/mod/github.com/katzenpost/katzenpost*/sphincsplus/ref; make libsphincsplus.a' \
+			bash -c 'cd /go/katzen; go mod tidy -compat=1.19' \
 		&& $(docker) commit katzen_go_mod katzen/go_mod \
 		&& $(docker) rm katzen_go_mod; \
 	fi
