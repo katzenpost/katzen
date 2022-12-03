@@ -1,4 +1,4 @@
-FROM docker.io/golang:buster AS builder
+FROM docker.io/golang:bullseye AS builder
 
 LABEL authors="Masala: masala@riseup.net"
 
