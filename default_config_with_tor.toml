@@ -203,5 +203,4 @@ d7pNKav+/Mrl4pfWQT5/kSMNHI+m61VemmQ3HJ5HoSbROjoS4ndumaOAOnFFVUAl
 
 [Debug]
   DisableDecoyTraffic = false
-  PollingInterval = 500
   PreferedTransports = ["onion"]
