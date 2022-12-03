@@ -32,8 +32,9 @@ docker-debian-base:
 # this is the image with all golang deps installed, ready to build katzen
 docker-go-mod: docker-debian-base
 	if ! $(docker) images|grep katzen/go_mod; then \
-		$(docker) run -v "$(shell readlink -f .)":/go/katzen --name katzen_go_mod katzen/debian_base \
-			bash -c 'cd /go/katzen; go mod tidy -compat=1.19' \
+		$(docker) run -v "$(shell readlink -f .)":/go/katzen --workdir /go/katzen \
+            --name katzen_go_mod katzen/debian_base \
+			bash -c 'go get && go mod verify' \
 		&& $(docker) commit katzen_go_mod katzen/go_mod \
 		&& $(docker) rm katzen_go_mod; \
 	fi
