@@ -19,7 +19,7 @@ android-signing-key: docker-android-base
 	fi
 
 docker-build-android: android-signing-key
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio@latest && CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio && CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base:
