@@ -109,25 +109,28 @@ func (a *App) update(gtx layout.Context) {
 			// validate the statefile somehow
 			a.c = e.client
 			a.c.Start()
-			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
-				isConnecting = true
-				go func() {
-					a.c.Online()
-					a.c.CreateRemoteSpool()
-				}()
-			}
 			a.stack.Clear(newHomePage(a))
+			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
+				a.c.Online()
+				isConnecting = true
+				// if the client does not already have a spool
+				// descriptor, prompt to create one
+				spool := a.c.SpoolWriteDescriptor()
+				if spool == nil {
+					a.stack.Push(newSpoolPage(a))
+				}
+			}
 		case OfflineClick:
 			go a.c.Offline()
 			isConnected = false
 			isConnecting = false
 		case OnlineClick:
+			go a.c.Online()
 			isConnecting = true
-			go func() {
-				a.c.Online()
-				// does not replace an existing spool
-				a.c.CreateRemoteSpool()
-			}()
+			spool := a.c.SpoolWriteDescriptor()
+			if spool == nil {
+				a.stack.Push(newSpoolPage(a))
+			}
 		case ShowSettingsClick:
 			a.stack.Push(newSettingsPage(a))
 		case AddContactClick:
