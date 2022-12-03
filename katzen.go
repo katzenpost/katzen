@@ -95,9 +95,15 @@ func (a *App) update(gtx layout.Context) {
 		case signInStarted:
 			p := newUnlockPage(e.result)
 			a.stack.Clear(p)
-		case unlockError, restartClient:
+		case unlockError:
 			isConnected = false
 			isConnecting = false
+			fmt.Printf("unlockError: %s\n", e.err)
+			a.stack.Clear(newSignInPage(a))
+		case restartClient:
+			isConnected = false
+			isConnecting = false
+			fmt.Printf("restartClient\n")
 			a.stack.Clear(newSignInPage(a))
 		case unlockSuccess:
 			// validate the statefile somehow
