@@ -45,16 +45,14 @@ without the need for internet access.
 
 To build using local uncomitted changes from the Katzenpost monorepo, add
 `replace github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod`
-file and clone the monorepo in your katzen checkout. (Note: this workflow is
-currently hampered by the need to manually build the libsphincsplus.a library
-in the local checkout of katzenpost.)
+file and clone the monorepo in your katzen checkout.
 
 ### Building without docker
 
-Make sure you have a working Go environment (Go 1.16 or higher is required; on
-Debian buster the backports repository can be used).
+Make sure you have a working Go environment (Go 1.19 or higher is required;
+on Debian bullseye the backports repository can be used).
 
-See the [install instructions](http://golang.org/doc/install.html).
+See the [golang install instructions](http://golang.org/doc/install.html).
 
 #### Installing golang (Debian Bullseye example)
 
@@ -79,18 +77,23 @@ Before building be sure to set the environment variable `CGO_CFLAGS_ALLOW`:
 
     go build -trimpath -ldflags=-buildid=
 
-# Cross-compilation dependencies for the arm64 architecture
+#### Cross-compilation dependencies for the arm64 architecture
 
     dpkg --add-architecture arm64 && apt update
     apt install --no-install-recommends crossbuild-essential-arm64 libgles2:arm64 libgles2-mesa-dev:arm64 libglib2.0-dev:arm64 libxkbcommon-dev libxkbcommon-x11-dev:arm64 libglu1-mesa-dev:arm64 libxcursor-dev:arm64 libwayland-dev:arm64 libx11-xcb-dev:arm64 libvulkan-dev:arm64
 
-#### Building for arm64
+#### Building for Linux on arm64
 
     CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=-buildid=
 
 #### Building for Windows
 
-    GOOS=windows go build -trimpath -ldflags="-H windowsgui -buildid="
+Windows builds are currently broken, since the addition of libsphincsplus in
+late 2022, and they had not actually been tested recently prior to that (though
+they were building in CI under Linux). If you wish to try to solve this problem
+this is a place to start:
+
+    GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui -buildid=" -o katzen.exe
 
 #### Building for macOS (Intel), requires macOS and xcode
 
