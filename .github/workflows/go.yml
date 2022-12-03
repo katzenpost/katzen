@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build for MacOS (amd64)
-        run: CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" CGO_ENABLED=1 GOOS="darwin" GOARCH="amd64" go build -trimpath -ldflags=-buildid= -o katzen-macos-amd64
+        run: CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" CGO_ENABLED=1 GOOS="darwin" GOARCH="amd64" go build -trimpath -ldflags=-buildid= -tags dynamic -o katzen-macos-amd64
 
       - name: Build for MacOS (arm64)
         run: CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" CGO_ENABLED=1 GOOS="darwin" GOARCH="arm64" go build -trimpath -ldflags=-buildid= -tags dynamic -o katzen-macos-arm64
