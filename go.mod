@@ -2,7 +2,7 @@ module github.com/katzenpost/katzen
 
 go 1.19
 
-replace github.com/katzenpost/katzenpost => github.com/katzenpost/katzenpost v0.0.15-0.20221203172132-7d58740345d7
+replace github.com/katzenpost/katzenpost => github.com/katzenpost/katzenpost v0.0.15-0.20221204005334-7624f520118a
 
 replace gioui.org => github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a
 
