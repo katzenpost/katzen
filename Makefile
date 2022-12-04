@@ -1,6 +1,6 @@
-docker := $(shell if which podman|grep . >/dev/null; then echo podman; else echo docker; fi)
-
-KEYPASS?=password
+docker := $(shell if which podman|grep -q .; then echo podman; else echo docker; fi)
+KEYSTORE := sign.keystore
+KEYPASS := password
 
 docker-build-linux: docker-go-mod
 	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags=-buildid='
@@ -14,12 +14,12 @@ docker-android-base:
 	fi
 
 android-signing-key: docker-android-base
-	if [ ! -e sign.keystore ]; then \
-		$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "keytool -genkey -keystore sign.keystore -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"; \
+	if [ ! -e $(KEYSTORE) ]; then \
+		$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "keytool -genkey -keystore $(KEYSTORE) -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"; \
 	fi
 
 docker-build-android: android-signing-key
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio && CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass ${KEYPASS} ."
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/build katzen/android_sdk bash -c "go install gioui.org/cmd/gogio && CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base:
