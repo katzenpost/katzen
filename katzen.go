@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/katzenpost/katzenpost/catshadow"
 	"github.com/katzenpost/katzenpost/client"
-	"github.com/katzenpost/katzenpost/client/config"
 	"time"
 
 	"gioui.org/app"
@@ -41,6 +41,11 @@ var (
 	minPasswordLen = 5 // XXX pick something reasonable
 
 	notifications = make(map[string]notify.Notification)
+
+	//go:embed default_config_without_tor.toml
+	cfgWithoutTor []byte
+	//go:embed default_config_with_tor.toml
+	cfgWithTor []byte
 
 	// theme
 	th = func() *material.Theme {
@@ -90,9 +95,15 @@ func (a *App) update(gtx layout.Context) {
 		case signInStarted:
 			p := newUnlockPage(e.result)
 			a.stack.Clear(p)
-		case unlockError, restartClient:
+		case unlockError:
 			isConnected = false
 			isConnecting = false
+			fmt.Printf("unlockError: %s\n", e.err)
+			a.stack.Clear(newSignInPage(a))
+		case restartClient:
+			isConnected = false
+			isConnecting = false
+			fmt.Printf("restartClient\n")
 			a.stack.Clear(newSignInPage(a))
 		case unlockSuccess:
 			// validate the statefile somehow
@@ -213,74 +224,6 @@ type (
 	C = layout.Context
 	D = layout.Dimensions
 )
-
-func getConfigNoTor() (*config.Config, error) {
-	cfgString := `
-[UpstreamProxy]
-  Type = "none"
-
-[Logging]
-  Disable = false
-  Level = "DEBUG"
-  File = ""
-
-[VotingAuthority]
-[[VotingAuthority.Peers]]
-  Addresses = ["37.218.241.202:30000"]
-  IdentityPublicKey = "EmUWxb6ocBBXhxlrAKgxVd/6tyIDVK/8pIY/nZrqSDQ="
-  LinkPublicKey = "Mcfs706pyzBIvEj+k5t2L9t9x+LplOR4wz3RiVrgoVU="
-
-[[VotingAuthority.Peers]]
-  Addresses = ["37.218.245.95:30000"]
-  IdentityPublicKey = "vdOAeoRtWKFDw+W4k3sNN1EMT9ZsaHHmuCHOEKSg1aA="
-  LinkPublicKey = "VNmU4g1hXBS7BQ1RJYMGNjNg4fIZbCimppeJ1XwrqX4="
-
-[[VotingAuthority.Peers]]
-  Addresses = ["37.218.245.228:30000"]
-  IdentityPublicKey = "bFgvws69dJrc3ACKXN5aCJKLHjkN7D8DA2HDKkhSNIk="
-  LinkPublicKey = "p1JekMh8uCPDsRSP5Uc59DJvEGMmA/B0mcMCXx1WEkk="
-
-[Debug]
-  DisableDecoyTraffic = false
- `
-	return config.Load([]byte(cfgString))
-}
-
-func getDefaultConfig() (*config.Config, error) {
-	cfgString := `
-[UpstreamProxy]
-  Type = "socks5"
-  Network = "tcp"
-  Address = "127.0.0.1:9050"
-
-[Logging]
-  Disable = false
-  Level = "DEBUG"
-  File = ""
-
-[VotingAuthority]
-[[VotingAuthority.Peers]]
-  Addresses = ["n5axysudjvjjkpy4r7hur7qfgybfaiwrfz2mqwkvnyylqxinldtao2ad.onion:30000"]
-  IdentityPublicKey = "EmUWxb6ocBBXhxlrAKgxVd/6tyIDVK/8pIY/nZrqSDQ="
-  LinkPublicKey = "Mcfs706pyzBIvEj+k5t2L9t9x+LplOR4wz3RiVrgoVU="
-
-[[VotingAuthority.Peers]]
-  Addresses = ["mj5ouhyjvokgvbcp56lh56plxvzh4wcrq3fadpqf6ewdqmuy7pr3n6qd.onion:30000"]
-  IdentityPublicKey = "vdOAeoRtWKFDw+W4k3sNN1EMT9ZsaHHmuCHOEKSg1aA="
-  LinkPublicKey = "VNmU4g1hXBS7BQ1RJYMGNjNg4fIZbCimppeJ1XwrqX4="
-
-[[VotingAuthority.Peers]]
-  Addresses = ["pz6obnsyh7vmpmtmrsam443jh4gkei77q3y66ty3fd6h6wjdvcmu6pid.onion:30000"]
-  IdentityPublicKey = "bFgvws69dJrc3ACKXN5aCJKLHjkN7D8DA2HDKkhSNIk="
-  LinkPublicKey = "p1JekMh8uCPDsRSP5Uc59DJvEGMmA/B0mcMCXx1WEkk="
-
-[Debug]
-  DisableDecoyTraffic = false
-  PollingInterval = 500
-  PreferedTransports = ["onion"]
-`
-	return config.Load([]byte(cfgString))
-}
 
 func (a *App) handleCatshadowEvent(e interface{}) error {
 	switch event := e.(type) {

@@ -14,32 +14,45 @@ A multiplatform chat client using catshadow and gio
 
 ## Building katzen for GNU/Linux
 
-### Using docker
+### Using docker or podman
 
-The easiest way to build katzen is to use a self-contained docker environment.
+The easiest way to build katzen is in a container managed by
+[podman](https://podman.io/) or
+[docker](https://en.wikipedia.org/wiki/Docker_(software)). (Podman is a docker
+replacement which has the advantages of not requiring root access or a daemon to
+operate.)
 
-Clone the repo as above, and then simply run `make` (or, if your user is not in
-the `docker` group, `sudo make`).
+The Makefile in this repository has targets to create a container image with
+the build environment, and to create a container with that image, and build
+katzen in the container.
 
-This will build a `katzen` binary which you can run as `./katzen`.
+Although the make target names are prefixed with `docker-`, podman will be used
+by default if it is installed. If you have both podman and docker installed
+and want to force the use of docker, or if you want to specify the path to a
+different docker/podman compatible binary, you can specify `docker=docker` as
+the first argument to the `make` command.
 
-To remove the docker images and containers created in this process, run `make
-docker-clean`. The `Makefile` contains targets which build intermediate images
-for the Debian and go module dependencies so that local changes can be built
-without the need for internet access. To also include local changes from the
-Katzenpost monorepo, add `replace github.com/katzenpost/katzenpost =>
-./katzenpost` to katzen's `go.mod` file and clone the monorepo in your katzen
-checkout.
+The default target is `docker-build-linux` which will produce a linux binary.
+Other Makefile targets include `docker-build-windows` and
+`docker-build-android`, which build for those platforms, and `docker-shell`
+which puts you in a shell inside an ephemeral build container with your local
+checkout mounted at `/go/katzen`.
 
-To build an apk for Anroid, use the makefile target docker-build-android,
- `make docker-build-android`
+To remove the docker images and containers created by the Makefile, run `make
+docker-clean`. The Makefile contains targets which build intermediate images
+for the Debian and go module dependencies, so that local changes can be built
+without the need for internet access.
+
+To build using local uncomitted changes from the Katzenpost monorepo, add
+`replace github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod`
+file and clone the monorepo in your katzen checkout.
 
 ### Building without docker
 
-Make sure you have a working Go environment (Go 1.16 or higher is required; on
-Debian buster the backports repository can be used).
+Make sure you have a working Go environment (Go 1.19 or higher is required;
+on Debian bullseye the backports repository can be used).
 
-See the [install instructions](http://golang.org/doc/install.html).
+See the [golang install instructions](http://golang.org/doc/install.html).
 
 #### Installing golang (Debian Bullseye example)
 
@@ -54,22 +67,33 @@ See the [install instructions](http://golang.org/doc/install.html).
 
    go mod download && go mod verify
 
+####
+
+Before building be sure to set the environment variable `CGO_CFLAGS_ALLOW`:
+
+    export CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f"
+
 #### Build katzen
 
     go build -trimpath -ldflags=-buildid=
 
-# Cross-compilation dependencies for the arm64 architecture
+#### Cross-compilation dependencies for the arm64 architecture
 
     dpkg --add-architecture arm64 && apt update
     apt install --no-install-recommends crossbuild-essential-arm64 libgles2:arm64 libgles2-mesa-dev:arm64 libglib2.0-dev:arm64 libxkbcommon-dev libxkbcommon-x11-dev:arm64 libglu1-mesa-dev:arm64 libxcursor-dev:arm64 libwayland-dev:arm64 libx11-xcb-dev:arm64 libvulkan-dev:arm64
 
-#### Building for arm64
+#### Building for Linux on arm64
 
     CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags=-buildid=
 
 #### Building for Windows
 
-    GOOS=windows go build -trimpath -ldflags="-H windowsgui -buildid="
+Windows builds are currently broken, since the addition of libsphincsplus in
+late 2022, and they had not actually been tested recently prior to that (though
+they were building in CI under Linux). If you wish to try to solve this problem
+this is a place to start:
+
+    GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui -buildid=" -o katzen.exe
 
 #### Building for macOS (Intel), requires macOS and xcode
 
