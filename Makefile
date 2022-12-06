@@ -1,12 +1,14 @@
 docker := $(shell if which podman|grep -q .; then echo podman; else echo docker; fi)
+warped?=false
+ldflags=-buildid= -X github.com/katzenpost/katzenpost/core/epochtime.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/server/internal/pki.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/minclient/pki.WarpedEpoch=${warped}
 KEYSTORE := sign.keystore
 KEYPASS := password
 
 docker-build-linux: docker-go-mod
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags=-buildid='
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="${ldflags}"'
 
 docker-build-windows: docker-go-mod
-	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui -buildid=" -o katzen.exe'
+	$(docker) run --rm -v "$(shell readlink -f .)":/go/katzen/ katzen/go_mod bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
 
 docker-android-base:
 	if ! $(docker) images|grep katzen/android_sdk; then \
