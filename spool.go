@@ -20,6 +20,7 @@ type SpoolPage struct {
 	provider *layout.List
 	providerClicks map[string]*gesture.Click
 	connect  *widget.Clickable
+	settings *widget.Clickable
 	back     *widget.Clickable
 	submit   *widget.Clickable
 	once     *sync.Once
@@ -62,20 +63,27 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 						}
 						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)
 					}(),
-					//layout.Rigid(button(th, p.showSettings, settingsIcon).Layout),
+					layout.Rigid(button(th, p.settings, settingsIcon).Layout),
 					//layout.Rigid(button(th, p.addContact, addContactIcon).Layout),
 				)
 			}),
+			// Add a caption
+			layout.Rigid(func(gtx C) D {
+				if err == catshadow.ErrNotOnline {
+					return material.Body2(th, "Welcome to Katzen. Please connect to choose a message storage provider").Layout(gtx)
+				}
+				if isConnecting {
+					return material.Body2(th, "Connecting...").Layout(gtx)
+				}
+				return material.Body2(th, "Please choose a message storage provider").Layout(gtx)
+			}),
+
 			// show list of providers
 			layout.Flexed(1, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-				// Display some message if not online
-				if err == catshadow.ErrNotOnline {
-					if isConnecting {
-						return material.Body2(th, "Welcome to Katzen. Please stand by, connecting...").Layout(gtx)
-					} else {
-						return material.Body2(th, "Welcome to Katzen. Please connect to create place to store your messages").Layout(gtx)
-					}
+				// skip the provider list if there was an error
+				if err != nil {
+					return layout.Dimensions{}
 				}
 				return p.provider.Layout(gtx, len(providers), func(gtx C, i int) layout.Dimensions {
 					in := layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}
@@ -119,6 +127,9 @@ func (p *SpoolPage) Event(gtx layout.Context) interface{} {
 		}
 		return OfflineClick{}
 	}
+	if p.settings.Clicked() {
+		return ShowSettingsClick{}
+	}
 	for provider, click := range p.providerClicks {
 		for _, e := range click.Events(gtx.Queue) {
 			if e.Type == gesture.TypeClick {
@@ -135,6 +146,7 @@ func (p *SpoolPage) Event(gtx layout.Context) interface{} {
 	select {
 	case e := <-p.errCh:
 		if e == nil {
+			notify.Push("Success", "Katzen created a spool")
 			return BackEvent{}
 		} else {
 			notify.Push("Failure", e.Error())
@@ -151,6 +163,7 @@ func newSpoolPage(a *App) *SpoolPage {
 	p.provider = &layout.List{Axis: layout.Vertical}
 	p.back = &widget.Clickable{}
 	p.connect = &widget.Clickable{}
+	p.settings = &widget.Clickable{}
 	p.once = new(sync.Once)
 	p.errCh = make(chan error)
 	p.submit = &widget.Clickable{}
