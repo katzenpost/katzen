@@ -26,7 +26,7 @@ DataDir = "./testdata/"
   File = ""
 
 [Debug]
-  DisableDecoyTraffic = true
+  DisableDecoyTraffic = false
 
 #[NonvotingAuthority]
 #  Address = "127.0.0.1:29483"
