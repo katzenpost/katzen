@@ -108,7 +108,7 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 	// initialize default options
 	if state.Blob == nil {
 		state.Blob = make(map[string][]byte)
-		if hasTor() {
+		if hasTor() && len(*clientConfigFile) == 0 {
 			state.Blob["UseTor"] = []byte{1}
 			state.Blob["AutoConnect"] = []byte{1}
 		}
@@ -119,6 +119,7 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 		if len(*clientConfigFile) != 0 {
 			// a user-supplied configuration file was specified
 			if cfg.UpstreamProxy.Type != "socks5" {
+				state.Blob["UseTor"] = []byte{0}
 				result <- errors.New("User supplied configuration and client settings mismatch! UseTor option selected without valid UpstreamProxy!")
 				return
 			}
