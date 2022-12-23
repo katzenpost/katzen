@@ -10,7 +10,8 @@
 
 [Debug]
   PollingInterval = 1000
-  DisableDecoyTraffic = true
+  DisableDecoyTraffic = false
+  PreferedTransports = [ "onion" ]
 [VotingAuthority]
   [[VotingAuthority.Peers]]
 # annares
