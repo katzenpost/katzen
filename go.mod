@@ -11,7 +11,7 @@ require (
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.18-0.20221222201539-9da4dc24f641
+	github.com/katzenpost/katzenpost v0.0.18-0.20221223142819-3ced03e06378
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
@@ -24,8 +24,7 @@ require (
 	gioui.org/cpu v0.0.0-20220307141130-bd82e69a82aa // indirect
 	gioui.org/shader v1.0.6 // indirect
 	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect
-	github.com/BurntSushi/toml v1.0.0 // indirect
-	github.com/akavel/rsrc v0.10.1 // indirect
+	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/awnumar/memcall v0.1.2 // indirect
 	github.com/awnumar/memguard v0.22.2 // indirect
 	github.com/benoitkugler/textlayout v0.1.3 // indirect
