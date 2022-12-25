@@ -3,6 +3,7 @@ FROM docker.io/golang:bullseye AS builder
 LABEL authors="Masala: masala@riseup.net"
 
 # Install build requirements and JDK
+RUN echo 'deb https://deb.debian.org/debian bullseye main\ndeb https://deb.debian.org/debian bullseye-updates main\ndeb https://deb.debian.org/debian-security bullseye-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list
 RUN apt update \
 && apt install --no-install-recommends -y git make ca-certificates \
 openjdk-11-jdk openjdk-11-jre-headless build-essential libgles2 \
