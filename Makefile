@@ -12,7 +12,7 @@ docker-build-windows: docker-go-mod
 
 docker-android-base:
 	if ! $(docker) images|grep katzen/android_sdk; then \
-		$(docker) build --no-cache -t katzen/android_sdk -f Dockerfile.android .; \
+		$(docker) build -t katzen/android_sdk -f Dockerfile.android .; \
 	fi
 
 android-signing-key: docker-android-base
