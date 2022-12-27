@@ -11,7 +11,7 @@ require (
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.18-0.20221225183722-d0d823d2586e
+	github.com/katzenpost/katzenpost v0.0.18
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
@@ -49,6 +49,7 @@ require (
 	gitlab.com/yawning/aez.git v0.0.0-20211027044916-e49e68abd344 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
 	gitlab.com/yawning/slice.git v0.0.0-20190714152416-bc4ae2510529 // indirect
+	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
