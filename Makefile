@@ -6,10 +6,10 @@ KEYPASS := password
 docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ -v $(shell pwd)/go_package_cache:/go/pkg
 
 docker-build-linux: docker-debian-base
-	$(docker) $(docker_run_cmd) katzen/go_mod bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="${ldflags}"'
+	$(docker) $(docker_run_cmd) katzen/debian_base bash -c 'cd /go/katzen/; CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="${ldflags}"'
 
 docker-build-windows: docker-debian-base
-	$(docker) $(docker_run_cmd) katzen/go_mod bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
+	$(docker) $(docker_run_cmd) katzen/debian_base bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f" go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
 
 docker-android-base:
 	if ! $(docker) images|grep katzen/android_sdk; then \
