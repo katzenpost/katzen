@@ -4,11 +4,6 @@ jobs:
   build_linux:
     runs-on: ubuntu-22.04
     steps:
-      - name: Install Build dependencies
-        run: |
-          sudo apt update
-          sudo apt install --no-install-recommends -y make podman
-
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -21,14 +16,24 @@ jobs:
           name: katzen
           path: ./katzen
 
+  build_alpine_linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build for linux (alpine)
+        run: make distro=alpine docker-build-linux
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: katzen.alpine
+          path: ./katzen
+
   build_windows:
     runs-on: ubuntu-22.04
     steps:
-      - name: Install Build dependencies
-        run: |
-          sudo apt update
-          sudo apt install --no-install-recommends -y make podman
-
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -78,11 +83,6 @@ jobs:
   build_android:
     runs-on: ubuntu-22.04
     steps:
-      - name: Install podman
-        run: |
-          sudo apt update
-          sudo apt install --no-install-recommends podman make
-
       - name: Checkout code
         uses: actions/checkout@v3
 
