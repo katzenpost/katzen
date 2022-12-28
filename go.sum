@@ -80,8 +80,6 @@ github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 h1:BkX
 github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129/go.mod h1:moU3dWG1uk4xayUNdUPs2Q3dx2Zsk5i9Ysfx+ujQrwM=
 github.com/katzenpost/doubleratchet v0.0.13 h1:XKm142nPgp9o7QGbJHs8o6udDSAQaaZ1BZGm63fZz4Y=
 github.com/katzenpost/doubleratchet v0.0.13/go.mod h1:1btKAEHf4Af7xY/SCooy5xMKE8hYWxtfaAdvzMqwGz0=
-github.com/katzenpost/katzenpost v0.0.18-0.20221225183722-d0d823d2586e h1:SKw5q9/RmfV83VQKWOmFPNBZ4EsJnl+RKi80835DRFE=
-github.com/katzenpost/katzenpost v0.0.18-0.20221225183722-d0d823d2586e/go.mod h1:hus+Qj4T9PPkILG3rmLY9PQh6+Dt5HZ6A3Yx6W46BuY=
 github.com/katzenpost/katzenpost v0.0.18 h1:DulNcUJSO8+51suVSsE5S2YJ0pW40Oq2UrVMU5kE2Hs=
 github.com/katzenpost/katzenpost v0.0.18/go.mod h1:hus+Qj4T9PPkILG3rmLY9PQh6+Dt5HZ6A3Yx6W46BuY=
 github.com/katzenpost/noise v0.0.3 h1:bpYnozkk8j0XE1FAX9iRYgKtfIywuAINF+vMdBOidrM=
@@ -97,8 +95,8 @@ github.com/lucasb-eyer/go-colorful v1.0.3/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i
 github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-pointer v0.0.1 h1:n+XhsuGeVO6MEAp7xyEukFINEa+Quek5psIR/ylA6o0=
-github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a h1:QtOfvyU6v44Y1NepERLC1x0Fjrpxfdkw9YwjFaevmuM=
-github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a/go.mod h1:GN091SCcGAfHfQiSOetXx7Abdy+8nmONj0ZN63Xxf7w=
+github.com/mixmasala/gio v0.0.0-20221228203809-26bd44569a64 h1:HSGVNjCDylk3uc26e+mgbEmqLIgDxDkKk/AEe0+zXnc=
+github.com/mixmasala/gio v0.0.0-20221228203809-26bd44569a64/go.mod h1:GN091SCcGAfHfQiSOetXx7Abdy+8nmONj0ZN63Xxf7w=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
 github.com/oasislabs/deoxysii v0.0.0-20190807103041-6159f99c2236 h1:eTbRemVO4uAXU5RlqqQ/OiPtBcB3tBez28rV0JusKss=
