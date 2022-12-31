@@ -15,6 +15,7 @@
 [VotingAuthority]
   [[VotingAuthority.Peers]]
 # annares
+Identifier = "annares"
 Addresses = ["131.155.69.135:65534"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 /fjoRTnyDITTtD1ialtNWSzfTp9Vd47kEUa7sc3LM2I+PRgv+JbeuaLpEbJLfAoR
@@ -51,8 +52,10 @@ hm8ySnLAh52a0CsVDKFgYWY6MGJRupt0aiQXIzCZQUdgWsE6AnxHzBgHsAhemrhG
 -----END KYBER768-X25519 PUBLIC KEY-----
 """
 
+
   [[VotingAuthority.Peers]]
 # beeblebrox
+Identifier = "beeblebrox"
 Addresses = ["37.218.247.39:3333"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 sffL6SrX94zltrKWiCc1bxvgqPaKuCpUsErChV3bUEop4+YrTXDMgH3JzKemFBf8
@@ -91,6 +94,7 @@ VSZNStzaExhQ9wxg7HeRaQ==
 
   [[VotingAuthority.Peers]]
 # gnunet
+Identifier = "gnunet"
 Addresses = [ "131.159.74.69:65534", "[2001:4ca0:2001:42:225:90ff:fe6b:d60]:65534" ]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 jclECUIi0bp4f627W/T3q/bVZTV/zBYiT4Ry/9RlTpEr7ul+qPLGaHNbtPwH1kxD
@@ -130,6 +134,7 @@ feOstL0pARWr1YI6PonRbQ==
 
   [[VotingAuthority.Peers]]
 # marighella
+Identifier = "marighella"
 Addresses = [ "191.101.71.152:40000", "[2a02:4780:14:af58::1]:40000" ]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 cEAu8JISHrc9n45xz6vUkJfvPnf3LlzowA0pyc443q+TAWiB5+NaRgK42Y01hDiK
@@ -168,6 +173,7 @@ d7pNKav+/Mrl4pfWQT5/kSMNHI+m61VemmQ3HJ5HoSbROjoS4ndumaOAOnFFVUAl
 
   [[VotingAuthority.Peers]]
 # nutria
+Identifier = "nutria"
 Addresses = ["65.108.220.173:40000", "[2a01:4f9:c011:4e7b::1]:40000"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 TUchIOZ98fc7UABosstqDlRN7aRQtKk/NTeVkhoNdSI62g883BupqMBY2RafKJfS
@@ -206,6 +212,7 @@ xKymaSdIB5pbFkGCV1C0ew==
 
   [[VotingAuthority.Peers]]
 # windfall
+Identifier = "windfall"
 Addresses = ["74.50.67.182:40002"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 +oxlrZurSc3JD/eJsRmSabtFVsbFB/N1fSZSHTEajndgX/rGGZTCiBqMDqXC/qTS
@@ -241,3 +248,4 @@ EQQMNqHcB8Z61ya7aG6K9wHLlnNpF0ZPV8n4k0Sp1QmJGJYt7/HMTAIK/ZHtHoQf
 vkdQm1uuoKMh1qC6oRRsgQ==
 -----END KYBER768-X25519 PUBLIC KEY-----
 """
+
