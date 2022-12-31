@@ -25,7 +25,7 @@ $(KEYSTORE):
 	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "keytool -genkey -keystore $(KEYSTORE) -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"
 
 docker-build-android: go_package_cache docker-android-base $(KEYSTORE)
-	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "cd replace-gogio && go install gioui.org/cmd/gogio && cd .. && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
+	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "cd replace-gogio && go install gioui.org/cmd/gogio && cd .. && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base: go_package_cache
