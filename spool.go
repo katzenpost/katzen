@@ -133,6 +133,7 @@ func (p *SpoolPage) Event(gtx layout.Context) interface{} {
 	for provider, click := range p.providerClicks {
 		for _, e := range click.Events(gtx.Queue) {
 			if e.Type == gesture.TypeClick {
+				provider := provider // copy reference to provider
 				go p.once.Do(func() {
 					select{
 					case p.errCh <- p.a.c.CreateRemoteSpoolOn(provider):
