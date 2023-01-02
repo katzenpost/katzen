@@ -7,31 +7,31 @@ replace gioui.org => github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a
 replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328
 
 require (
-	gioui.org v0.0.0-20220628163331-e21c665e70ae
-	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
+	gioui.org v0.0.0-20230101161950-e9bce02b24f0
+	gioui.org/x v0.0.0-20221219202300-e2d994f107e4
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/katzenpost/katzenpost v0.0.20
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
-	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
+	golang.org/x/exp/shiny v0.0.0-20221230185412-738e83a70c30
+	golang.org/x/image v0.2.0
 )
 
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
-	gioui.org/cpu v0.0.0-20220307141130-bd82e69a82aa // indirect
+	gioui.org/cpu v0.0.0-20220412190645-f1e9e8c3b1f7 // indirect
 	gioui.org/shader v1.0.6 // indirect
 	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/awnumar/memcall v0.1.2 // indirect
 	github.com/awnumar/memguard v0.22.3 // indirect
-	github.com/benoitkugler/textlayout v0.1.3 // indirect
+	github.com/benoitkugler/textlayout v0.3.0 // indirect
 	github.com/cloudflare/circl v1.3.1 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/esiqveland/notify v0.11.0 // indirect
+	github.com/esiqveland/notify v0.11.2 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
 	github.com/gioui/uax v0.2.1-0.20220819135011-cda973fac06d // indirect
-	github.com/go-text/typesetting v0.0.0-20220411150340-35994bc27a7b // indirect
+	github.com/go-text/typesetting v0.0.0-20221219135543-5d0d724ee181 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
