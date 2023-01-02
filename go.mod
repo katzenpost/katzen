@@ -2,7 +2,7 @@ module github.com/katzenpost/katzen
 
 go 1.19
 
-replace gioui.org => github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a
+replace gioui.org => github.com/mixmasala/gio v0.0.0-20230102155156-079448b40f41
 
 replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328
 
@@ -30,8 +30,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/esiqveland/notify v0.11.2 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
-	github.com/gioui/uax v0.2.1-0.20220819135011-cda973fac06d // indirect
-	github.com/go-text/typesetting v0.0.0-20221219135543-5d0d724ee181 // indirect
+	github.com/go-text/typesetting v0.0.0-20221214201735-a0484d778a78 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -52,10 +51,10 @@ require (
 	gitlab.com/yawning/slice.git v0.0.0-20190714152416-bc4ae2510529 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
+	golang.org/x/exp v0.0.0-20221012211006-4de253d81b95 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/eapache/channels.v1 v1.1.0 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473 // indirect
