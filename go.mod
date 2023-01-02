@@ -44,6 +44,7 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/oasislabs/deoxysii v0.0.0-20190807103041-6159f99c2236 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/ugorji/go/codec v1.2.8 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	gitlab.com/yawning/aez.git v0.0.0-20211027044916-e49e68abd344 // indirect
