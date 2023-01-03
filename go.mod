@@ -11,7 +11,7 @@ require (
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.20
+	github.com/katzenpost/katzenpost v0.0.21-0.20230102233349-6eb96108e22e
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
