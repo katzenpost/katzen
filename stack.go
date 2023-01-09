@@ -125,6 +125,9 @@ func (s *pageStack) Pop() {
 		i := len(s.pages) - 1
 		s.pages[i] = nil
 		s.pages = s.pages[:i]
+		if len(s.pages) > 0 {
+			s.start()
+		}
 	}
 }
 
