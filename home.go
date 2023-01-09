@@ -26,6 +26,11 @@ var (
 	selectedIdx       = 0
 	kb                = false
 	connectIcon, _    = widget.NewIcon(icons.DeviceSignalWiFi4Bar)
+	connectIcon1, _   = widget.NewIcon(icons.DeviceSignalWiFi1Bar)
+	connectIcon2, _   = widget.NewIcon(icons.DeviceSignalWiFi2Bar)
+	connectIcon3, _   = widget.NewIcon(icons.DeviceSignalWiFi3Bar)
+	connectIcons      = []*widget.Icon{connectIcon1, connectIcon2, connectIcon3}
+	connectIconIdx    = 0
 	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
 	addContactIcon, _ = widget.NewIcon(icons.SocialPersonAdd)
@@ -97,6 +102,8 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 					func() layout.FlexChild {
 						if isConnected {
 							return layout.Rigid(button(th, p.connect, connectIcon).Layout)
+						} else if isConnecting {
+							return layout.Rigid(button(th, p.connect, connectIcons[connectIconIdx]).Layout)
 						}
 						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)
 					}(),
@@ -148,21 +155,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 											}),
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
-												layout.Rigid(func(gtx C) D {
-													if contacts[i].IsPending {
-														return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-												layout.Rigid(func(gtx C) D {
-													// timestamp
-													if lastMsg != nil {
-														messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
-														return material.Caption(th, messageAge).Layout(gtx)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-											)}),
+													layout.Rigid(func(gtx C) D {
+														if contacts[i].IsPending {
+															return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+													layout.Rigid(func(gtx C) D {
+														// timestamp
+														if lastMsg != nil {
+															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+															return material.Caption(th, messageAge).Layout(gtx)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+												)
+											}),
 										)
 									}),
 									// last message
@@ -323,6 +331,17 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 }
 
 func (p *HomePage) Start(stop <-chan struct{}) {
+	go func() {
+		for {
+			connectIconIdx = (connectIconIdx + 1) % len(connectIcons)
+			select {
+			case <-stop:
+				return
+			case <-time.After(time.Second):
+				p.a.w.Invalidate()
+			}
+		}
+	}()
 }
 
 func newHomePage(a *App) *HomePage {
