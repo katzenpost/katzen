@@ -12,7 +12,6 @@ import (
 	"image"
 	"sync"
 	"time"
-	//"gioui.org/widget/material"
 )
 
 type SpoolPage struct {
@@ -31,7 +30,9 @@ func (p *SpoolPage) Start(stop <-chan struct{}) {
 	// start a goroutine that redraws the page every second
 	go func() {
 		for {
+			connectIconLock.Lock()
 			connectIconIdx = (connectIconIdx + 1) % len(connectIcons)
+			connectIconLock.Unlock()
 			select {
 			case <-stop:
 				return
@@ -62,6 +63,8 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 						if isConnected {
 							return layout.Rigid(button(th, p.connect, connectIcon).Layout)
 						} else if isConnecting {
+							connectIconLock.Lock()
+							defer connectIconLock.Unlock()
 							return layout.Rigid(button(th, p.connect, connectIcons[connectIconIdx]).Layout)
 						}
 						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)

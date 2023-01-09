@@ -18,6 +18,7 @@ import (
 	"image"
 	"image/png"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,7 @@ var (
 	connectIcon3, _   = widget.NewIcon(icons.DeviceSignalWiFi3Bar)
 	connectIcons      = []*widget.Icon{connectIcon1, connectIcon2, connectIcon3}
 	connectIconIdx    = 0
+	connectIconLock   = new(sync.Mutex)
 	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
 	addContactIcon, _ = widget.NewIcon(icons.SocialPersonAdd)
@@ -103,6 +105,8 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 						if isConnected {
 							return layout.Rigid(button(th, p.connect, connectIcon).Layout)
 						} else if isConnecting {
+							connectIconLock.Lock()
+							defer connectIconLock.Unlock()
 							return layout.Rigid(button(th, p.connect, connectIcons[connectIconIdx]).Layout)
 						}
 						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)
@@ -333,7 +337,9 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 func (p *HomePage) Start(stop <-chan struct{}) {
 	go func() {
 		for {
+			connectIconLock.Lock()
 			connectIconIdx = (connectIconIdx + 1) % len(connectIcons)
+			connectIconLock.Unlock()
 			select {
 			case <-stop:
 				return
