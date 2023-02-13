@@ -38,7 +38,7 @@ require (
 	github.com/henrydcase/nobs v0.0.0-20210422124615-3a8ac85da11b // indirect
 	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
 	github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 // indirect
-	github.com/katzenpost/doubleratchet v0.0.14 // indirect
+	github.com/katzenpost/doubleratchet v0.0.15 // indirect
 	github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
