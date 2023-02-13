@@ -6,6 +6,8 @@ replace gioui.org => github.com/mixmasala/gio v0.0.0-20221110164814-c517124e183a
 
 replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328
 
+replace github.com/katzenpost/doubleratchet => github.com/katzenpost/doubleratchet v0.0.16-0.20230213202958-0d6afa8dced6
+
 require (
 	gioui.org v0.0.0-20220628163331-e21c665e70ae
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
@@ -38,7 +40,7 @@ require (
 	github.com/henrydcase/nobs v0.0.0-20210422124615-3a8ac85da11b // indirect
 	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
 	github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 // indirect
-	github.com/katzenpost/doubleratchet v0.0.14 // indirect
+	github.com/katzenpost/doubleratchet v0.0.15 // indirect
 	github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
