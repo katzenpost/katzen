@@ -72,6 +72,14 @@ github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 h1:BkX
 github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129/go.mod h1:moU3dWG1uk4xayUNdUPs2Q3dx2Zsk5i9Ysfx+ujQrwM=
 github.com/katzenpost/doubleratchet v0.0.14 h1:dbLUUbgK7ceOSQzUJOYxdfPR+5A5LKHUIjzh1cBTAIU=
 github.com/katzenpost/doubleratchet v0.0.14/go.mod h1:S/shjvsqWuDYwa/3ZsCcvkN1SdfVaNtBDZ4dx5mXUDI=
+github.com/katzenpost/doubleratchet v0.0.15 h1:8IqLfuWNCD1UiHrkCtni3Wc71RUeXyxRMdMoFjQaSn4=
+github.com/katzenpost/doubleratchet v0.0.15/go.mod h1:S/shjvsqWuDYwa/3ZsCcvkN1SdfVaNtBDZ4dx5mXUDI=
+github.com/katzenpost/katzenpost v0.0.18-0.20221225183722-d0d823d2586e h1:SKw5q9/RmfV83VQKWOmFPNBZ4EsJnl+RKi80835DRFE=
+github.com/katzenpost/katzenpost v0.0.18-0.20221225183722-d0d823d2586e/go.mod h1:hus+Qj4T9PPkILG3rmLY9PQh6+Dt5HZ6A3Yx6W46BuY=
+github.com/katzenpost/katzenpost v0.0.18 h1:DulNcUJSO8+51suVSsE5S2YJ0pW40Oq2UrVMU5kE2Hs=
+github.com/katzenpost/katzenpost v0.0.18/go.mod h1:hus+Qj4T9PPkILG3rmLY9PQh6+Dt5HZ6A3Yx6W46BuY=
+github.com/katzenpost/katzenpost v0.0.19 h1:Tfh1keIxmqbhYIgcxyRHDUyuUichyIXkhr5TbA4aUVM=
+github.com/katzenpost/katzenpost v0.0.19/go.mod h1:8X0/kOI0XxZUdE20wC9X/LuRyGXHH6Pe7enwLhrjZfA=
 github.com/katzenpost/katzenpost v0.0.20 h1:30LFmFnWYgVbCImd8MQMx5H3mY6H650bnoQI1kT5h2Q=
 github.com/katzenpost/katzenpost v0.0.20/go.mod h1:8X0/kOI0XxZUdE20wC9X/LuRyGXHH6Pe7enwLhrjZfA=
 github.com/katzenpost/noise v0.0.3 h1:bpYnozkk8j0XE1FAX9iRYgKtfIywuAINF+vMdBOidrM=
