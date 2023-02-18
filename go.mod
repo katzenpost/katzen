@@ -11,7 +11,7 @@ require (
 	gioui.org/x v0.0.0-20221219202300-e2d994f107e4
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.20
+	github.com/katzenpost/katzenpost v0.0.22-0.20230218125803-2cfa1c8021d8
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20221230185412-738e83a70c30
 	golang.org/x/image v0.2.0
