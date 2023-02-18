@@ -18,7 +18,6 @@ import (
 	"image"
 	"image/png"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -26,14 +25,6 @@ var (
 	contactList       = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
 	selectedIdx       = 0
 	kb                = false
-	connectIcon, _    = widget.NewIcon(icons.DeviceSignalWiFi4Bar)
-	connectIcon1, _   = widget.NewIcon(icons.DeviceSignalWiFi1Bar)
-	connectIcon2, _   = widget.NewIcon(icons.DeviceSignalWiFi2Bar)
-	connectIcon3, _   = widget.NewIcon(icons.DeviceSignalWiFi3Bar)
-	connectIcons      = []*widget.Icon{connectIcon1, connectIcon2, connectIcon3}
-	connectIconIdx    = 0
-	connectIconLock   = new(sync.Mutex)
-	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
 	addContactIcon, _ = widget.NewIcon(icons.SocialPersonAdd)
 	logo              = getLogo()
@@ -56,6 +47,7 @@ type HomePage struct {
 	a             *App
 	addContact    *widget.Clickable
 	connect       *widget.Clickable
+	connectIcon   *connectIcon
 	showSettings  *widget.Clickable
 	av            map[string]*widget.Image
 	contactClicks map[string]*gesture.Click
@@ -101,16 +93,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 					gtx,
 					layout.Rigid(layoutLogo),
 					layout.Flexed(1, fill{th.Bg}.Layout),
-					func() layout.FlexChild {
-						if isConnected {
-							return layout.Rigid(button(th, p.connect, connectIcon).Layout)
-						} else if isConnecting {
-							connectIconLock.Lock()
-							defer connectIconLock.Unlock()
-							return layout.Rigid(button(th, p.connect, connectIcons[connectIconIdx]).Layout)
-						}
-						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)
-					}(),
+					layout.Rigid(p.connectIcon.Layout),
 					layout.Rigid(button(th, p.showSettings, settingsIcon).Layout),
 					layout.Rigid(button(th, p.addContact, addContactIcon).Layout),
 				)
@@ -262,22 +245,14 @@ type ChooseContactClick struct {
 	nickname string
 }
 
-// Connect is the event that indicates client online mode is requested
-type OnlineClick struct {
-}
-
-// OfflineClick is the event that indicates client offline mode is requested
-type OfflineClick struct {
-	Err error
+// ConnectClick is the event that indicates connection button was clicked
+type ConnectClick struct {
 }
 
 // Event returns a ChooseContactClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
 	if p.connect.Clicked() {
-		if !isConnected && !isConnecting {
-			return OnlineClick{}
-		}
-		return OfflineClick{}
+		return ConnectClick{}
 	}
 	// listen for pointer right click events on the addContact widget
 	if p.addContact.Clicked() {
@@ -307,10 +282,7 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 				return ShowSettingsClick{}
 			}
 			if e.Name == key.NameF4 && e.State == key.Release {
-				if !isConnected {
-					return OnlineClick{}
-				}
-				return OfflineClick{}
+				return ConnectClick{}
 			}
 			if e.Name == key.NameUpArrow && e.State == key.Release {
 				kb = true
@@ -335,26 +307,16 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 }
 
 func (p *HomePage) Start(stop <-chan struct{}) {
-	go func() {
-		for {
-			connectIconLock.Lock()
-			connectIconIdx = (connectIconIdx + 1) % len(connectIcons)
-			connectIconLock.Unlock()
-			select {
-			case <-stop:
-				return
-			case <-time.After(time.Second):
-				p.a.w.Invalidate()
-			}
-		}
-	}()
+	p.connectIcon.Start(stop)
 }
 
 func newHomePage(a *App) *HomePage {
+	cl := &widget.Clickable{}
 	return &HomePage{
 		a:             a,
 		addContact:    &widget.Clickable{},
-		connect:       &widget.Clickable{},
+		connect:       cl,
+		connectIcon:   NewConnectIcon(a, th, cl),
 		showSettings:  &widget.Clickable{},
 		contactClicks: make(map[string]*gesture.Click),
 		av:            make(map[string]*widget.Image),

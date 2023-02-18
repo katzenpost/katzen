@@ -56,9 +56,6 @@ var (
 		th.ContrastFg = rgb(0x77777777)
 		return th
 	}()
-
-	isConnected  bool
-	isConnecting bool
 )
 
 type App struct {
@@ -84,6 +81,17 @@ func (a *App) Layout(gtx layout.Context) {
 	a.stack.Current().Layout(gtx)
 }
 
+func (a *App) doConnectClick() {
+	switch a.c.Status() {
+	case catshadow.StateOnline:
+		a.c.Offline()
+	case catshadow.StateConnecting:
+		// ignore
+	case catshadow.StateOffline:
+		a.c.Online()
+	}
+}
+
 func (a *App) update(gtx layout.Context) {
 	page := a.stack.Current()
 	if e := page.Event(gtx); e != nil {
@@ -96,41 +104,17 @@ func (a *App) update(gtx layout.Context) {
 			p := newUnlockPage(e.result)
 			a.stack.Clear(p)
 		case unlockError:
-			isConnected = false
-			isConnecting = false
-			fmt.Printf("unlockError: %s\n", e.err)
 			a.stack.Clear(newSignInPage(a))
 		case restartClient:
-			isConnected = false
-			isConnecting = false
-			fmt.Printf("restartClient\n")
 			a.stack.Clear(newSignInPage(a))
 		case unlockSuccess:
 			// validate the statefile somehow
-			a.c = e.client
-			a.c.Start()
+			c := e.client
+			a.c = c
 			a.stack.Clear(newHomePage(a))
-			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
-				a.c.Online()
-				isConnecting = true
-				// if the client does not already have a spool
-				// descriptor, prompt to create one
-				spool := a.c.SpoolWriteDescriptor()
-				if spool == nil {
-					a.stack.Push(newSpoolPage(a))
-				}
-			}
-		case OfflineClick:
-			go a.c.Offline()
-			isConnected = false
-			isConnecting = false
-		case OnlineClick:
-			go a.c.Online()
-			isConnecting = true
-			spool := a.c.SpoolWriteDescriptor()
-			if spool == nil {
-				a.stack.Push(newSpoolPage(a))
-			}
+			go c.Start()
+		case ConnectClick:
+			go a.doConnectClick()
 		case ShowSettingsClick:
 			a.stack.Push(newSettingsPage(a))
 		case AddContactClick:
@@ -231,9 +215,7 @@ type (
 func (a *App) handleCatshadowEvent(e interface{}) error {
 	switch event := e.(type) {
 	case *client.ConnectionStatusEvent:
-		isConnecting = false
 		if event.IsConnected {
-			isConnected = true
 			go func() {
 				if n, err := notify.Push("Connected", "Katzen has connected"); err == nil {
 					<-time.After(notificationTimeout)
@@ -241,7 +223,6 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 				}
 			}()
 		} else {
-			isConnected = false
 			go func() {
 				if n, err := notify.Push("Disconnected", "Katzen has disconnected"); err == nil {
 					<-time.After(notificationTimeout)

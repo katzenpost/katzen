@@ -11,7 +11,6 @@ import (
 	"github.com/katzenpost/katzenpost/catshadow"
 	"image"
 	"sync"
-	"time"
 )
 
 type SpoolPage struct {
@@ -19,28 +18,18 @@ type SpoolPage struct {
 	provider       *layout.List
 	providerClicks map[string]*gesture.Click
 	connect        *widget.Clickable
-	settings       *widget.Clickable
-	back           *widget.Clickable
-	submit         *widget.Clickable
-	once           *sync.Once
-	errCh          chan error
+	connectIcon    *connectIcon
+
+	settings *widget.Clickable
+	back     *widget.Clickable
+	submit   *widget.Clickable
+	once     *sync.Once
+	errCh    chan error
 }
 
 func (p *SpoolPage) Start(stop <-chan struct{}) {
 	// start a goroutine that redraws the page every second
-	go func() {
-		for {
-			connectIconLock.Lock()
-			connectIconIdx = (connectIconIdx + 1) % len(connectIcons)
-			connectIconLock.Unlock()
-			select {
-			case <-stop:
-				return
-			case <-time.After(time.Second):
-				p.a.w.Invalidate()
-			}
-		}
-	}()
+	p.connectIcon.Start(stop)
 }
 
 func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
@@ -59,16 +48,7 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 					gtx,
 					layout.Rigid(layoutLogo),
 					layout.Flexed(1, fill{th.Bg}.Layout),
-					func() layout.FlexChild {
-						if isConnected {
-							return layout.Rigid(button(th, p.connect, connectIcon).Layout)
-						} else if isConnecting {
-							connectIconLock.Lock()
-							defer connectIconLock.Unlock()
-							return layout.Rigid(button(th, p.connect, connectIcons[connectIconIdx]).Layout)
-						}
-						return layout.Rigid(button(th, p.connect, disconnectIcon).Layout)
-					}(),
+					layout.Rigid(p.connectIcon.Layout),
 					layout.Rigid(button(th, p.settings, settingsIcon).Layout),
 					//layout.Rigid(button(th, p.addContact, addContactIcon).Layout),
 				)
@@ -78,7 +58,7 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 				if err == catshadow.ErrNotOnline {
 					return material.Body2(th, "Welcome to Katzen. Please connect to choose a message storage provider").Layout(gtx)
 				}
-				if isConnecting {
+				if p.a.c.Status() == catshadow.StateConnecting {
 					return material.Body2(th, "Connecting...").Layout(gtx)
 				}
 				return material.Body2(th, "Please choose a message storage provider").Layout(gtx)
@@ -128,10 +108,7 @@ func (p *SpoolPage) Event(gtx layout.Context) interface{} {
 		return BackEvent{}
 	}
 	if p.connect.Clicked() {
-		if !isConnected && !isConnecting {
-			return OnlineClick{}
-		}
-		return OfflineClick{}
+		return ConnectClick{}
 	}
 	if p.settings.Clicked() {
 		return ShowSettingsClick{}
@@ -170,6 +147,7 @@ func newSpoolPage(a *App) *SpoolPage {
 	p.provider = &layout.List{Axis: layout.Vertical}
 	p.back = &widget.Clickable{}
 	p.connect = &widget.Clickable{}
+	p.connectIcon = NewConnectIcon(a, th, p.connect)
 	p.settings = &widget.Clickable{}
 	p.once = new(sync.Once)
 	p.errCh = make(chan error)
