@@ -37,7 +37,7 @@ var (
 	dataDirName      = "katzen"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	stateFile        = flag.String("s", "statefile", "Path to the client state file.")
-	debug            = flag.Bool("d", false, "Enable golang debug service.")
+	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 
 	minPasswordLen = 5 // XXX pick something reasonable
 
@@ -199,9 +199,9 @@ func main() {
 	flag.Parse()
 	fmt.Println("Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.")
 
-	if *debug {
+	if *debug != 0{
 		go func() {
-			http.ListenAndServe("localhost:8080", nil)
+			http.ListenAndServe(fmt.Sprintf("localhost:%d", *debug), nil)
 		}()
 		runtime.SetMutexProfileFraction(1)
 		runtime.SetBlockProfileRate(1)
