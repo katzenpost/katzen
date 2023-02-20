@@ -4,6 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"image"
+	mrand "math/rand"
+	"runtime"
+	"sync"
+	"time"
+
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
 	"gioui.org/layout"
@@ -15,11 +21,9 @@ import (
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"github.com/katzenpost/katzenpost/stream"
 	qrcode "github.com/skip2/go-qrcode"
 	"golang.org/x/exp/shiny/materialdesign/icons"
-	"image"
-	mrand "math/rand"
-	"runtime"
 )
 
 // AddContactComplete is emitted when NewContact has been called
@@ -33,6 +37,57 @@ var (
 	submitIcon, _ = widget.NewIcon(icons.NavigationCheck)
 	cancelIcon, _ = widget.NewIcon(icons.NavigationCancel)
 )
+
+// Contact represents a conversion party
+type Contact struct {
+	sync.Mutex
+
+	// ID is the local unique contact ID.
+	ID uint64
+
+	// Nickname is also unique locally.
+	Nickname string
+
+	// IsPending is true if the key exchange has not been completed.
+	IsPending bool
+
+	/*
+		XXX: decide how long term identity should be constructed for this client
+		and what sort of end-to-end encryption should be used for each message
+		e.g. doubleratchet or else ?
+
+		we should also consider how the stream secret may be updated by protocol
+		messages - ie rekeying the stream so as to implement forward secrecy.
+
+		// An identity for this client
+		Identity sign.PublicKey
+		for establishing PQ
+		// KeyExchange is the serialised double ratchet key exchange we generated.
+		KeyExchange []byte
+
+		// Rratchet is the client's double ratchet for end to end encryption
+		Ratchet *ratchet.Ratchet
+	*/
+
+	// Stream is the reliable channel used to communicate with Contact
+	Stream *stream.Stream
+
+	// SharedSecret is the passphrase used to add the contact.
+	SharedSecret []byte
+
+	MessageExpiration time.Duration
+}
+
+// NewContact creates a new Contact
+func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
+	for {
+		id := uint64(rand.NewMath().Int63())
+		if _, ok := a.Contacts[id]; ok {
+			continue
+		}
+		return &Contact{ID: id, Nickname: nickname, SharedSecret: secret}, nil
+	}
+}
 
 // A contactal is a fractal and secret that represents a user identity
 type Contactal struct {

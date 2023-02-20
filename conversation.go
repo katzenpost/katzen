@@ -6,6 +6,7 @@ import (
 	"image"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"gioui.org/gesture"
@@ -29,6 +30,50 @@ var (
 	deliveredIcon, _ = widget.NewIcon(icons.ActionDoneAll)
 	pandaIcon, _     = widget.NewIcon(icons.ActionPets)
 )
+
+// Conversation holds a multiparty conversation
+type Conversation struct {
+	sync.Mutex
+
+	// Title is the string set to dispaly at header of conversation
+	Title string
+
+	// ID is the group identifier for this conversation to tag messages to/from
+	ID uint64
+
+	// Contacts are the contacts present in this conversation
+	Contacts []*Contact
+
+	// Messages are the messages in this conversation
+	Messages []*Message
+
+	// MessageExpiration is the duration after which conversation history is cleared
+	MessageExpiration time.Duration
+}
+
+func (c *Conversation) Add(contactID uint64) error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Remove(contactID uint64) error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Destroy() error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Send(msg *Message) error {
+	c.Lock()
+	for _, c := range c.Contacts {
+		c.Send(msg)
+	}
+	panic("NotImplemented")
+	return nil
+}
 
 type conversationPage struct {
 	a              *App

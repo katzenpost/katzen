@@ -12,7 +12,6 @@ import (
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"github.com/katzenpost/katzenpost/core/worker"
-	"github.com/katzenpost/katzenpost/stream"
 	"time"
 
 	"gioui.org/app"
@@ -117,144 +116,10 @@ type Reunion struct {
 
 // TODO :Methods on Reunion that we want
 
-// MessageType indicates what type of Body is encoded by Message
-type MessageType uint8
-
-const (
-	Text MessageType = iota
-	Audio
-	Image
-	Attachment
-)
-
-// Message holds information
-type Message struct {
-	sync.Mutex
-
-	// Type is the type of Message
-	Type MessageType
-
-	// Conversation tag
-	Conversation uint64
-
-	// ID of the Message
-	ID uint64
-
-	// sender Contact.ID for this client
-	Sender uint64 `cbor:"-"`
-
-	// Sent is the sender timestamp
-	Sent time.Time
-
-	// Received is the reciver timestamp
-	Received time.Time `cbor:"-"`
-
-	// Acked is when the receiver acknowledged this message
-	Acked time.Time
-
-	// Body is the message body
-	Body []byte
-}
-
-// Conversation holds a multiparty conversation
-type Conversation struct {
-	sync.Mutex
-
-	// Title is the string set to dispaly at header of conversation
-	Title string
-
-	// ID is the group identifier for this conversation to tag messages to/from
-	ID uint64
-
-	// Contacts are the contacts present in this conversation
-	Contacts []*Contact
-
-	// Messages are the messages in this conversation
-	Messages []*Message
-
-	// MessageExpiration is the duration after which conversation history is cleared
-	MessageExpiration time.Duration
-}
-
-func (c *Conversation) Add(contactID uint64) error {
-	panic("NotImplemented")
-	return nil
-}
-
-func (c *Conversation) Remove(contactID uint64) error {
-	panic("NotImplemented")
-	return nil
-}
-
-func (c *Conversation) Destroy() error {
-	panic("NotImplemented")
-	return nil
-}
-
-func (c *Conversation) Send(msg *Message) error {
-	c.Lock()
-	for _, c := range c.Contacts {
-		c.Send(msg)
-	}
-	panic("NotImplemented")
-	return nil
-}
-
 // Methods on Conversation that we want
 // Remove(contactID uint64)
 // Add(contactID uint64)
 // Destroy() // purge *Message sent to this Conversation
-
-// Contact represents a conversion party
-type Contact struct {
-	sync.Mutex
-
-	// ID is the local unique contact ID.
-	ID uint64
-
-	// Nickname is also unique locally.
-	Nickname string
-
-	// IsPending is true if the key exchange has not been completed.
-	IsPending bool
-
-	/*
-		XXX: decide how long term identity should be constructed for this client
-		and what sort of end-to-end encryption should be used for each message
-		e.g. doubleratchet or else ?
-
-		we should also consider how the stream secret may be updated by protocol
-		messages - ie rekeying the stream so as to implement forward secrecy.
-
-		// An identity for this client
-		Identity sign.PublicKey
-		for establishing PQ
-		// KeyExchange is the serialised double ratchet key exchange we generated.
-		KeyExchange []byte
-
-		// Rratchet is the client's double ratchet for end to end encryption
-		Ratchet *ratchet.Ratchet
-	*/
-
-	// Stream is the reliable channel used to communicate with Contact
-	Stream *stream.Stream
-
-	// SharedSecret is the passphrase used to add the contact.
-	SharedSecret []byte
-
-	MessageExpiration time.Duration
-}
-
-// NewContact creates a new Contact
-func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
-	for {
-		id := uint64(rand.NewMath().Int63())
-		if _, ok := a.Contacts[id]; ok {
-			continue
-		}
-		return &Contact{ID: id, Nickname: nickname, SharedSecret: secret}, nil
-	}
-}
 
 func (a *App) NewConversation(id uint64) (*Conversation, error) {
 	contact, ok := a.Contacts[id]
