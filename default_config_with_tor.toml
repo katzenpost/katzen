@@ -5,7 +5,7 @@
 
 [Logging]
   Disable = false
-  Level = "NOTICE"
+  Level = "DEBUG"
   File = ""
 
 [Debug]

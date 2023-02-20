@@ -1,15 +1,91 @@
 package main
 
 import (
+	"context"
+	"sync"
+	"time"
+
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/katzenpost/katzenpost/catshadow"
+	"github.com/katzenpost/katzenpost/client"
 	"golang.org/x/exp/shiny/materialdesign/icons"
-	"sync"
-	"time"
 )
+
+type ConnectedState uint8
+
+const (
+	StateOffline ConnectedState = iota
+	StateConnecting
+	StateOnline
+)
+
+func (a *App) Status() ConnectedState {
+	a.Lock()
+	defer a.Unlock()
+	return a.state
+}
+
+func (a *App) doConnectClick() {
+	a.Lock()
+	switch a.state {
+	case StateOffline:
+	case StateConnecting:
+		a.cancelConn()
+		a.Unlock()
+		return
+	case StateOnline:
+		// iterate over all sessions held by client and teardown
+		// Note, we currently only make one session
+		// but client will support making multiple sessions to different entry nodes
+		a.state = StateOffline
+		a.Unlock()
+		for s := a.c.Session(); s != nil; {
+			s.Shutdown()
+		}
+		return
+	}
+	a.Unlock()
+
+	a.connectOnce.Do(func() {
+		// set state connecting ??
+		ctx, cancel := context.WithTimeout(context.Background(), initialPKIConsensusTimeout)
+		defer cancel()
+		a.Lock()
+		a.state = StateConnecting
+		a.cancelConn = cancel
+		a.Unlock()
+		time.After(5 * time.Second)
+		s, err := a.c.NewTOFUSession(ctx)
+		if err != nil {
+			a.Lock()
+			a.state = StateOffline
+			a.connectOnce = new(sync.Once)
+			a.cancelConn = nil
+			a.Unlock()
+			return
+		}
+		// start worker routine to consume events from this session
+		a.Go(func() { a.eventSinkWorker(s) })
+		err = s.WaitForDocument(ctx)
+
+		// failed to bootstrap before timeout; teardown
+		if err != nil {
+			s.Shutdown()
+			a.Lock()
+			a.state = StateOffline
+			a.cancelConn = nil
+			a.connectOnce = new(sync.Once)
+			a.Unlock()
+			return
+		}
+
+		a.Lock()
+		a.state = StateOnline
+		a.Unlock()
+	})
+}
 
 type connectIcon struct {
 	sync.Mutex
@@ -53,14 +129,14 @@ func (i *connectIcon) Start(stop <-chan struct{}) {
 				return
 			case <-time.After(i.interval):
 				i.Lock()
-				switch i.a.c.Status() {
-				case catshadow.StateOnline:
-					i.current = i.connected
-				case catshadow.StateConnecting:
+				switch i.a.Status() {
+				case StateOffline:
+					i.current = i.disconnected
+				case StateConnecting:
 					i.current = i.connecting[i.connectingIdx]
 					i.connectingIdx = (i.connectingIdx + 1) % numIcons
-				case catshadow.StateOffline:
-					i.current = i.disconnected
+				case StateOnline:
+					i.current = i.connected
 				}
 				i.Unlock()
 				i.a.w.Invalidate() // redraw
@@ -103,7 +179,7 @@ type connectError struct {
 }
 
 type connectSuccess struct {
-	client *catshadow.Client
+	client *client.Client
 }
 
 func (p *connectingPage) Event(gtx layout.Context) interface{} {
@@ -112,7 +188,7 @@ func (p *connectingPage) Event(gtx layout.Context) interface{} {
 		switch r := r.(type) {
 		case error:
 			return connectError{err: r}
-		case *catshadow.Client:
+		case *client.Client:
 			return connectSuccess{client: r}
 		}
 	default:

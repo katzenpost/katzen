@@ -3,7 +3,7 @@ package main
 import (
 	"gioui.org/layout"
 	"gioui.org/widget/material"
-	"github.com/katzenpost/katzenpost/catshadow"
+	"github.com/katzenpost/katzenpost/client"
 )
 
 type unlockPage struct {
@@ -29,7 +29,7 @@ type unlockError struct {
 }
 
 type unlockSuccess struct {
-	client *catshadow.Client
+	client *client.Client
 }
 
 func (p *unlockPage) Event(gtx layout.Context) interface{} {
@@ -38,7 +38,7 @@ func (p *unlockPage) Event(gtx layout.Context) interface{} {
 		switch r := r.(type) {
 		case error:
 			return unlockError{err: r}
-		case *catshadow.Client:
+		case *client.Client:
 			return unlockSuccess{client: r}
 		}
 	default:

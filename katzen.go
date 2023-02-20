@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 
-	"github.com/katzenpost/katzenpost/catshadow"
 	"github.com/katzenpost/katzenpost/client"
+	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"github.com/katzenpost/katzenpost/core/worker"
+	"github.com/katzenpost/katzenpost/stream"
 	"time"
 
 	"gioui.org/app"
@@ -33,9 +36,9 @@ const (
 )
 
 var (
-	dataDirName      = "catshadow"
+	dataDirName      = "katzen"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
-	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
+	stateFile        = flag.String("s", "statefile", "Path to the client state file.")
 	debug            = flag.Bool("d", false, "Enable golang debug service.")
 
 	minPasswordLen = 5 // XXX pick something reasonable
@@ -58,7 +61,16 @@ var (
 	}()
 )
 
+// Store is the interface for reading and writing saved state
+type Store interface {
+	Get([]byte) ([]byte, error)
+	Put([]byte, []byte) error
+}
+
 type App struct {
+	sync.Mutex
+	worker.Worker
+
 	endBg func()
 	w     *app.Window
 	ops   *op.Ops
@@ -74,12 +86,210 @@ type App struct {
 	stack pageStack
 	focus bool
 	stage system.Stage
+
+	connectOnce *sync.Once
+
+	db Store
+}
+
+func (a *App) eventSinkWorker(s *client.Session) {
+	for {
+		select {
+		case <-s.HaltCh(): // session is halted
+			return
+		case <-a.HaltCh(): // client is halted
+			return
+		case e := <-s.EventSink:
+			err := a.handleClientEvent(e)
+			if err != nil {
+				return
+			}
+		}
+	}
+}
+
+// Reunion holds the informtaion for a Reunion protocol
+type Reunion struct {
+	// TODO other parts of state we must serialize / deserialize
+	Secret []byte
+	Epoch  []byte
+}
+
+// TODO :Methods on Reunion that we want
+
+// MessageType indicates what type of Body is encoded by Message
+type MessageType uint8
+
+const (
+	Text MessageType = iota
+	Audio
+	Image
+	Attachment
+)
+
+// Message holds information
+type Message struct {
+	sync.Mutex
+
+	// Type is the type of Message
+	Type MessageType
+
+	// Conversation tag
+	Conversation uint64
+
+	// ID of the Message
+	ID uint64
+
+	// sender Contact.ID for this client
+	Sender uint64 `cbor:"-"`
+
+	// Sent is the sender timestamp
+	Sent time.Time
+
+	// Received is the reciver timestamp
+	Received time.Time `cbor:"-"`
+
+	// Acked is when the receiver acknowledged this message
+	Acked time.Time
+
+	// Body is the message body
+	Body []byte
+}
+
+// Conversation holds a multiparty conversation
+type Conversation struct {
+	sync.Mutex
+
+	// Title is the string set to dispaly at header of conversation
+	Title string
+
+	// ID is the group identifier for this conversation to tag messages to/from
+	ID uint64
+
+	// Contacts are the contacts present in this conversation
+	Contacts []*Contact
+
+	// Messages are the messages in this conversation
+	Messages []*Message
+
+	// MessageExpiration is the duration after which conversation history is cleared
+	MessageExpiration time.Duration
+}
+
+func (c *Conversation) Add(contactID uint64) error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Remove(contactID uint64) error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Destroy() error {
+	panic("NotImplemented")
+	return nil
+}
+
+func (c *Conversation) Send(msg *Message) error {
+	c.Lock()
+	for _, c := range c.Contacts {
+		c.Send(msg)
+	}
+	panic("NotImplemented")
+	return nil
+}
+
+// Methods on Conversation that we want
+// Remove(contactID uint64)
+// Add(contactID uint64)
+// Destroy() // purge *Message sent to this Conversation
+
+// Contact represents a conversion party
+type Contact struct {
+	sync.Mutex
+
+	// ID is the local unique contact ID.
+	ID uint64
+
+	// Nickname is also unique locally.
+	Nickname string
+
+	// IsPending is true if the key exchange has not been completed.
+	IsPending bool
+
+	/*
+		XXX: decide how long term identity should be constructed for this client
+		and what sort of end-to-end encryption should be used for each message
+		e.g. doubleratchet or else ?
+
+		we should also consider how the stream secret may be updated by protocol
+		messages - ie rekeying the stream so as to implement forward secrecy.
+
+		// An identity for this client
+		Identity sign.PublicKey
+		for establishing PQ
+		// KeyExchange is the serialised double ratchet key exchange we generated.
+		KeyExchange []byte
+
+		// Rratchet is the client's double ratchet for end to end encryption
+		Ratchet *ratchet.Ratchet
+	*/
+
+	// Stream is the reliable channel used to communicate with Contact
+	Stream *stream.Stream
+
+	// SharedSecret is the passphrase used to add the contact.
+	SharedSecret []byte
+
+	MessageExpiration time.Duration
+}
+
+// NewContact creates a new Contact
+func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
+	for {
+		id := uint64(rand.NewMath().Int63())
+		if _, ok := a.Contacts[id]; ok {
+			continue
+		}
+		return &Contact{ID: id, Nickname: nickname, SharedSecret: secret}, nil
+	}
+}
+
+func (a *App) NewConversation(id uint64) (*Conversation, error) {
+	contact, ok := a.Contacts[id]
+	if !ok {
+		return nil, errors.New("No such contact")
+	}
+	for {
+		id = uint64(rand.NewMath().Int63())
+		if _, ok := a.Conversations[id]; ok {
+			continue
+		}
+	}
+
+	conv := &Conversation{ID: id, Title: "Chat with" + contact.Nickname, Contacts: []*Contact{contact}}
+	return conv, nil
+}
+
+// Send a Message to Contact
+func (c *Contact) Send(msg *Message) error {
+	panic("NotImplemented")
+	return nil
 }
 
 func newApp(w *app.Window) *App {
 	a := &App{
-		w:   w,
-		ops: &op.Ops{},
+		Contacts:      make(map[uint64]*Contact),
+		Conversations: make(map[uint64]*Conversation),
+		Settings:      make(map[string]interface{}),
+		w:             w,
+		ops:           &op.Ops{},
+		connectOnce:   new(sync.Once),
+	}
+	// XXX we dont serialize anything to disk yet
+	if hasTor() {
+		a.Settings["UseTor"] = true
 	}
 	return a
 }
@@ -109,7 +319,6 @@ func (a *App) update(gtx layout.Context) {
 			c := e.client
 			a.c = c
 			a.stack.Clear(newHomePage(a))
-			go c.Start()
 		case ConnectClick:
 			go a.doConnectClick()
 		case ShowSettingsClick:
@@ -137,16 +346,7 @@ func (a *App) update(gtx layout.Context) {
 }
 
 func (a *App) run() error {
-	// only read window events until client is established
-	for {
-		if a.c != nil {
-			break
-		}
-		e := <-a.w.Events()
-		if err := a.handleGioEvents(e); err != nil {
-			return err
-		}
-	}
+	// teardown client at exit for any reason
 	defer func() {
 		if a.c != nil {
 			a.c.Shutdown()
@@ -154,13 +354,8 @@ func (a *App) run() error {
 		}
 	}()
 
-	// select from all event sources
 	for {
 		select {
-		case e := <-a.c.EventSink:
-			if err := a.handleCatshadowEvent(e); err != nil {
-				return err
-			}
 		case e := <-a.w.Events():
 			if err := a.handleGioEvents(e); err != nil {
 				return err
@@ -209,74 +404,16 @@ type (
 	D = layout.Dimensions
 )
 
-func (a *App) handleCatshadowEvent(e interface{}) error {
-	switch event := e.(type) {
-	case *client.ConnectionStatusEvent:
-		if event.IsConnected {
-			go func() {
-				if n, err := notify.Push("Connected", "Katzen has connected"); err == nil {
-					<-time.After(notificationTimeout)
-					n.Cancel()
-				}
-			}()
-		} else {
-			go func() {
-				if n, err := notify.Push("Disconnected", "Katzen has disconnected"); err == nil {
-					<-time.After(notificationTimeout)
-					n.Cancel()
-				}
-			}()
-		}
-		if event.Err != nil {
-			go func() {
-				if n, err := notify.Push("Error", fmt.Sprintf("Katzen error: %s", event.Err)); err == nil {
-					<-time.After(notificationTimeout)
-					n.Cancel()
-				}
-			}()
-		}
-	case *catshadow.KeyExchangeCompletedEvent:
-		if event.Err != nil {
-			if n, err := notify.Push("Key Exchange", fmt.Sprintf("Failed: %s", event.Err)); err == nil {
-				go func() { <-time.After(notificationTimeout); n.Cancel() }()
-			}
-		} else {
-			if n, err := notify.Push("Key Exchange", fmt.Sprintf("Completed: %s", event.Nickname)); err == nil {
-				go func() { <-time.After(notificationTimeout); n.Cancel() }()
-			}
-		}
-	case *catshadow.MessageNotSentEvent:
-		if n, err := notify.Push("Message Not Sent", fmt.Sprintf("Failed to send message to %s", event.Nickname)); err == nil {
-			go func() { <-time.After(notificationTimeout); n.Cancel() }()
-		}
-	case *catshadow.MessageReceivedEvent:
-		// do not notify for the focused conversation
-		p := a.stack.Current()
-		switch p := p.(type) {
-		case *conversationPage:
-			// XXX: on android, input focus is not lost when the application does not have foreground
-			// but system.Stage is changed. On desktop linux, the stage does not change, but window focus is lost.
-			if p.nickname == event.Nickname && a.stage == system.StageRunning && a.focus {
-				a.w.Invalidate()
-				return nil
-			}
-		}
-		// emit a notification in all other cases
-		if n, err := notify.Push("Message Received", fmt.Sprintf("Message Received from %s", event.Nickname)); err == nil {
-			if o, ok := notifications[event.Nickname]; ok {
-				// cancel old notification before replacing with a new one
-				o.Cancel()
-			}
-			notifications[event.Nickname] = n
-		}
-	case *catshadow.MessageSentEvent:
-	case *catshadow.MessageDeliveredEvent:
+func (a *App) handleClientEvent(e interface{}) error {
+	switch e := e.(type) {
+	case client.ConnectionStatusEvent:
+	case client.MessageReplyEvent:
+	case client.MessageSentEvent:
+	case client.MessageIDGarbageCollected:
+	case client.NewDocumentEvent:
 	default:
-		// do not invalidate window for events we do not care about
-		return nil
+		panic(e)
 	}
-	// redraw the screen when an event we care about is received
-	a.w.Invalidate()
 	return nil
 }
 

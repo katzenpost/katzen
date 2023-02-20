@@ -13,7 +13,7 @@ import (
 	"golang.org/x/image/draw"
 	"image"
 	_ "image/jpeg"
-	"image/png"
+	_ "image/png"
 	"io/ioutil"
 	"os"
 	"path/filepath"

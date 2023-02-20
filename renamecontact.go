@@ -39,7 +39,7 @@ func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
 	})
 }
 
-// Event catches the widget submit events and calls catshadow.NewContact
+// Event catches the widget submit events and calls NewContact
 func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 	if p.back.Clicked() {
 		return BackEvent{}

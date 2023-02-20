@@ -82,21 +82,21 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 	if p.switchUseTor.Changed() {
 		if p.switchUseTor.Value && !hasTor() {
 			p.switchUseTor.Value = false
-			p.a.c.DeleteBlob("UseTor")
+			p.a.Settings["UseTor"] = false
 			warnNoTor()
 			return nil
 		}
 		if p.switchUseTor.Value {
-			p.a.c.AddBlob("UseTor", []byte{1})
+			p.a.Settings["UseTor"] = true
 		} else {
-			p.a.c.DeleteBlob("UseTor")
+			delete(p.a.Settings, "UseTor")
 		}
 	}
 	if p.switchAutoConnect.Changed() {
 		if p.switchAutoConnect.Value {
-			p.a.c.AddBlob("AutoConnect", []byte{1})
+			p.a.Settings["AutoConnect"] = true
 		} else {
-			p.a.c.DeleteBlob("AutoConnect")
+			delete(p.a.Settings, "AutoConnect")
 		}
 	}
 	if p.submit.Clicked() {
@@ -119,12 +119,12 @@ func newSettingsPage(a *App) *SettingsPage {
 	p := &SettingsPage{a: a}
 	p.back = &widget.Clickable{}
 	p.submit = &widget.Clickable{}
-	if _, err := a.c.GetBlob("UseTor"); err == nil {
+	if _, ok := a.Settings["UseTor"]; ok {
 		p.switchUseTor = &widget.Bool{Value: true}
 	} else {
 		p.switchUseTor = &widget.Bool{Value: false}
 	}
-	if _, err := a.c.GetBlob("AutoConnect"); err == nil {
+	if _, ok := a.Settings["AutoConnect"]; ok {
 		p.switchAutoConnect = &widget.Bool{Value: true}
 	} else {
 		p.switchAutoConnect = &widget.Bool{Value: false}

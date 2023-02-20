@@ -13,23 +13,24 @@ import (
 	"gioui.org/widget/material"
 	"github.com/hako/durafmt"
 	"github.com/katzenpost/katzen/assets"
-	"github.com/katzenpost/katzenpost/catshadow"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
-	"image/png"
+	_ "image/png"
+	"sort"
 	"strings"
 	"time"
 )
 
 var (
-	contactList       = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
+	convoList         = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
+	sorted            = []*Conversation{}
 	selectedIdx       = 0
 	kb                = false
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
 	addContactIcon, _ = widget.NewIcon(icons.SocialPersonAdd)
 	logo              = getLogo()
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
-	avatars           = make(map[string]layout.Widget)
+	avatars           = make(map[uint64]layout.Widget)
 	shortcuts         = key.Set(key.NameUpArrow + "|" +
 		key.NameDownArrow + "|" +
 		key.NamePageUp + "|" +
@@ -43,49 +44,99 @@ var (
 		key.NameF5) // edit contact
 )
 
+type sortedConvos []*Conversation
+
+func (s sortedConvos) Less(i, j int) bool {
+	// sorts conversations by most-recent-first, followed by conversations
+	// without messages by title alphabetically
+
+	li := len(s[i].Messages)
+	lj := len(s[j].Messages)
+
+	if li == 0 && lj == 0 {
+		return s[i].Title < s[j].Title
+	} else if li == 0 {
+		return false
+	} else if lj == 0 {
+		return true
+	} else {
+		var its, jts time.Time
+		if !s[i].Messages[li-1].Sent.IsZero() {
+			its = s[i].Messages[li-1].Sent
+		} else {
+			its = s[i].Messages[li-1].Received
+		}
+		if !s[j].Messages[lj-1].Sent.IsZero() {
+			jts = s[j].Messages[lj-1].Sent
+		} else {
+			jts = s[j].Messages[lj-1].Received
+		}
+		return its.After(jts)
+	}
+}
+
+func (s sortedConvos) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s sortedConvos) Len() int {
+	return len(s)
+}
+
+func getSortedConvos(a *App) (convos sortedConvos) {
+	if a.c == nil {
+		return
+	}
+
+	// returns map[string]*Contact
+	for _, convo := range a.Conversations {
+		convos = append(convos, convo)
+	}
+	sort.Sort(convos)
+	return
+}
+
 type HomePage struct {
-	a             *App
-	addContact    *widget.Clickable
-	connect       *widget.Clickable
-	connectIcon   *connectIcon
-	showSettings  *widget.Clickable
-	av            map[string]*widget.Image
-	contactClicks map[string]*gesture.Click
+	a            *App
+	addContact   *widget.Clickable
+	connect      *widget.Clickable
+	connectIcon  *connectIcon
+	showSettings *widget.Clickable
+	convoClicks  map[uint64]*gesture.Click
 }
 
 type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	contacts := getSortedContacts(p.a)
+	sorted = getSortedConvos(p.a)
 	// xxx do not request this every frame...
 	bg := Background{
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
 
-	if len(contacts) == 0 {
+	if len(sorted) == 0 {
 		selectedIdx = 0
 	} else if selectedIdx < 0 {
-		selectedIdx = len(contacts) - 1
+		selectedIdx = len(sorted) - 1
 	} else {
-		selectedIdx = selectedIdx % len(contacts)
+		selectedIdx = selectedIdx % len(sorted)
 	}
 
 	// re-center list view for keyboard contact selection
 	if kb {
-		if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
+		if selectedIdx < convoList.Position.First || selectedIdx >= convoList.Position.First+convoList.Position.Count {
 			// list doesn't wrap around view to end, so do not give negative value for First
-			if selectedIdx < contactList.Position.Count-1 {
-				contactList.Position.First = 0
+			if selectedIdx < convoList.Position.Count-1 {
+				convoList.Position.First = 0
 			} else {
-				contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
+				convoList.Position.First = (selectedIdx - convoList.Position.Count + 1)
 			}
 		}
 	}
 
 	return bg.Layout(gtx, func(gtx C) D {
-		// returns a flex consisting of the contacts list and add contact button
+		// returns a flex consisting of the conversation list and add contact button
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
 			// topbar: Name, Add Contact, Settings
 			layout.Rigid(func(gtx C) D {
@@ -102,9 +153,13 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 			// show list of conversations
 			layout.Flexed(1, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-				// the contactList
-				return contactList.Layout(gtx, len(contacts), func(gtx C, i int) layout.Dimensions {
-					lastMsg := contacts[i].LastMessage
+				// the convoList
+				return convoList.Layout(gtx, len(sorted), func(gtx C, i int) layout.Dimensions {
+					lastMsg := sorted[i].Messages[len(sorted[i].Messages)-1]
+					lastTs := lastMsg.Sent
+					if !lastMsg.Received.IsZero() {
+						lastTs = lastMsg.Received
+					}
 
 					// inset each contact Flex
 					in := layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)}
@@ -119,39 +174,29 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 					return bg.Layout(gtx, func(gtx C) D {
 						// returns Flex of contact icon, contact name, and last message received or sent
-						if _, ok := p.contactClicks[contacts[i].Nickname]; !ok {
+						if _, ok := p.convoClicks[sorted[i].ID]; !ok {
 							c := new(gesture.Click)
-							p.contactClicks[contacts[i].Nickname] = c
+							p.convoClicks[sorted[i].ID] = c
 						}
 
 						dims := layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceEvenly}.Layout(gtx,
-							// contact avatar
-							layout.Rigid(func(gtx C) D {
-								return layoutAvatar(gtx, p.a.c, contacts[i].Nickname)
-							}),
-							// contact name and last message
+							// conversation name and last message
 							layout.Flexed(1, func(gtx C) D {
 								gtx.Constraints.Max.Y = gtx.Dp(unit.Dp(96))
 								return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceBetween}.Layout(gtx,
 									layout.Rigid(func(gtx C) D {
 										return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Start, Spacing: layout.SpaceBetween}.Layout(gtx,
-											// contact name
+											// conversation Title
 											layout.Rigid(func(gtx C) D {
 												in := layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(12), Right: unit.Dp(12)}
-												return in.Layout(gtx, ContactStyle(th, contacts[i].Nickname).Layout)
+												return in.Layout(gtx, ConvoStyle(th, sorted[i].Title).Layout)
 											}),
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
 													layout.Rigid(func(gtx C) D {
-														if contacts[i].IsPending {
-															return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
-														}
-														return fill{th.Bg}.Layout(gtx)
-													}),
-													layout.Rigid(func(gtx C) D {
 														// timestamp
 														if lastMsg != nil {
-															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastTs).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
 															return material.Caption(th, messageAge).Layout(gtx)
 														}
 														return fill{th.Bg}.Layout(gtx)
@@ -166,7 +211,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 										if lastMsg != nil {
 											return in.Layout(gtx, func(gtx C) D {
 												// TODO: set the color based on sent or received
-												return material.Body2(th, string(lastMsg.Plaintext)).Layout(gtx)
+												return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
 											})
 										} else {
 											return fill{th.Bg}.Layout(gtx)
@@ -177,7 +222,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 						)
 						a := clip.Rect(image.Rectangle{Max: dims.Size})
 						t := a.Push(gtx.Ops)
-						p.contactClicks[contacts[i].Nickname].Add(gtx.Ops)
+						p.convoClicks[sorted[i].ID].Add(gtx.Ops)
 						t.Pop()
 						return dims
 					})
@@ -216,7 +261,7 @@ type ChooseConvoClick struct {
 type ConnectClick struct {
 }
 
-// Event returns a ChooseContactClick event when a contact is chosen
+// Event returns a ChooseConvoClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
 	if p.connect.Clicked() {
 		return ConnectClick{}
@@ -228,10 +273,10 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 	if p.showSettings.Clicked() {
 		return ShowSettingsClick{}
 	}
-	for nickname, click := range p.contactClicks {
+	for id, click := range p.convoClicks {
 		for _, e := range click.Events(gtx.Queue) {
 			if e.Type == gesture.TypeClick {
-				return ChooseContactClick{nickname: nickname}
+				return ChooseConvoClick{id: id}
 			}
 		}
 	}
@@ -263,9 +308,12 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 				kb = false
 			}
 			if e.Name == key.NameReturn && e.State == key.Release {
-				contacts := getSortedContacts(p.a)
 				kb = false
-				return ChooseContactClick{nickname: contacts[selectedIdx].Nickname}
+				// editor event isn't consuming the kb input upon addcontact return.
+				if len(sorted) <= selectedIdx {
+					return nil
+				}
+				return ChooseConvoClick{id: sorted[selectedIdx].ID}
 			}
 		}
 	}
@@ -280,17 +328,16 @@ func (p *HomePage) Start(stop <-chan struct{}) {
 func newHomePage(a *App) *HomePage {
 	cl := &widget.Clickable{}
 	return &HomePage{
-		a:             a,
-		addContact:    &widget.Clickable{},
-		connect:       cl,
-		connectIcon:   NewConnectIcon(a, th, cl),
-		showSettings:  &widget.Clickable{},
-		contactClicks: make(map[string]*gesture.Click),
-		av:            make(map[string]*widget.Image),
+		a:            a,
+		addContact:   &widget.Clickable{},
+		connect:      cl,
+		connectIcon:  NewConnectIcon(a, th, cl),
+		showSettings: &widget.Clickable{},
+		convoClicks:  make(map[uint64]*gesture.Click),
 	}
 }
 
-func ContactStyle(th *material.Theme, txt string) material.LabelStyle {
+func ConvoStyle(th *material.Theme, txt string) material.LabelStyle {
 	l := material.Label(th, th.TextSize, txt)
 	return l
 }

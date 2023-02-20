@@ -61,7 +61,7 @@ func (p *signInPage) Event(gtx layout.Context) interface{} {
 			p.errMsg = fmt.Sprintf("Password must be minimum %d characters long", minPasswordLen)
 		} else {
 			go func() {
-				setupCatShadow([]byte(pw), p.result)
+				setupClient(p.a, []byte(pw), p.result)
 				p.a.w.Invalidate()
 			}()
 			return signInStarted{result: p.result}

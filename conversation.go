@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/hako/durafmt"
-	"github.com/katzenpost/katzenpost/catshadow"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	"runtime"
@@ -33,7 +32,7 @@ var (
 
 type conversationPage struct {
 	a              *App
-	nickname       string
+	conversation   *Conversation
 	avatar         *widget.Image
 	edit           *gesture.Click
 	compose        *widget.Editor
@@ -43,20 +42,15 @@ type conversationPage struct {
 	msgcopy        *widget.Clickable
 	msgpaste       *LongPress
 	msgdetails     *widget.Clickable
-	messageClicked *catshadow.Message
-	messageClicks  map[*catshadow.Message]*gesture.Click
+	messageClicked *Message
+	messageClicks  map[*Message]*gesture.Click
 }
 
 func (c *conversationPage) Start(stop <-chan struct{}) {
 }
 
 type MessageSent struct {
-	nickname string
-	msgId    catshadow.MessageID
-}
-
-type EditContact struct {
-	nickname string
+	conversation uint64
 }
 
 func (c *conversationPage) Event(gtx layout.Context) interface{} {
@@ -83,9 +77,6 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		case key.Event:
 			if e.Name == key.NameEscape && e.State == key.Release {
 				return BackEvent{}
-			}
-			if e.Name == key.NameF5 && e.State == key.Release {
-				return EditContact{nickname: c.nickname}
 			}
 			if e.Name == key.NameUpArrow && e.State == key.Release {
 				messageList.ScrollToEnd = false
@@ -128,24 +119,14 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		if len(msg) == 0 {
 			return nil
 		}
-		// truncate messages
-		// TODO: this should split messages and return the set of message IDs sent
-		if len(msg)+4 > catshadow.DoubleRatchetPayloadLength {
-			msg = msg[:catshadow.DoubleRatchetPayloadLength-4]
-		}
-		msgId := c.a.c.SendMessage(c.nickname, msg)
-		return MessageSent{nickname: c.nickname, msgId: msgId}
-	}
-	for _, e := range c.edit.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			return EditContact{nickname: c.nickname}
-		}
+		//msgId := c.a.c.SendMessage(c.nickname, msg)
+		return MessageSent{conversation: c.conversation.ID}
 	}
 	if c.back.Clicked() {
 		return BackEvent{}
 	}
 	if c.msgcopy.Clicked() {
-		clipboard.WriteOp{Text: string(c.messageClicked.Plaintext)}.Add(gtx.Ops)
+		clipboard.WriteOp{Text: string(c.messageClicked.Body)}.Add(gtx.Ops)
 		c.messageClicked = nil
 		return nil
 	}
@@ -170,43 +151,49 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	return nil
 }
 
-func layoutMessage(gtx C, msg *catshadow.Message, isSelected bool, expires time.Duration) D {
+func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) D {
 
 	var statusIcon *widget.Icon
-	if msg.Outbound == true {
+	if msg.Sender == 0 { // self
 		statusIcon = queuedIcon
 		switch {
-		case !msg.Sent:
+		case msg.Sent.IsZero():
 			statusIcon = queuedIcon
-		case msg.Sent && !msg.Delivered:
+		case !msg.Sent.IsZero() && !msg.Acked.IsZero():
 			statusIcon = sentIcon
-		case msg.Delivered:
+		case !msg.Acked.IsZero():
 			statusIcon = deliveredIcon
 		default:
 		}
 	}
 
 	return layout.Flex{Axis: layout.Vertical, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
-		layout.Rigid(material.Body1(th, string(msg.Plaintext)).Layout),
+		layout.Rigid(material.Body1(th, string(msg.Body)).Layout),
 		layout.Rigid(func(gtx C) D {
 			in := layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(8), Right: unit.Dp(8)}
 			return in.Layout(gtx, func(gtx C) D {
-				timeLabel := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(msg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+				var ts time.Time
+				if msg.Sender == 0 {
+					ts = msg.Sent
+				} else {
+					ts = msg.Received
+				}
+				timeLabel := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(ts).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
 				var whenExpires string
 				if expires == 0 {
 					whenExpires = ""
 				} else {
-					whenExpires = durafmt.ParseShort(msg.Timestamp.Add(expires).Sub(time.Now().Round(0).Truncate(time.Minute))).Format(units) + " remaining"
+					whenExpires = durafmt.ParseShort(ts.Add(expires).Sub(time.Now().Round(0).Truncate(time.Minute))).Format(units) + " remaining"
 				}
 				if isSelected {
-					timeLabel = msg.Timestamp.Truncate(time.Minute).Format(time.RFC822)
-					if msg.Outbound {
+					timeLabel = ts.Truncate(time.Minute).Format(time.RFC822)
+					if msg.Sender == 0 {
 						timeLabel = "Sent: " + timeLabel
 					} else {
 						timeLabel = "Received: " + timeLabel
 					}
 				}
-				if msg.Outbound {
+				if msg.Sender == 0 {
 					return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
 						layout.Rigid(material.Caption(th, timeLabel).Layout),
 						layout.Rigid(material.Caption(th, whenExpires).Layout),
@@ -227,15 +214,8 @@ func layoutMessage(gtx C, msg *catshadow.Message, isSelected bool, expires time.
 }
 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
-	contact := c.a.c.GetContacts()[c.nickname]
-	if n, ok := notifications[c.nickname]; ok {
-		if c.a.focus {
-			n.Cancel()
-			delete(notifications, c.nickname)
-		}
-	}
-	messages := c.a.c.GetSortedConversation(c.nickname)
-	expires, _ := c.a.c.GetExpiration(c.nickname)
+	messages := c.conversation.Messages
+	expires := c.conversation.MessageExpiration
 	bgl := Background{
 		Color: th.Bg,
 		Inset: layout.Inset{Top: unit.Dp(0), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
@@ -246,21 +226,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			return bgl.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(button(th, c.back, backIcon).Layout),
-					layout.Rigid(func(gtx C) D {
-						dims := layoutAvatar(gtx, c.a.c, c.nickname)
-						a := clip.Rect(image.Rectangle{Max: dims.Size})
-						t := a.Push(gtx.Ops)
-						c.edit.Add(gtx.Ops)
-						t.Pop()
-						return dims
-					}),
-					layout.Rigid(material.Caption(th, c.nickname).Layout),
-					layout.Rigid(func(gtx C) D {
-						if contact.IsPending {
-							return pandaIcon.Layout(gtx, th.Palette.ContrastFg)
-						}
-						return layout.Dimensions{}
-					}),
+					layout.Rigid(material.Caption(th, c.conversation.Title).Layout),
 					layout.Flexed(1, fill{th.Bg}.Layout),
 				)
 			},
@@ -289,13 +255,15 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 					}
 					inbetween := layout.Inset{Top: unit.Dp(2)}
 					if i > 0 {
-						if messages[i-1].Outbound != messages[i].Outbound {
+						sent1 := messages[i-1].Sender == 0
+						sent2 := messages[i].Sender == 0
+						if sent1 != sent2 {
 							inbetween = layout.Inset{Top: unit.Dp(8)}
 						}
 					}
 					var dims D
 					isSelected := messages[i] == c.messageClicked
-					if messages[i].Outbound {
+					if messages[i].Sender == 0 {
 						dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
 							layout.Flexed(1, fill{th.Bg}.Layout),
 							layout.Flexed(5, func(gtx C) D {
@@ -381,15 +349,23 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 	)
 }
 
-func newConversationPage(a *App, nickname string) *conversationPage {
+func newConversationPage(a *App, conversationId uint64) *conversationPage {
 	ed := &widget.Editor{SingleLine: false, Submit: true}
 	if runtime.GOOS == "android" {
 		ed.Submit = false
 	}
 
-	p := &conversationPage{a: a, nickname: nickname,
+	var conv *Conversation
+	var ok bool
+	conv, ok = a.Conversations[conversationId]
+	if !ok {
+		conv = new(Conversation)
+		a.Conversations[conversationId] = conv
+	}
+
+	p := &conversationPage{a: a, conversation: conv,
 		compose:       ed,
-		messageClicks: make(map[*catshadow.Message]*gesture.Click),
+		messageClicks: make(map[*Message]*gesture.Click),
 		back:          &widget.Clickable{},
 		msgcopy:       &widget.Clickable{},
 		msgpaste:      NewLongPress(a.w.Invalidate, 800*time.Millisecond),

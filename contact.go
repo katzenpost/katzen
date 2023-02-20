@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -15,18 +14,15 @@ import (
 	"gioui.org/widget/material"
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
-	"github.com/katzenpost/katzenpost/catshadow"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	qrcode "github.com/skip2/go-qrcode"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
-	"image/png"
 	mrand "math/rand"
 	"runtime"
-	"sort"
 )
 
-// AddContactComplete is emitted when catshadow.NewContact has been called
+// AddContactComplete is emitted when NewContact has been called
 type AddContactComplete struct {
 	id uint64
 }
@@ -201,7 +197,7 @@ func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
 	})
 }
 
-// Event catches the widget submit events and calls catshadow.NewContact
+// Event catches the widget submit events and calls NewContact
 func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 	if p.back.Clicked() {
 		return BackEvent{}
@@ -348,41 +344,6 @@ func (p *AddContactPage) layoutQr(gtx C) D {
 	t.Pop()
 	return dims
 
-}
-
-type sortedContacts []*catshadow.Contact
-
-func (s sortedContacts) Less(i, j int) bool {
-	// sorts contacts with messages most-recent-first, followed by contacts
-	// without messages alphabetically
-	if s[i].LastMessage == nil && s[j].LastMessage == nil {
-		return s[i].Nickname < s[j].Nickname
-	} else if s[i].LastMessage == nil {
-		return false
-	} else if s[j].LastMessage == nil {
-		return true
-	} else {
-		return s[i].LastMessage.Timestamp.After(s[j].LastMessage.Timestamp)
-	}
-}
-func (s sortedContacts) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s sortedContacts) Len() int {
-	return len(s)
-}
-
-func getSortedContacts(a *App) (contacts sortedContacts) {
-	if a.c == nil {
-		return
-	}
-
-	// returns map[string]*Contact
-	for _, contact := range a.c.GetContacts() {
-		contacts = append(contacts, contact)
-	}
-	sort.Sort(contacts)
-	return
 }
 
 func button(th *material.Theme, button *widget.Clickable, icon *widget.Icon) material.IconButtonStyle {

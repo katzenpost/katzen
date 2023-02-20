@@ -1,15 +1,12 @@
 package main
 
 import (
-	"errors"
 	"net"
 	"os"
 
 	"gioui.org/app"
-	"github.com/katzenpost/katzenpost/catshadow"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/client/config"
-	"github.com/katzenpost/katzenpost/core/log"
 	"path/filepath"
 )
 
@@ -23,15 +20,7 @@ func hasTor() bool {
 	return true
 }
 
-func setupCatShadow(passphrase []byte, result chan interface{}) {
-	// XXX: if the catshadowClient already exists, shut it down
-	// FIXME: figure out a better way to toggle connected/disconnected
-	// states and allow to retry attempts on a timeout or other failure.
-	var catshadowClient *catshadow.Client
-	var stateWorker *catshadow.StateWriter
-	var state *catshadow.State
-	var err error
-
+func setupClient(a *App, passphrase []byte, result chan interface{}) {
 	// obtain the default data location
 	dir, err := app.DataDir()
 	if err != nil {
@@ -52,14 +41,6 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 		}
 	}
 
-	// if the statefile doesn't exist, try the default datadir
-	var statefile string
-	if _, err := os.Stat(*stateFile); os.IsNotExist(err) {
-		statefile = filepath.Join(datadir, *stateFile)
-	} else {
-		statefile = *stateFile
-	}
-
 	var cfg *config.Config
 	if len(*clientConfigFile) != 0 {
 		cfg, err = config.LoadFile(*clientConfigFile)
@@ -68,68 +49,15 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 			return
 		}
 	} else {
-		cfg, err = config.Load(cfgWithoutTor)
-		if err != nil {
-			result <- err
-			return
-		}
-	}
-
-	// initialize logging
-	backendLog, err := log.New(cfg.Logging.File, cfg.Logging.Level, cfg.Logging.Disable)
-	if err != nil {
-		result <- err
-		return
-	}
-
-	// automatically create a statefile if one does not already exist
-	stateLogger := backendLog.GetLogger("catshadow_state")
-	if _, err = os.Stat(statefile); os.IsNotExist(err) {
-		stateWorker, err = catshadow.NewStateWriter(stateLogger, statefile, passphrase)
-	} else {
-		stateWorker, state, err = catshadow.LoadStateWriter(stateLogger, statefile, passphrase)
-	}
-
-	// catches any err above
-	if err != nil {
-		result <- err
-		return
-	}
-
-	// create a default statefile with default options on first run
-	if state == nil {
-		// create a default statefile
-		state = &catshadow.State{
-			Contacts:      make([]*catshadow.Contact, 0),
-			Conversations: make(map[string]map[catshadow.MessageID]*catshadow.Message),
-		}
-	}
-
-	// initialize default options
-	if state.Blob == nil {
-		state.Blob = make(map[string][]byte)
-		if hasTor() && len(*clientConfigFile) == 0 {
-			state.Blob["UseTor"] = []byte{1}
-			state.Blob["AutoConnect"] = []byte{1}
-		}
-	}
-
-	// apply any persistent settings that are needed before bootstrapping client
-	if _, ok := state.Blob["UseTor"]; ok {
-		if len(*clientConfigFile) != 0 {
-			// a user-supplied configuration file was specified
-			if cfg.UpstreamProxy.Type != "socks5" {
-				state.Blob["UseTor"] = []byte{0}
-				result <- errors.New("User supplied configuration and client settings mismatch! UseTor option selected without valid UpstreamProxy!")
+		// detect running Tor and use configuration
+		if _, ok := a.Settings["UseTor"]; ok {
+			cfg, err = config.Load(cfgWithTor)
+			if err != nil {
+				result <- err
 				return
 			}
-		}
-		if !hasTor() {
-			warnNoTor()
-			// disable autoconnect
-			delete(state.Blob, "AutoConnect")
 		} else {
-			cfg, err = config.Load(cfgWithTor)
+			cfg, err = config.Load(cfgWithoutTor)
 			if err != nil {
 				result <- err
 				return
@@ -144,15 +72,5 @@ func setupCatShadow(passphrase []byte, result chan interface{}) {
 		return
 	}
 
-	// Start the stateworker
-	stateWorker.Start()
-
-	catshadowClient, err = catshadow.New(backendLog, c, stateWorker, state)
-	if err != nil {
-		result <- err
-		c.Shutdown()
-		stateWorker.Halt()
-		return
-	}
-	result <- catshadowClient
+	result <- c
 }
