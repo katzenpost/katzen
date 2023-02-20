@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/katzenpost/katzenpost/client"
-	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"github.com/katzenpost/katzenpost/core/worker"
 	"time"
 
@@ -105,42 +104,6 @@ func (a *App) eventSinkWorker(s *client.Session) {
 			}
 		}
 	}
-}
-
-// Reunion holds the informtaion for a Reunion protocol
-type Reunion struct {
-	// TODO other parts of state we must serialize / deserialize
-	Secret []byte
-	Epoch  []byte
-}
-
-// TODO :Methods on Reunion that we want
-
-// Methods on Conversation that we want
-// Remove(contactID uint64)
-// Add(contactID uint64)
-// Destroy() // purge *Message sent to this Conversation
-
-func (a *App) NewConversation(id uint64) (*Conversation, error) {
-	contact, ok := a.Contacts[id]
-	if !ok {
-		return nil, errors.New("No such contact")
-	}
-	for {
-		id = uint64(rand.NewMath().Int63())
-		if _, ok := a.Conversations[id]; ok {
-			continue
-		}
-	}
-
-	conv := &Conversation{ID: id, Title: "Chat with" + contact.Nickname, Contacts: []*Contact{contact}}
-	return conv, nil
-}
-
-// Send a Message to Contact
-func (c *Contact) Send(msg *Message) error {
-	panic("NotImplemented")
-	return nil
 }
 
 func newApp(w *app.Window) *App {

@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/hako/durafmt"
-	"golang.org/x/exp/shiny/materialdesign/icons"
+	"errors"
 	"image"
 	"runtime"
 	"strings"
@@ -18,6 +17,10 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/hako/durafmt"
+	"github.com/katzenpost/katzenpost/client"
+	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
 var (
@@ -66,13 +69,36 @@ func (c *Conversation) Destroy() error {
 	return nil
 }
 
-func (c *Conversation) Send(msg *Message) error {
+func (c *Conversation) Send(s *client.Session, msg *Message) error {
 	c.Lock()
+	c.Messages = append(c.Messages, msg)
+	defer c.Unlock()
 	for _, c := range c.Contacts {
-		c.Send(msg)
+		err := c.Send(s, msg)
+		if err != nil {
+			return err
+		}
 	}
-	panic("NotImplemented")
 	return nil
+}
+
+func (a *App) NewConversation(id uint64) (*Conversation, error) {
+	a.Lock()
+	defer a.Unlock()
+	contact, ok := a.Contacts[id]
+	if !ok {
+		return nil, errors.New("No such contact")
+	}
+	for {
+		id = uint64(rand.NewMath().Int63())
+		if _, ok := a.Conversations[id]; ok {
+			continue
+		}
+		break
+	}
+
+	conv := &Conversation{ID: id, Title: "Chat with " + contact.Nickname, Contacts: []*Contact{contact}}
+	return conv, nil
 }
 
 type conversationPage struct {
@@ -159,13 +185,22 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	}
 
 	if c.send.Clicked() {
-		msg := []byte(c.compose.Text())
-		c.compose.SetText("")
-		if len(msg) == 0 {
+		msg := &Message{
+			// XXX: truncate sender timestamps to some lower resolution
+			Sent:         time.Now(),
+			Type:         Text,
+			Conversation: c.conversation.ID,
+			Body:         []byte(c.compose.Text()),
+		}
+		// XXX handle case without session
+		err := c.conversation.Send(c.a.c.Session(), msg)
+		if err == nil {
+			c.compose.SetText("")
+			return MessageSent{conversation: c.conversation.ID}
+		} else {
+			shortNotify("Send failed", err.Error())
 			return nil
 		}
-		//msgId := c.a.c.SendMessage(c.nickname, msg)
-		return MessageSent{conversation: c.conversation.ID}
 	}
 	if c.back.Clicked() {
 		return BackEvent{}

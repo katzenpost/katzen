@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"image"
 	mrand "math/rand"
@@ -20,6 +21,8 @@ import (
 	"gioui.org/widget/material"
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
+	"github.com/fxamacker/cbor/v2"
+	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"github.com/katzenpost/katzenpost/stream"
 	qrcode "github.com/skip2/go-qrcode"
@@ -75,18 +78,58 @@ type Contact struct {
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
 
+	// Initiator indicates whether the SharedSecret for this pairing was created by us or the peer
+	Initiator bool
+
 	MessageExpiration time.Duration
 }
 
-// NewContact creates a new Contact
+// NewContact creates a new Contact from a shared secret (dialer)
 func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 	for {
 		id := uint64(rand.NewMath().Int63())
 		if _, ok := a.Contacts[id]; ok {
 			continue
 		}
+
+		// XXX: must indicate whether this is OUR secret (listener direction)
+		// or else we are the dialer
+		// this is something that a reunion handshake should confirm, which
+		// client will be sender and which will be receiver
 		return &Contact{ID: id, Nickname: nickname, SharedSecret: secret}, nil
 	}
+}
+
+// Send a Message to Contact
+func (c *Contact) Send(s *client.Session, msg *Message) error {
+	c.Lock()
+	defer c.Unlock()
+	var st *stream.Stream
+	var err error
+
+	if s == nil {
+		return errors.New("cannot send offline yet")
+	}
+
+	// establish a Stream for the peer if one doesn't exist
+	if c.Stream == nil {
+		if c.Initiator {
+			st, err = stream.ListenDuplex(s, "", string(c.SharedSecret))
+		} else {
+			st, err = stream.DialDuplex(s, "", string(c.SharedSecret))
+		}
+		if err != nil {
+			return err
+		}
+		c.Stream = st
+	} else {
+		// do stuff if the stream isn't running, etc
+	}
+	enc := cbor.NewEncoder(c.Stream)
+	err = enc.Encode(msg)
+	// XXX: how do we know when the stream has transmitted messages to the network?
+	// XXX: how do we know when the message has been acknowledged?
+	return err
 }
 
 // A contactal is a fractal and secret that represents a user identity

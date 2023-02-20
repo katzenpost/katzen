@@ -155,10 +155,15 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
 				// the convoList
 				return convoList.Layout(gtx, len(sorted), func(gtx C, i int) layout.Dimensions {
-					lastMsg := sorted[i].Messages[len(sorted[i].Messages)-1]
-					lastTs := lastMsg.Sent
-					if !lastMsg.Received.IsZero() {
-						lastTs = lastMsg.Received
+					// update the last message received
+					var lastMsg *Message
+					var lastTs time.Time
+					if len(sorted[i].Messages) > 0 {
+						lastMsg = sorted[i].Messages[len(sorted[i].Messages)-1]
+						lastTs = lastMsg.Sent
+						if !lastMsg.Received.IsZero() {
+							lastTs = lastMsg.Received
+						}
 					}
 
 					// inset each contact Flex
