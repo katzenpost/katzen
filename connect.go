@@ -64,6 +64,7 @@ func (a *App) doConnectClick() {
 			a.connectOnce = new(sync.Once)
 			a.cancelConn = nil
 			a.Unlock()
+			shortNotify("Disconnected", err.Error())
 			return
 		}
 		// start worker routine to consume events from this session
@@ -78,6 +79,7 @@ func (a *App) doConnectClick() {
 			a.cancelConn = nil
 			a.connectOnce = new(sync.Once)
 			a.Unlock()
+			shortNotify("Disconnected", err.Error())
 			return
 		}
 

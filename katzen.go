@@ -407,10 +407,15 @@ type (
 func (a *App) handleClientEvent(e interface{}) error {
 	switch e := e.(type) {
 	case client.ConnectionStatusEvent:
+		shortNotify("ConnectionStatusEvent", e.String())
 	case client.MessageReplyEvent:
+		shortNotify("MessageReplyEvent", e.String())
 	case client.MessageSentEvent:
+		shortNotify("MessageSentEvent", e.String())
 	case client.MessageIDGarbageCollected:
+		shortNotify("MessageIDGarbageCollected", e.String())
 	case client.NewDocumentEvent:
+		shortNotify("NewDocument", e.String())
 	default:
 		panic(e)
 	}
