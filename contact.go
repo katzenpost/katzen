@@ -28,7 +28,7 @@ import (
 
 // AddContactComplete is emitted when catshadow.NewContact has been called
 type AddContactComplete struct {
-	nickname string
+	id uint64
 }
 
 var (
@@ -268,15 +268,27 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			return nil
 		}
 
-		p.a.c.NewContact(p.nickname.Text(), []byte(p.secret.Text()))
-		b := &bytes.Buffer{}
+		contact, err := p.a.NewContact(p.nickname.Text(), []byte(p.secret.Text()))
+		if err != nil {
+			p.nickname.SetText("")
+			p.secret.SetText("")
+			return nil
+		}
+
 		sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
 		i := p.contactal.Render(sz)
-
-		if err := png.Encode(b, i); err == nil {
-			p.a.c.AddBlob("avatar://"+p.nickname.Text(), b.Bytes())
+		w := func(gtx C) D {
+			return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
 		}
-		return AddContactComplete{nickname: p.nickname.Text()}
+
+		p.a.Contacts[contact.ID] = contact
+		avatars[contact.ID] = w
+		conv, err := p.a.NewConversation(contact.ID)
+		if err == nil {
+			// create a new conversation with this contact
+			p.a.Conversations[conv.ID] = conv
+			return AddContactComplete{id: contact.ID}
+		}
 	}
 	return nil
 }

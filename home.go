@@ -207,42 +207,9 @@ func layoutLogo(gtx C) D {
 	})
 }
 
-func layoutAvatar(gtx C, c *catshadow.Client, nickname string) D {
-	return layout.Center.Layout(gtx, func(gtx C) D {
-		cc := clipCircle{}
-		return cc.Layout(gtx, func(gtx C) D {
-			sz := image.Point{X: gtx.Dp(42), Y: gtx.Dp(42)}
-			gtx.Constraints = layout.Exact(gtx.Constraints.Constrain(sz))
-			if w, ok := avatars[nickname]; ok {
-				return w(gtx)
-			} else {
-				if b, err := c.GetBlob("avatar://" + nickname); err == nil {
-					if m, _, err := image.Decode(bytes.NewReader(b)); err == nil {
-						w = func(gtx C) D {
-							return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(m)}.Layout(gtx)
-						}
-					}
-				} else {
-					co := Contactal{SharedSecret: nickname}
-					i := co.Render(sz)
-					b := &bytes.Buffer{}
-					if err := png.Encode(b, i); err == nil {
-						c.AddBlob("avatar://"+nickname, b.Bytes())
-					}
-					w = func(gtx C) D {
-						return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
-					}
-				}
-				avatars[nickname] = w
-				return w(gtx)
-			}
-		})
-	})
-}
-
-// ChooseContactClick is the event that indicates which contact was selected
-type ChooseContactClick struct {
-	nickname string
+// ChooseConvoClick is the event that indicates which conversation was selected
+type ChooseConvoClick struct {
+	id uint64
 }
 
 // ConnectClick is the event that indicates connection button was clicked

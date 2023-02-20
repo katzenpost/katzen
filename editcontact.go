@@ -7,16 +7,14 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/hako/durafmt"
 	"image"
-	"math"
 	"time"
 )
 
 // EditContactPage is the page for adding a new contact
 type EditContactPage struct {
 	a        *App
-	nickname string
+	id       uint64
 	back     *widget.Clickable
 	apply    *widget.Clickable
 	avatar   *gesture.Click
@@ -65,52 +63,50 @@ func (p *EditContactPage) Layout(gtx layout.Context) layout.Dimensions {
 	})
 }
 
+type EditContact struct {
+	id uint64
+}
+
 type EditContactComplete struct {
-	nickname string
+	id uint64
 }
 
 type ChooseAvatar struct {
-	nickname string
+	id uint64
 }
 
 type RenameContact struct {
-	nickname string
+	id uint64
 }
 
-// Event catches the widget submit events and calls catshadow.NewContact
+// Event catches the widget submit events and calls NewContact
 func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 	if p.back.Clicked() {
 		return BackEvent{}
 	}
 	for _, e := range p.avatar.Events(gtx.Queue) {
 		if e.Type == gesture.TypeClick {
-			return ChooseAvatar{nickname: p.nickname}
+			return ChooseAvatar{id: p.id}
 		}
-	}
-	if p.clear.Clicked() {
-		// TODO: confirmation dialog
-		p.a.c.WipeConversation(p.nickname)
-		return EditContactComplete{nickname: p.nickname}
-	}
-	if p.expiry.Changed() {
-		p.expiry.Value = float32(math.Round(float64(p.expiry.Value)))
 	}
 	// update duration
 	p.duration = time.Duration(int64(p.expiry.Value)) * time.Minute * 60 * 24
 	if p.rename.Clicked() {
-		return RenameContact{nickname: p.nickname}
+		return RenameContact{id: p.id}
 	}
 	if p.remove.Clicked() {
 		// TODO: confirmation dialog
-		p.a.c.RemoveContact(p.nickname)
-		p.a.c.DeleteBlob("avatar://" + p.nickname)
-		// remove avatar cache
-		delete(avatars, p.nickname)
-		return EditContactComplete{nickname: p.nickname}
-	}
-	if p.apply.Clicked() {
-		p.a.c.ChangeExpiration(p.nickname, p.duration)
-		return BackEvent{}
+		c, ok := p.a.Contacts[p.id]
+		if ok {
+			if c.Stream != nil {
+				// if has a stream, halt it
+				c.Stream.Close()
+				c.Stream = nil
+			}
+			delete(p.a.Contacts, p.id)
+			delete(avatars, p.id)
+			return EditContactComplete{id: p.id}
+		}
 	}
 	return nil
 }
@@ -118,19 +114,17 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 func (p *EditContactPage) Start(stop <-chan struct{}) {
 }
 
-func newEditContactPage(a *App, contact string) *EditContactPage {
-	expiry, _ := a.c.GetExpiration(contact)
-	p := &EditContactPage{a: a, nickname: contact, back: &widget.Clickable{},
+func newEditContactPage(a *App, id uint64) *EditContactPage {
+	p := &EditContactPage{a: a, id: id, back: &widget.Clickable{},
 		avatar: &gesture.Click{}, clear: &widget.Clickable{},
-		expiry: &widget.Float{}, rename: &widget.Clickable{},
+		rename: &widget.Clickable{},
 		remove: &widget.Clickable{}, apply: &widget.Clickable{},
 		settings: &layout.List{Axis: layout.Vertical},
 	}
-	p.expiry.Value = float32(math.Round(float64(expiry) / float64(time.Minute*60*24)))
 	p.widgets = []layout.Widget{
 		func(gtx C) D {
 			dims := layout.Center.Layout(gtx, func(gtx C) D {
-				return layoutAvatar(gtx, p.a.c, p.nickname)
+				return p.a.layoutAvatar(gtx, p.id)
 			})
 			a := clip.Rect(image.Rectangle{Max: dims.Size})
 			t := a.Push(gtx.Ops)
@@ -139,27 +133,9 @@ func newEditContactPage(a *App, contact string) *EditContactPage {
 			return dims
 		},
 		layout.Spacer{Height: unit.Dp(8)}.Layout,
-		func(gtx C) D {
-			var label string
-			if p.expiry.Value < 1.0 {
-				label = "Delete after: never"
-			} else {
-				label = "Delete after: " + durafmt.Parse(p.duration).Format(units)
-			}
-			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle, Spacing: layout.SpaceBetween}.Layout(gtx,
-				layout.Rigid(material.Body2(th, "Message deletion").Layout),
-				layout.Rigid(material.Slider(th, p.expiry, minExpiration, maxExpiration).Layout),
-				layout.Rigid(material.Caption(th, label).Layout),
-			)
-		},
-		layout.Spacer{Height: unit.Dp(8)}.Layout,
-		material.Button(th, p.clear, "Clear History").Layout,
-		layout.Spacer{Height: unit.Dp(8)}.Layout,
 		material.Button(th, p.rename, "Rename Contact").Layout,
 		layout.Spacer{Height: unit.Dp(8)}.Layout,
 		material.Button(th, p.remove, "Delete Contact").Layout,
-		layout.Spacer{Height: unit.Dp(8)}.Layout,
-		material.Button(th, p.apply, "Apply Changes").Layout,
 	}
 	return p
 }

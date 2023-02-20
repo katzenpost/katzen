@@ -28,20 +28,19 @@ var (
 )
 
 type AvatarPicker struct {
-	a        *App
-	avatar   *gesture.Click
-	nickname string
-	path     string
-	back     *widget.Clickable
-	clear    *widget.Clickable
-	up       *widget.Clickable
-	clicks   map[string]*gesture.Click
-	thumbs   map[os.FileInfo]*image.Image
-	files    []os.FileInfo
-	thsz     int
-	opCh     chan *opThumb
-	running  bool
-	tl       *sync.Mutex
+	a       *App
+	id      uint64
+	path    string
+	back    *widget.Clickable
+	clear   *widget.Clickable
+	up      *widget.Clickable
+	clicks  map[string]*gesture.Click
+	thumbs  map[os.FileInfo]*image.Image
+	files   []os.FileInfo
+	thsz    int
+	opCh    chan *opThumb
+	running bool
+	tl      *sync.Mutex
 }
 
 // Layout displays a file chooser for supported image types
@@ -63,14 +62,9 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 			}),
 			// avatar icon
 			layout.Rigid(func(gtx C) D {
-				dims := layout.Center.Layout(gtx, func(gtx C) D {
-					return layoutAvatar(gtx, p.a.c, p.nickname)
+				return layout.Center.Layout(gtx, func(gtx C) D {
+					return p.a.layoutAvatar(gtx, p.id)
 				})
-				a := clip.Rect(image.Rectangle{Max: dims.Size})
-				t := a.Push(gtx.Ops)
-				p.avatar.Add(gtx.Ops)
-				t.Pop()
-				return dims
 			}),
 			// cwd and buttons
 			layout.Rigid(func(gtx C) D {
@@ -200,26 +194,11 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 func (p *AvatarPicker) Event(gtx C) interface{} {
 	if p.up.Clicked() {
 		if u, err := filepath.Abs(filepath.Join(p.path, "..")); err == nil {
-			return ChooseAvatarPath{nickname: p.nickname, path: u}
+			return ChooseAvatarPath{id: p.id, path: u}
 		}
 	}
 	if p.back.Clicked() {
 		return BackEvent{}
-	}
-
-	for _, e := range p.avatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			ct := Contactal{}
-			ct.Reset()
-			sz := image.Point{X: gtx.Dp(96), Y: gtx.Dp(96)}
-			i := ct.Render(sz)
-			b := new(bytes.Buffer)
-			if err := png.Encode(b, i); err == nil {
-				p.a.c.AddBlob("avatar://"+p.nickname, b.Bytes())
-				delete(avatars, p.nickname)
-				return RedrawEvent{}
-			}
-		}
 	}
 
 	for filename, click := range p.clicks {
@@ -230,10 +209,10 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 				if u, err := filepath.Abs(filepath.Join(p.path, filename)); err == nil {
 					if f, err := os.Stat(u); err == nil {
 						if f.IsDir() {
-							return ChooseAvatarPath{nickname: p.nickname, path: u}
+							return ChooseAvatarPath{id: p.id, path: u}
 							p.path = u
 						} else {
-							p.a.setAvatar(p.nickname, u)
+							p.a.setAvatar(p.id, u)
 						}
 					}
 				}
@@ -244,8 +223,8 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 }
 
 type ChooseAvatarPath struct {
-	nickname string
-	path     string
+	id   uint64
+	path string
 }
 
 type opThumb struct {
@@ -313,7 +292,7 @@ func (p *AvatarPicker) scan() {
 	p.tl.Unlock()
 }
 
-func newAvatarPicker(a *App, nickname string, path string) *AvatarPicker {
+func newAvatarPicker(a *App, id uint64, path string) *AvatarPicker {
 	if path == "" {
 		path, _ = app.DataDir()
 		if runtime.GOOS == "android" {
@@ -322,16 +301,15 @@ func newAvatarPicker(a *App, nickname string, path string) *AvatarPicker {
 	}
 
 	ap := &AvatarPicker{up: &widget.Clickable{},
-		a:        a,
-		avatar:   &gesture.Click{},
-		nickname: nickname,
-		back:     &widget.Clickable{},
-		clear:    &widget.Clickable{},
-		clicks:   make(map[string]*gesture.Click),
-		thumbs:   make(map[os.FileInfo]*image.Image),
-		files:    make([]os.FileInfo, 0),
-		tl:       new(sync.Mutex),
-		path:     path}
+		a:      a,
+		id:     id,
+		back:   &widget.Clickable{},
+		clear:  &widget.Clickable{},
+		clicks: make(map[string]*gesture.Click),
+		thumbs: make(map[os.FileInfo]*image.Image),
+		files:  make([]os.FileInfo, 0),
+		tl:     new(sync.Mutex),
+		path:   path}
 	ap.scan()
 	return ap
 }
@@ -342,19 +320,42 @@ func scale(src image.Image, rect image.Rectangle, scale draw.Scaler) image.Image
 	return dst
 }
 
-func (a *App) setAvatar(nickname, path string) {
+func (a *App) setAvatar(id uint64, path string) {
 	if b, err := ioutil.ReadFile(path); err == nil {
 		// scale file
 		if m, _, err := image.Decode(bytes.NewReader(b)); err == nil {
 			avatarSz := image.Rect(0, 0, 96, 96)
 			resized := scale(m, avatarSz, draw.ApproxBiLinear)
-			b := &bytes.Buffer{}
-			if err := png.Encode(b, resized); err == nil {
-				a.c.AddBlob("avatar://"+nickname, b.Bytes())
-				delete(avatars, nickname)
+			w := func(gtx C) D {
+				return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(resized)}.Layout(gtx)
 			}
+			avatars[id] = w
 		}
 	} else {
 		panic(err)
 	}
+}
+
+func (a *App) layoutAvatar(gtx C, id uint64) D {
+	return layout.Center.Layout(gtx, func(gtx C) D {
+		cc := clipCircle{}
+		return cc.Layout(gtx, func(gtx C) D {
+			sz := image.Point{X: gtx.Dp(42), Y: gtx.Dp(42)}
+			gtx.Constraints = layout.Exact(gtx.Constraints.Constrain(sz))
+			if w, ok := avatars[id]; ok {
+				return w(gtx)
+			} else {
+				if contact, ok := a.Contacts[id]; ok {
+					co := Contactal{SharedSecret: string(contact.SharedSecret)}
+					i := co.Render(sz)
+					w = func(gtx C) D {
+						return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
+					}
+				}
+				avatars[id] = w
+				return w(gtx)
+			}
+			panic("Unknown contact ID requested passed to layoutAvatar")
+		})
+	})
 }

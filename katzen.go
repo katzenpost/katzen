@@ -62,7 +62,15 @@ type App struct {
 	endBg func()
 	w     *app.Window
 	ops   *op.Ops
-	c     *catshadow.Client
+	c     *client.Client
+
+	cancelConn func()
+	state      ConnectedState
+
+	Contacts      map[uint64]*Contact
+	Conversations map[uint64]*Conversation
+	Settings      map[string]interface{}
+
 	stack pageStack
 	focus bool
 	stage system.Stage
@@ -79,17 +87,6 @@ func newApp(w *app.Window) *App {
 func (a *App) Layout(gtx layout.Context) {
 	a.update(gtx)
 	a.stack.Current().Layout(gtx)
-}
-
-func (a *App) doConnectClick() {
-	switch a.c.Status() {
-	case catshadow.StateOnline:
-		a.c.Offline()
-	case catshadow.StateConnecting:
-		// ignore
-	case catshadow.StateOffline:
-		a.c.Online()
-	}
 }
 
 func (a *App) update(gtx layout.Context) {
@@ -121,17 +118,17 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Push(newAddContactPage(a))
 		case AddContactComplete:
 			a.stack.Pop()
-		case ChooseContactClick:
-			a.stack.Push(newConversationPage(a, e.nickname))
+		case ChooseConvoClick:
+			a.stack.Push(newConversationPage(a, e.id))
 		case ChooseAvatar:
-			a.stack.Push(newAvatarPicker(a, e.nickname, ""))
+			a.stack.Push(newAvatarPicker(a, e.id, ""))
 		case ChooseAvatarPath:
 			a.stack.Pop()
-			a.stack.Push(newAvatarPicker(a, e.nickname, e.path))
+			a.stack.Push(newAvatarPicker(a, e.id, e.path))
 		case RenameContact:
-			a.stack.Push(newRenameContactPage(a, e.nickname))
+			a.stack.Push(newRenameContactPage(a, e.id))
 		case EditContact:
-			a.stack.Push(newEditContactPage(a, e.nickname))
+			a.stack.Push(newEditContactPage(a, e.id))
 		case EditContactComplete:
 			a.stack.Clear(newHomePage(a))
 		case MessageSent:

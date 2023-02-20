@@ -9,7 +9,7 @@ import (
 // RenameContactPage is the page for renaming a contact
 type RenameContactPage struct {
 	a           *App
-	nickname    string
+	contactID   uint64
 	newnickname *widget.Editor
 	back        *widget.Clickable
 	submit      *widget.Clickable
@@ -51,8 +51,12 @@ func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if p.submit.Clicked() {
-		err := p.a.c.RenameContact(p.nickname, p.newnickname.Text())
-		if err == nil {
+		contact, ok := p.a.Contacts[p.contactID]
+		if ok {
+			// XXX: SetNickname() Nickname() methods ?
+			contact.Lock()
+			contact.Nickname = p.newnickname.Text()
+			contact.Unlock()
 			return EditContactComplete{}
 		}
 		p.newnickname.SetText("")
@@ -63,8 +67,8 @@ func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 func (p *RenameContactPage) Start(stop <-chan struct{}) {
 }
 
-func newRenameContactPage(a *App, nickname string) *RenameContactPage {
-	p := &RenameContactPage{a: a, nickname: nickname}
+func newRenameContactPage(a *App, contactID uint64) *RenameContactPage {
+	p := &RenameContactPage{a: a, contactID: contactID}
 	p.newnickname = &widget.Editor{SingleLine: true, Submit: true}
 	p.newnickname.Focus()
 	p.back = &widget.Clickable{}
