@@ -93,7 +93,7 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 
 		// if we are online, start a PANDA exchange immediately
 		// if not, the exchange must be started when the client comes online and tries to send a message.
-		if a.c.Session() != nil {
+		if a.Status() == StateOnline {
 			// start a panda' exchange with contact
 			err := a.doPANDAExchange(id)
 			if err != nil {
@@ -111,7 +111,7 @@ func (a *App) sendToContact(id uint64, msg *Message) error {
 	if !ok {
 		return ErrContactNotFound
 	}
-	if a.c.Session == nil {
+	if a.state != StateOnline { // we hold a.Lock()
 		return errors.New("Cannot send offline")
 	}
 	l := a.c.GetLogger("sendToContact" + c.Nickname)
