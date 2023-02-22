@@ -42,6 +42,7 @@ func (a *App) doConnectClick() {
 		a.state = StateOffline
 		// XXX: we need to remove session from client... but how?
 		a.c.Session().Shutdown()
+		a.connectOnce = new(sync.Once)
 		a.Unlock()
 		return
 	}
