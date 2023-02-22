@@ -40,10 +40,9 @@ func (a *App) doConnectClick() {
 		// Note, we currently only make one session
 		// but client will support making multiple sessions to different entry nodes
 		a.state = StateOffline
+		// XXX: we need to remove session from client... but how?
+		a.c.Session().Shutdown()
 		a.Unlock()
-		for s := a.c.Session(); s != nil; {
-			s.Shutdown()
-		}
 		return
 	}
 	a.Unlock()
@@ -69,20 +68,8 @@ func (a *App) doConnectClick() {
 		}
 		// start worker routine to consume events from this session
 		a.Go(func() { a.eventSinkWorker(s) })
-		err = s.WaitForDocument(ctx)
-
-		// failed to bootstrap before timeout; teardown
-		if err != nil {
-			s.Shutdown()
-			a.Lock()
-			a.state = StateOffline
-			a.cancelConn = nil
-			a.connectOnce = new(sync.Once)
-			a.Unlock()
-			shortNotify("Disconnected", err.Error())
-			return
-		}
-
+		// start worker routine to read from streams
+		a.Go(a.streamWorker)
 		a.Lock()
 		a.state = StateOnline
 		a.Unlock()

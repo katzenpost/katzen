@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	mrand "math/rand"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -22,7 +23,8 @@ import (
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/katzenpost/katzenpost/client"
+	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
+	"github.com/katzenpost/katzenpost/core/crypto/nike"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"github.com/katzenpost/katzenpost/stream"
 	qrcode "github.com/skip2/go-qrcode"
@@ -39,6 +41,12 @@ var (
 	pasteIcon, _  = widget.NewIcon(icons.ContentContentPaste)
 	submitIcon, _ = widget.NewIcon(icons.NavigationCheck)
 	cancelIcon, _ = widget.NewIcon(icons.NavigationCancel)
+
+	ErrContactNotFound  = errors.New("Contact not found")
+	ErrContactNotDialed = errors.New("Contact not Dialed")
+
+	week              = 7 * 24 * time.Hour
+	defaultExpiration = week
 )
 
 // Contact represents a conversion party
@@ -54,34 +62,20 @@ type Contact struct {
 	// IsPending is true if the key exchange has not been completed.
 	IsPending bool
 
-	/*
-		XXX: decide how long term identity should be constructed for this client
-		and what sort of end-to-end encryption should be used for each message
-		e.g. doubleratchet or else ?
+	// PandaKeyExchange is the serialised PANDA key exchange we generated.
+	PandaKeyExchange []byte
 
-		we should also consider how the stream secret may be updated by protocol
-		messages - ie rekeying the stream so as to implement forward secrecy.
-
-		// An identity for this client
-		Identity sign.PublicKey
-		for establishing PQ
-		// KeyExchange is the serialised double ratchet key exchange we generated.
-		KeyExchange []byte
-
-		// Rratchet is the client's double ratchet for end to end encryption
-		Ratchet *ratchet.Ratchet
-	*/
+	// PandaResult contains an error message if the PANDA exchange fails.
+	PandaResult string
 
 	// Stream is the reliable channel used to communicate with Contact
 	Stream *stream.Stream
 
+	// MyIdentity is the ecdh.PrivateKey used with PANDA
+	MyIdentity nike.PrivateKey
+
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
-
-	// Initiator indicates whether the SharedSecret for this pairing was created by us or the peer
-	Initiator bool
-
-	MessageExpiration time.Duration
 }
 
 // NewContact creates a new Contact from a shared secret (dialer)
@@ -91,12 +85,22 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 		if _, ok := a.Contacts[id]; ok {
 			continue
 		}
+		// generate a new ecdh keypair as a long-term identity with this contact
+		// for re-keying, etc, exchanged as part of PANDA
+		sK, _ := ecdh.NewKeypair(rand.Reader)
+		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK, SharedSecret: secret}
+		a.Contacts[id] = c
 
-		// XXX: must indicate whether this is OUR secret (listener direction)
-		// or else we are the dialer
-		// this is something that a reunion handshake should confirm, which
-		// client will be sender and which will be receiver
-		return &Contact{ID: id, Nickname: nickname, SharedSecret: secret}, nil
+		// if we are online, start a PANDA exchange immediately
+		// if not, the exchange must be started when the client comes online and tries to send a message.
+		if a.c.Session() != nil {
+			// start a panda' exchange with contact
+			err := a.doPANDAExchange(id)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return c, nil
 	}
 }
 

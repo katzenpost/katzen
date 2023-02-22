@@ -31,6 +31,7 @@ require (
 	github.com/go-text/typesetting v0.0.0-20221214201735-a0484d778a78 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
 	github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -38,6 +39,7 @@ require (
 	github.com/oasislabs/deoxysii v0.0.0-20190807103041-6159f99c2236 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/ugorji/go/codec v1.2.8 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	gitlab.com/yawning/aez.git v0.0.0-20211027044916-e49e68abd344 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
@@ -48,6 +50,7 @@ require (
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/eapache/channels.v1 v1.1.0 // indirect
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473 // indirect
