@@ -136,6 +136,7 @@ func (a *App) streamWorker() {
 	// read messages from each contact
 	// write to the appropriate conversation
 
+	l := a.c.GetLogger("streamWorker")
 	for {
 		select {
 		case <-a.HaltCh():
@@ -150,11 +151,15 @@ func (a *App) streamWorker() {
 				panic(cmd)
 			}
 		case <-time.After(updateInterval):
+			l.Debugf("woke on updateInterval")
 		}
 		for _, c := range a.Contacts {
 			// start reading from contact in another routine
 			a.Go(func() {
+				l.Debugf("readFromContact %s", c.Nickname)
 				err := a.readFromContact(c.ID)
+				if err != nil {
+					l.Errorf("%v", err)
 				}
 			})
 		}
