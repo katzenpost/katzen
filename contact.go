@@ -88,7 +88,7 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 		// generate a new ecdh keypair as a long-term identity with this contact
 		// for re-keying, etc, exchanged as part of PANDA
 		sK, _ := ecdh.NewKeypair(rand.Reader)
-		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK, SharedSecret: secret}
+		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK, SharedSecret: secret, IsPending: true}
 		a.Contacts[id] = c
 
 		// if we are online, start a PANDA exchange immediately
