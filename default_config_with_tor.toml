@@ -56,7 +56,7 @@ hm8ySnLAh52a0CsVDKFgYWY6MGJRupt0aiQXIzCZQUdgWsE6AnxHzBgHsAhemrhG
   [[VotingAuthority.Peers]]
 # beeblebrox
 Identifier = "beeblebrox"
-Addresses = ["37.218.247.39:3333"]
+Addresses = ["37.218.247.39:3333", "xargi3page7cvuqltct33ipbd7d6nzhp43qa5r526yktljfg2r3434qd.onion:3333"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 sffL6SrX94zltrKWiCc1bxvgqPaKuCpUsErChV3bUEop4+YrTXDMgH3JzKemFBf8
 nmKjcV8le0fvASF0COhBdCoSse7YWSuR0zCiB1YiZk4nkfyhClxcTmXMV4hY7pvp
