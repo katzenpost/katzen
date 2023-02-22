@@ -56,7 +56,6 @@ func (a *App) doConnectClick() {
 		a.state = StateConnecting
 		a.cancelConn = cancel
 		a.Unlock()
-		time.After(5 * time.Second)
 		s, err := a.c.NewTOFUSession(ctx)
 		if err != nil {
 			a.Lock()
