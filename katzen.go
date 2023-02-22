@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	initialPKIConsensusTimeout = 45 * time.Second
+	initialPKIConsensusTimeout = 120 * time.Second
 	notificationTimeout        = 30 * time.Second
 )
 
