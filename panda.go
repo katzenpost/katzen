@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
+	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
 	panda "github.com/katzenpost/katzenpost/panda/crypto"
@@ -40,8 +41,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 		return err
 	}
 
-	pandaPayloadSize:= 1000 // XXX find out the actual payload size...
-	meetingPlace := pclient.New(wtf, s, l, p.Name, p.Provider)
+	meetingPlace := pclient.New(ecdh.PublicKeySize, s, l, p.Name, p.Provider)
 	// get the current document and shared random
 	doc := s.CurrentDocument()
 
@@ -55,7 +55,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 	pandaChan := make(chan panda.PandaUpdate)
 
 	// our ecdh public key
-	ecdhNike := ecdh.NewEcdhNike(rand.Reader)
+	ecdhNike := necdh.NewEcdhNike(rand.Reader)
 	myPublic := ecdhNike.DerivePublicKey(c.MyIdentity)
 	if c.PandaKeyExchange != nil {
 		kx, err = panda.UnmarshalKeyExchange(rand.Reader, l, meetingPlace, c.PandaKeyExchange, id, pandaChan, s.HaltCh())
@@ -140,7 +140,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		c.PandaKeyExchange = nil
 
 		// get the exchanged keys and figure out who goes first
-		ecdhNike := ecdh.NewEcdhNike(rand.Reader)
+		ecdhNike := necdh.NewEcdhNike(rand.Reader)
 		theirPublic, err := ecdhNike.UnmarshalBinaryPublicKey(update.Result)
 		if err != nil {
 			err = fmt.Errorf("failed to parse contact public key bytes: %s", err)
