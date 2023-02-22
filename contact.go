@@ -104,36 +104,92 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 	}
 }
 
-// Send a Message to Contact
-func (c *Contact) Send(s *client.Session, msg *Message) error {
+func (a *App) sendToContact(id uint64, msg *Message) error {
+	a.Lock()
+	defer a.Unlock()
+	c, ok := a.Contacts[id]
+	if !ok {
+		return ErrContactNotFound
+	}
+	if a.c.Session == nil {
+		return errors.New("Cannot send offline")
+	}
+	l := a.c.GetLogger("sendToContact" + c.Nickname)
+	l.Debugf("sendToContact1")
+	// Send a Message to Contact
 	c.Lock()
 	defer c.Unlock()
-	var st *stream.Stream
-	var err error
 
-	if s == nil {
-		return errors.New("cannot send offline yet")
+	if c.Stream == nil {
+		return ErrContactNotDialed
 	}
 
-	// establish a Stream for the peer if one doesn't exist
-	if c.Stream == nil {
-		if c.Initiator {
-			st, err = stream.ListenDuplex(s, "", string(c.SharedSecret))
-		} else {
-			st, err = stream.DialDuplex(s, "", string(c.SharedSecret))
-		}
-		if err != nil {
-			return err
-		}
-		c.Stream = st
+	// This can also block the UX thread because Write() to a Stream can block...
+	// We probably want to use the SetDeadline method  (but how? does cbor.NewEncoder support
+	// a context or similar for cancelling a write?
+	enc := cbor.NewEncoder(c.Stream)
+	c.Stream.Timeout = 42 * time.Second
+	err := enc.Encode(msg)
+	if err == os.ErrDeadlineExceeded {
+		l.Debugf("ok %s", err)
+		// set status of Message kj
 	} else {
 		// do stuff if the stream isn't running, etc
 	}
-	enc := cbor.NewEncoder(c.Stream)
-	err = enc.Encode(msg)
+
 	// XXX: how do we know when the stream has transmitted messages to the network?
 	// XXX: how do we know when the message has been acknowledged?
 	return err
+}
+
+// readFromContact is called by the streamWorker
+func (a *App) readFromContact(id uint64) error {
+	a.Lock()
+	defer a.Unlock()
+	c, ok := a.Contacts[id]
+	if !ok {
+		return ErrContactNotFound
+	}
+	// try to read any buffered data
+	// XXX: unclear what happens here if a cbor object
+	// spans multiple messages and we get a partial read
+	// maybe we need a buffered reader that accumulates
+	// things read from Stream so that we dont throw away
+	// any data on a timeout that doesn't deserialize into
+	// a struct
+	//c.Stream.Timeout = 2 * time.Second
+
+	c.Lock()
+	defer c.Unlock()
+	if c.Stream == nil {
+		return ErrContactNotDialed
+	}
+
+	l := a.c.GetLogger("readFromContact")
+	dec := cbor.NewDecoder(c.Stream)
+	c.Stream.Timeout = 42 * time.Second
+	m := new(Message)
+	err := dec.Decode(m)
+	if err != nil {
+		l.Errorf("cbor decode failure: %s", err)
+		return err
+	}
+
+	// if we have a conversation from this contact
+	co, ok := a.Conversations[m.Conversation]
+	if !ok {
+		// Create a new conversation with this ID
+		co = &Conversation{ID: m.Conversation,
+			Title:    "Conversation with " + c.Nickname,
+			Contacts: []*Contact{c}, Messages: []*Message{},
+			MessageExpiration: defaultExpiration,
+		}
+		a.Conversations[m.Conversation] = co
+	}
+	co.Lock()
+	defer co.Unlock()
+	co.Messages = append(co.Messages, m)
+	return nil
 }
 
 // A contactal is a fractal and secret that represents a user identity

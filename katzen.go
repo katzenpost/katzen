@@ -39,7 +39,8 @@ var (
 	stateFile        = flag.String("s", "statefile", "Path to the client state file.")
 	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 
-	minPasswordLen = 5 // XXX pick something reasonable
+	minPasswordLen = 5                // XXX pick something reasonable
+	updateInterval = 30 * time.Second // try to read from contacts every updateInterval
 
 	notifications = make(map[string]notify.Notification)
 
@@ -87,7 +88,77 @@ type App struct {
 
 	connectOnce *sync.Once
 
+	cmdCh chan streamCmd
+
 	db Store
+}
+
+type Command uint8
+
+const (
+	Start Command = iota
+	Stop
+)
+
+// contacts have streams, commands act on contacts
+type streamCmd struct {
+	Command   Command
+	ContactID uint64
+}
+
+func (a *App) startStream(id uint64) error {
+	c, ok := a.Contacts[id]
+	if !ok {
+		return ErrContactNotFound
+	}
+	if c.Stream == nil {
+		return ErrContactNotDialed
+	}
+
+	c.Stream.Start()
+	return nil
+}
+
+func (a *App) stopStream(id uint64) error {
+	c, ok := a.Contacts[id]
+	if !ok {
+		return ErrContactNotFound
+	}
+	if c.Stream == nil {
+		return ErrContactNotDialed
+	}
+	c.Stream.Halt()
+	return nil
+}
+
+func (a *App) streamWorker() {
+	// add active streams to active list
+	// read messages from each contact
+	// write to the appropriate conversation
+
+	for {
+		select {
+		case <-a.HaltCh():
+			return
+		case cmd := <-a.cmdCh:
+			switch cmd.Command {
+			case Start:
+				a.startStream(cmd.ContactID)
+			case Stop:
+				a.stopStream(cmd.ContactID)
+			default:
+				panic(cmd)
+			}
+		case <-time.After(updateInterval):
+		}
+		for _, c := range a.Contacts {
+			// start reading from contact in another routine
+			a.Go(func() {
+				err := a.readFromContact(c.ID)
+				}
+			})
+		}
+	}
 }
 
 func (a *App) eventSinkWorker(s *client.Session) {
@@ -199,7 +270,7 @@ func main() {
 	flag.Parse()
 	fmt.Println("Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.")
 
-	if *debug != 0{
+	if *debug != 0 {
 		go func() {
 			http.ListenAndServe(fmt.Sprintf("localhost:%d", *debug), nil)
 		}()
@@ -234,15 +305,15 @@ type (
 
 func (a *App) handleClientEvent(e interface{}) error {
 	switch e := e.(type) {
-	case client.ConnectionStatusEvent:
+	case *client.ConnectionStatusEvent:
 		shortNotify("ConnectionStatusEvent", e.String())
-	case client.MessageReplyEvent:
-		shortNotify("MessageReplyEvent", e.String())
-	case client.MessageSentEvent:
-		shortNotify("MessageSentEvent", e.String())
-	case client.MessageIDGarbageCollected:
+	case *client.MessageReplyEvent:
+		//shortNotify("MessageReplyEvent", e.String())
+	case *client.MessageSentEvent:
+		//shortNotify("MessageSentEvent", e.String())
+	case *client.MessageIDGarbageCollected:
 		shortNotify("MessageIDGarbageCollected", e.String())
-	case client.NewDocumentEvent:
+	case *client.NewDocumentEvent:
 		shortNotify("NewDocument", e.String())
 	default:
 		panic(e)

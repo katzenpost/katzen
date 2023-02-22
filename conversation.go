@@ -18,7 +18,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/hako/durafmt"
-	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
@@ -32,6 +31,9 @@ var (
 	sentIcon, _      = widget.NewIcon(icons.ActionDone)
 	deliveredIcon, _ = widget.NewIcon(icons.ActionDoneAll)
 	pandaIcon, _     = widget.NewIcon(icons.ActionPets)
+
+	ErrConversationNotFound = errors.New("Conversation not found")
+	ErrHalted               = errors.New("Halted")
 )
 
 // Conversation holds a multiparty conversation
@@ -69,14 +71,39 @@ func (c *Conversation) Destroy() error {
 	return nil
 }
 
-func (c *Conversation) Send(s *client.Session, msg *Message) error {
-	c.Lock()
-	c.Messages = append(c.Messages, msg)
-	defer c.Unlock()
-	for _, c := range c.Contacts {
-		err := c.Send(s, msg)
-		if err != nil {
-			return err
+func (a *App) sendToConversation(id uint64, msg *Message) error {
+	a.Lock()
+	co, ok := a.Conversations[id]
+	if !ok {
+		a.Unlock()
+		return ErrConversationNotFound
+	}
+
+	co.Lock()
+	co.Messages = append(co.Messages, msg)
+	n := len(co.Contacts)
+	wg := new(sync.WaitGroup)
+	errCh := make(chan error, n)
+	wg.Add(n)
+	for _, c := range co.Contacts {
+		go func() {
+			errCh <- a.sendToContact(c.ID, msg)
+			wg.Done()
+		}()
+	}
+	co.Unlock()
+
+	a.Unlock()
+	wg.Wait() // wait for all workers to return
+
+	for i := 0; i < n; i++ {
+		select {
+		case e := <-errCh:
+			if e != nil {
+				return e
+			}
+		case <-a.c.Session().HaltCh():
+			return ErrHalted
 		}
 	}
 	return nil
@@ -193,7 +220,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			Body:         []byte(c.compose.Text()),
 		}
 		// XXX handle case without session
-		err := c.conversation.Send(c.a.c.Session(), msg)
+		err := c.a.sendToConversation(c.conversation.ID, msg)
 		if err == nil {
 			c.compose.SetText("")
 			return MessageSent{conversation: c.conversation.ID}
