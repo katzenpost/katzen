@@ -151,14 +151,14 @@ func (a *App) streamWorker() {
 				panic(cmd)
 			}
 		case <-time.After(updateInterval):
-			l.Debugf("woke on updateInterval")
 		}
 		for _, c := range a.Contacts {
 			// start reading from contact in another routine
 			a.Go(func() {
-				l.Debugf("readFromContact %s", c.Nickname)
 				err := a.readFromContact(c.ID)
-				if err != nil {
+				switch err {
+				case nil, os.ErrDeadlineExceeded, ErrContactNotDialed:
+				default:
 					l.Errorf("%v", err)
 				}
 			})

@@ -156,7 +156,6 @@ func (a *App) readFromContact(id uint64) error {
 		a.Unlock()
 		return ErrContactNotFound
 	}
-	l := a.c.GetLogger("readFromContact")
 	a.Unlock()
 	// try to read any buffered data
 	// XXX: unclear what happens here if a cbor object
