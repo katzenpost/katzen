@@ -6,6 +6,7 @@ import (
 	"fmt"
 	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"golang.org/x/crypto/nacl/secretbox"
 	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
@@ -17,6 +18,22 @@ var (
 	ErrNotOnline  = errors.New("Not Online")
 	ErrNoDocument = errors.New("No PKI Document")
 )
+
+func (a *App) restartPandaExchanges() error {
+	for id, c := range a.Contacts {
+		c.Lock()
+		if !c.IsPending {
+			c.Unlock()
+			continue
+		}
+		c.Unlock()
+		err := a.doPANDAExchange(id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (a *App) doPANDAExchange(id uint64) error {
 	a.Lock()
@@ -40,8 +57,10 @@ func (a *App) doPANDAExchange(id uint64) error {
 		l.Errorf("Failed to get %s: %s", pCommon.PandaCapability, err)
 		return err
 	}
+	// minimum blob size to exchange a ecdh.PublicKey
+	blobSize := 24 /* nonce */ +4 /* length */ + ecdh.PublicKeySize + secretbox.Overhead
 
-	meetingPlace := pclient.New(ecdh.PublicKeySize, s, l, p.Name, p.Provider)
+	meetingPlace := pclient.New(blobSize, s, l, p.Name, p.Provider)
 	// get the current document and shared random
 	doc := s.CurrentDocument()
 
