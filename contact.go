@@ -475,6 +475,7 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			p.a.Conversations[conv.ID] = conv
 			return AddContactComplete{id: contact.ID}
 		}
+		shortNotify("ConnectionStatusEvent", err.Error())
 	}
 	return nil
 }
