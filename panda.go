@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
 	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
-	"golang.org/x/crypto/nacl/secretbox"
-	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
 	panda "github.com/katzenpost/katzenpost/panda/crypto"
 	"github.com/katzenpost/katzenpost/stream"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 var (
@@ -58,7 +58,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 		return err
 	}
 	// minimum blob size to exchange a ecdh.PublicKey
-	blobSize := 24 /* nonce */ +4 /* length */ + ecdh.PublicKeySize + secretbox.Overhead
+	blobSize := 24 /* nonce */ + 4 /* length */ + ecdh.PublicKeySize + secretbox.Overhead
 
 	meetingPlace := pclient.New(blobSize, s, l, p.Name, p.Provider)
 	// get the current document and shared random
