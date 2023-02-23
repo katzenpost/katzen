@@ -172,47 +172,39 @@ func (a *App) readFromContact(id uint64) error {
 		c.Unlock()
 		return ErrContactNotDialed
 	}
-
-	// XXX: we need to double buffer the raw reads from Stream so that
-	// no bytes are lost on a timeout while deserializing
-
 	if c.CborBuffer == nil {
 		c.CborBuffer = new(bytes.Buffer)
 	}
-	newBuf := new(bytes.Buffer)
 	var dec *cbor.Decoder
+	newBuf := new(bytes.Buffer)
+
+	// if previously undecoded bytes exist, read those first
 	if c.CborBuffer.Len() > 0 {
-		l.Debugf("io.MultiReader(c.CborBuffer, c.Stream), newBuf): CborBuffer.Len() %d", c.CborBuffer.Len())
 		dec = cbor.NewDecoder(io.TeeReader(io.MultiReader(c.CborBuffer, c.Stream), newBuf))
 	} else {
 		dec = cbor.NewDecoder(io.TeeReader(c.Stream, newBuf))
 	}
 	c.Unlock()
+
 	m := new(Message)
 	err := dec.Decode(m)
-	if err != nil {
-		// timed out, most likely
-		if newBuf.Len() > 0 {
-			// partial read of stream
-			c.Lock()
-			c.CborBuffer = newBuf
-			c.Unlock()
-		}
-		return err
-	} else {
-		// how many bytes were read? ...
-		l.Debugf("newBuf.Len(): %d", newBuf.Len())
-		if  c.CborBuffer.Len() > 0 {
-			l.Debugf("short read of CborBuffer: %d", c.CborBuffer.Len())
-			if newBuf.Len() > 0 {
-				// Decoded an object from CborBuffer, but also read Stream,:
-				n, err := io.Copy(c.CborBuffer, newBuf)
-				l.Debugf("short read of buf, %d %v io.Copy(c.CborBuffer, newBuf)", n, err)
-				panic("does this happen?")
-			}
-		}
-	}
 
+	// regardless of error, drain unread CborBuffer into newBuf
+	l := a.c.GetLogger("readFromContact")
+
+	c.Lock()
+	if err != nil {
+		if c.CborBuffer.Len() > 0 {
+			io.Copy(newBuf, c.CborBuffer)
+		}
+		c.CborBuffer = newBuf
+		l.Debugf("c.CborBuffer.Len(): %d", c.CborBuffer.Len())
+		c.Unlock()
+		return err
+	}
+	c.Unlock()
+
+	// Set Sender to our contact ID for this Stream
 	m.Sender = c.ID
 	m.Received = time.Now()
 	// if we have a conversation from this contact
