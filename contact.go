@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"image"
+	"io"
 	mrand "math/rand"
 	"os"
 	"runtime"
@@ -212,7 +212,7 @@ func (a *App) readFromContact(id uint64) error {
 	if !ok {
 		// Create a new conversation with this ID
 		co = &Conversation{ID: m.Conversation,
-			Title:    "Conversation with " + c.Nickname,
+			Title:    c.Nickname,
 			Contacts: []*Contact{c}, Messages: []*Message{},
 			MessageExpiration: defaultExpiration,
 		}

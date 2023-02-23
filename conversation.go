@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"image"
 	"runtime"
@@ -18,7 +20,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/hako/durafmt"
-	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
@@ -116,15 +118,19 @@ func (a *App) NewConversation(id uint64) (*Conversation, error) {
 	if !ok {
 		return nil, errors.New("No such contact")
 	}
-	for {
-		id = uint64(rand.NewMath().Int63())
-		if _, ok := a.Conversations[id]; ok {
-			continue
-		}
-		break
+	// contacts want to agree on a conversation ID so either of them can start a chat and
+	// the conversation id will agree
+	r := hkdf.New(sha256.New, []byte(contact.SharedSecret), []byte("our first rendezvous"), nil)
+	tmp := [8]byte{}
+	_, err := r.Read(tmp[:])
+	if err != nil {
+		panic(err)
 	}
-
-	conv := &Conversation{ID: id, Title: "Chat with " + contact.Nickname, Contacts: []*Contact{contact}}
+	id = binary.LittleEndian.Uint64(tmp[:])
+	if _, ok := a.Conversations[id]; ok {
+		return nil, errors.New("Converation aleady exists")
+	}
+	conv := &Conversation{ID: id, Title: contact.Nickname, Contacts: []*Contact{contact}}
 	return conv, nil
 }
 
