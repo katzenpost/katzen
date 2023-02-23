@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"image"
 	mrand "math/rand"
 	"os"
@@ -76,6 +78,10 @@ type Contact struct {
 
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
+
+	// partial reads of cbor bytes get stashed here until a complete object
+	// can be deserialized
+	CborBuffer *bytes.Buffer
 }
 
 // NewContact creates a new Contact from a shared secret (dialer)
@@ -145,11 +151,13 @@ func (a *App) sendToContact(id uint64, msg *Message) error {
 // readFromContact is called by the streamWorker
 func (a *App) readFromContact(id uint64) error {
 	a.Lock()
-	defer a.Unlock()
 	c, ok := a.Contacts[id]
 	if !ok {
+		a.Unlock()
 		return ErrContactNotFound
 	}
+	l := a.c.GetLogger("readFromContact")
+	a.Unlock()
 	// try to read any buffered data
 	// XXX: unclear what happens here if a cbor object
 	// spans multiple messages and we get a partial read
@@ -160,21 +168,53 @@ func (a *App) readFromContact(id uint64) error {
 	//c.Stream.Timeout = 2 * time.Second
 
 	c.Lock()
-	defer c.Unlock()
 	if c.Stream == nil {
+		c.Unlock()
 		return ErrContactNotDialed
 	}
 
-	l := a.c.GetLogger("readFromContact")
-	dec := cbor.NewDecoder(c.Stream)
-	c.Stream.Timeout = 42 * time.Second
+	// XXX: we need to double buffer the raw reads from Stream so that
+	// no bytes are lost on a timeout while deserializing
+
+	if c.CborBuffer == nil {
+		c.CborBuffer = new(bytes.Buffer)
+	}
+	newBuf := new(bytes.Buffer)
+	var dec *cbor.Decoder
+	if c.CborBuffer.Len() > 0 {
+		l.Debugf("io.MultiReader(c.CborBuffer, c.Stream), newBuf): CborBuffer.Len() %d", c.CborBuffer.Len())
+		dec = cbor.NewDecoder(io.TeeReader(io.MultiReader(c.CborBuffer, c.Stream), newBuf))
+	} else {
+		dec = cbor.NewDecoder(io.TeeReader(c.Stream, newBuf))
+	}
+	c.Unlock()
 	m := new(Message)
 	err := dec.Decode(m)
 	if err != nil {
-		l.Errorf("cbor decode failure: %s", err)
+		// timed out, most likely
+		if newBuf.Len() > 0 {
+			// partial read of stream
+			c.Lock()
+			c.CborBuffer = newBuf
+			c.Unlock()
+		}
 		return err
+	} else {
+		// how many bytes were read? ...
+		l.Debugf("newBuf.Len(): %d", newBuf.Len())
+		if  c.CborBuffer.Len() > 0 {
+			l.Debugf("short read of CborBuffer: %d", c.CborBuffer.Len())
+			if newBuf.Len() > 0 {
+				// Decoded an object from CborBuffer, but also read Stream,:
+				n, err := io.Copy(c.CborBuffer, newBuf)
+				l.Debugf("short read of buf, %d %v io.Copy(c.CborBuffer, newBuf)", n, err)
+				panic("does this happen?")
+			}
+		}
 	}
 
+	m.Sender = c.ID
+	m.Received = time.Now()
 	// if we have a conversation from this contact
 	co, ok := a.Conversations[m.Conversation]
 	if !ok {
