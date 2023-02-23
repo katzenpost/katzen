@@ -140,6 +140,14 @@ func (a *App) streamWorker() {
 	for {
 		select {
 		case <-a.HaltCh():
+			for _, c := range a.Contacts {
+				c.Stream.Halt()
+			}
+			return
+		case <-a.c.Session().HaltCh():
+			for _, c := range a.Contacts {
+				c.Stream.Halt()
+			}
 			return
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {

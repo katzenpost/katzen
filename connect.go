@@ -70,9 +70,11 @@ func (a *App) doConnectClick() {
 		a.Go(func() { a.eventSinkWorker(s) })
 		// start worker routine to read from streams
 		a.Go(a.streamWorker)
+		// restart any unfinished key exchanges
 		a.Lock()
 		a.state = StateOnline
 		a.Unlock()
+		a.Go(func() { a.restartPandaExchanges() })
 	})
 }
 
