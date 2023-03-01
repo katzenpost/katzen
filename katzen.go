@@ -77,7 +77,7 @@ type App struct {
 
 	cancelConn func()
 	state      ConnectedState
-
+	sessions      map[uint64]*client.Session
 	Contacts      map[uint64]*Contact
 	Conversations map[uint64]*Conversation
 	Settings      map[string]interface{}

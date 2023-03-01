@@ -19,7 +19,8 @@ var (
 	ErrNoDocument = errors.New("No PKI Document")
 )
 
-func (a *App) restartPandaExchanges() error {
+func (a *App) restartPandaExchanges() {
+	l := a.c.GetLogger("restartPandaExchanges")
 	for id, c := range a.Contacts {
 		c.Lock()
 		if !c.IsPending {
@@ -29,25 +30,24 @@ func (a *App) restartPandaExchanges() error {
 		c.Unlock()
 		err := a.doPANDAExchange(id)
 		if err != nil {
-			return err
+			l.Debug("error restarting exchange for %s: %s", c.Nickname, err.Error())
 		}
 	}
-	return nil
 }
 
 func (a *App) doPANDAExchange(id uint64) error {
-	a.Lock()
-	defer a.Unlock()
-
-	c, ok := a.Contacts[id]
-	if !ok {
-		return ErrContactNotFound
-	}
-
-	s := a.c.Session()
+	s := a.Session()
 	if s == nil {
 		return ErrNotOnline
 	}
+
+	a.Lock()
+	c, ok := a.Contacts[id]
+	if !ok {
+		a.Unlock()
+		return ErrContactNotFound
+	}
+	a.Unlock()
 
 	l := a.c.GetLogger("panda " + c.Nickname)
 
@@ -97,18 +97,13 @@ func (a *App) doPANDAExchange(id uint64) error {
 }
 
 func (a *App) pandaWorker(pandaChan chan panda.PandaUpdate) {
-	a.Lock()
-	if a.c == nil || a.c.Session() == nil {
-		a.Unlock()
+	if a.Session() == nil {
 		return
 	}
-
 	// teardown at session close
-	haltOn := a.c.Session().HaltCh()
+	haltOn := a.Session().HaltCh()
 
 	l := a.c.GetLogger("pandaWorker")
-	a.Unlock()
-
 	for {
 		select {
 		case <-haltOn:
@@ -175,18 +170,18 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		if bytes.Compare(myPublic.Bytes(), theirPublic.Bytes()) == 1 {
 			// we go first, so we are the "listener"
 			l.Notice("Listening with %x", streamSecret)
-			st, err := stream.ListenDuplex(a.c.Session(), "", string(streamSecret))
+			st, err := stream.ListenDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			c.Stream = st
+			c.Transport = &stream.BufferedStream{Stream:st}
 		} else {
 			l.Notice("Dialing with %x", streamSecret)
-			st, err := stream.DialDuplex(a.c.Session(), "", string(streamSecret))
+			st, err := stream.DialDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			c.Stream = st
+			c.Transport = &stream.BufferedStream{Stream:st}
 		}
 
 		c.IsPending = false
