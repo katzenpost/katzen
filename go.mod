@@ -10,10 +10,12 @@ require (
 	gioui.org v0.0.0-20230101161950-e9bce02b24f0
 	gioui.org/x v0.0.0-20221219202300-e2d994f107e4
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
+	github.com/dgraph-io/badger/v4 v4.0.1
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.22-0.20230226154649-e997bc9f4a40
+	github.com/katzenpost/katzenpost v0.0.22-0.20230301172231-2eb815fee349
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	golang.org/x/crypto v0.4.0
 	golang.org/x/exp/shiny v0.0.0-20221230185412-738e83a70c30
 	golang.org/x/image v0.2.0
 )
@@ -28,7 +30,6 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.3.1 // indirect
-	github.com/dgraph-io/badger/v4 v4.0.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
@@ -58,7 +59,6 @@ require (
 	gitlab.com/yawning/slice.git v0.0.0-20190714152416-bc4ae2510529 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.22.5 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20221012211006-4de253d81b95 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
