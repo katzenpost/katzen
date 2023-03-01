@@ -8,6 +8,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/notify"
+	"github.com/dgraph-io/badger/v4"
 )
 
 // SettingsPage is for user settings
@@ -82,21 +83,33 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 	if p.switchUseTor.Changed() {
 		if p.switchUseTor.Value && !hasTor() {
 			p.switchUseTor.Value = false
-			p.a.Settings["UseTor"] = false
+
+			// set UseTor to false
+			p.a.db.Update(func(txn *badger.Txn) error {
+				return txn.Set([]byte("UseTor"), []byte{0x0})
+			})
 			warnNoTor()
 			return nil
 		}
 		if p.switchUseTor.Value {
-			p.a.Settings["UseTor"] = true
+			p.a.db.Update(func(txn *badger.Txn) error {
+				return txn.Set([]byte("UseTor"), []byte{0xFF})
+			})
 		} else {
-			delete(p.a.Settings, "UseTor")
+			p.a.db.Update(func(txn *badger.Txn) error {
+				return txn.Set([]byte("UseTor"), []byte{0x00})
+			})
 		}
 	}
 	if p.switchAutoConnect.Changed() {
 		if p.switchAutoConnect.Value {
-			p.a.Settings["AutoConnect"] = true
+			p.a.db.Update(func(txn *badger.Txn) error {
+				return txn.Set([]byte("AutoConnect"), []byte{0xFF})
+			})
 		} else {
-			delete(p.a.Settings, "AutoConnect")
+			p.a.db.Update(func(txn *badger.Txn) error {
+				return txn.Set([]byte("AutoConnect"), []byte{0x00})
+			})
 		}
 	}
 	if p.submit.Clicked() {
@@ -119,16 +132,29 @@ func newSettingsPage(a *App) *SettingsPage {
 	p := &SettingsPage{a: a}
 	p.back = &widget.Clickable{}
 	p.submit = &widget.Clickable{}
-	if _, ok := a.Settings["UseTor"]; ok {
-		p.switchUseTor = &widget.Bool{Value: true}
-	} else {
-		p.switchUseTor = &widget.Bool{Value: false}
+
+	// read database for Tor setting (set at startup
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get([]byte("UseTor"))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			if val[0] == 0xFF {
+				p.switchUseTor = &widget.Bool{Value: true}
+			} else {
+				p.switchUseTor = &widget.Bool{Value: false}
+			}
+			return nil
+		})
+	})
+	// XXX: this is defaulted in setup.go
+	if err != nil {
+		panic(err)
 	}
-	if _, ok := a.Settings["AutoConnect"]; ok {
-		p.switchAutoConnect = &widget.Bool{Value: true}
-	} else {
-		p.switchAutoConnect = &widget.Bool{Value: false}
-	}
+
+	// FIXME: put in db
+	p.switchAutoConnect = &widget.Bool{Value: true}
 	return p
 }
 

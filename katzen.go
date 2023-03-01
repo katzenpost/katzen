@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
 	"time"
@@ -31,6 +32,7 @@ import (
 const (
 	initialPKIConsensusTimeout = 120 * time.Second
 	notificationTimeout        = 30 * time.Second
+	keySize                    = 32 // symmetric key size for badger db encryption (AES-256)
 )
 
 var (
@@ -60,12 +62,6 @@ var (
 	}()
 )
 
-// Store is the interface for reading and writing saved state
-type Store interface {
-	Get([]byte) ([]byte, error)
-	Put([]byte, []byte) error
-}
-
 type App struct {
 	sync.Mutex
 	worker.Worker
@@ -75,14 +71,14 @@ type App struct {
 	ops   *op.Ops
 	c     *client.Client
 
-	cancelConn func()
-	state      ConnectedState
+	db *badger.DB
+
+	cancelConn    func()
+	state         ConnectedState
 	sessions      map[uint64]*client.Session
 	Contacts      map[uint64]*Contact
 	Conversations map[uint64]*Conversation
-	Settings      map[string]interface{}
-
-	messageChans map[uint64]chan *Message
+	messageChans  map[uint64]chan *Message
 
 	stack pageStack
 	focus bool
@@ -91,8 +87,6 @@ type App struct {
 	connectOnce *sync.Once
 
 	cmdCh chan streamCmd
-
-	db Store
 }
 
 type Command uint8
@@ -209,16 +203,11 @@ func newApp(w *app.Window) *App {
 	a := &App{
 		Contacts:      make(map[uint64]*Contact),
 		Conversations: make(map[uint64]*Conversation),
-		Settings:      make(map[string]interface{}),
 		sessions:      make(map[uint64]*client.Session),
 		messageChans:  make(map[uint64]chan *Message),
 		w:             w,
 		ops:           &op.Ops{},
 		connectOnce:   new(sync.Once),
-	}
-	// XXX we dont serialize anything to disk yet
-	if hasTor() {
-		a.Settings["UseTor"] = true
 	}
 	return a
 }
@@ -242,6 +231,7 @@ func (a *App) update(gtx layout.Context) {
 		case unlockError:
 			a.stack.Clear(newSignInPage(a))
 		case restartClient:
+			a.db.Close()
 			a.stack.Clear(newSignInPage(a))
 		case unlockSuccess:
 			// validate the statefile somehow
