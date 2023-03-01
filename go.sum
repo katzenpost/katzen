@@ -91,6 +91,8 @@ github.com/jfreymuth/oggvorbis v1.0.0/go.mod h1:abe6F9QRjuU9l+2jek3gj46lu40N4qlY
 github.com/jfreymuth/vorbis v1.0.0/go.mod h1:8zy3lUAm9K/rJJk223RKy6vjCZTWC61NA2QD06bfOE0=
 github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 h1:9gHByAWH1LydGefFGorN1ZBRZ/Oz9iozdzMvRTWpyRw=
 github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556/go.mod h1:d9kxwmGOcutgP6bQwr2xaLInaW5yJsxsoPRyUIG0J/E=
+github.com/katzenpost/katzenpost v0.0.22-0.20230226154649-e997bc9f4a40 h1:xbyMFVb7KgkIfxQKEuTT8J5gS/oH+YrYWs7K/2kZOjk=
+github.com/katzenpost/katzenpost v0.0.22-0.20230226154649-e997bc9f4a40/go.mod h1:PzjZSaSNyClSQGns5lgUYhiUKrpBjBzogsmdkUU2HjE=
 github.com/katzenpost/noise v0.0.3 h1:bpYnozkk8j0XE1FAX9iRYgKtfIywuAINF+vMdBOidrM=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf h1:iTvu+cdByoEzF1Hatwbl8AoFfTEB2ZITE2FOeJUyz78=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf/go.mod h1:wzbXAL9lcBAiryER2XStcCww3HGTKl7jjzf2BCgHWrI=
