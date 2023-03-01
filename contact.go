@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"image"
-	"io"
 	mrand "math/rand"
 	"os"
 	"runtime"
@@ -25,8 +23,8 @@ import (
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/nike"
+	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"github.com/katzenpost/katzenpost/stream"
 	qrcode "github.com/skip2/go-qrcode"
@@ -44,6 +42,7 @@ var (
 	submitIcon, _ = widget.NewIcon(icons.NavigationCheck)
 	cancelIcon, _ = widget.NewIcon(icons.NavigationCancel)
 
+	ErrAlreadyReading = errors.New("Already Reading Contact")
 	ErrContactNotFound  = errors.New("Contact not found")
 	ErrContactNotDialed = errors.New("Contact not Dialed")
 
@@ -70,18 +69,16 @@ type Contact struct {
 	// PandaResult contains an error message if the PANDA exchange fails.
 	PandaResult string
 
-	// Stream is the reliable channel used to communicate with Contact
-	Stream *stream.Stream
+	// Transport is the reliable channel used to communicate with Contact
+	// The BufferedStream varient saves preserves bytes read from Stream that
+	// have not been decoded.
+	Transport *stream.BufferedStream
 
 	// MyIdentity is the ecdh.PrivateKey used with PANDA
 	MyIdentity nike.PrivateKey
 
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
-
-	// partial reads of cbor bytes get stashed here until a complete object
-	// can be deserialized
-	CborBuffer *bytes.Buffer
 }
 
 // NewContact creates a new Contact from a shared secret (dialer)
@@ -93,9 +90,11 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 		}
 		// generate a new ecdh keypair as a long-term identity with this contact
 		// for re-keying, etc, exchanged as part of PANDA
-		sK, _ := ecdh.NewKeypair(rand.Reader)
+		sK := necdh.EcdhScheme.GeneratePrivateKey(rand.Reader)
 		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK, SharedSecret: secret, IsPending: true}
+		a.Lock()
 		a.Contacts[id] = c
+		a.Unlock()
 
 		// if we are online, start a PANDA exchange immediately
 		// if not, the exchange must be started when the client comes online and tries to send a message.
@@ -126,15 +125,15 @@ func (a *App) sendToContact(id uint64, msg *Message) error {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.Stream == nil {
+	if c.Transport == nil {
 		return ErrContactNotDialed
 	}
 
 	// This can also block the UX thread because Write() to a Stream can block...
 	// We probably want to use the SetDeadline method  (but how? does cbor.NewEncoder support
 	// a context or similar for cancelling a write?
-	enc := cbor.NewEncoder(c.Stream)
-	c.Stream.Timeout = 42 * time.Second
+	enc := cbor.NewEncoder(c.Transport)
+	c.Transport.Stream.Timeout = 42 * time.Second
 	err := enc.Encode(msg)
 	if err == os.ErrDeadlineExceeded {
 		l.Debugf("ok %s", err)
@@ -148,6 +147,94 @@ func (a *App) sendToContact(id uint64, msg *Message) error {
 	return err
 }
 
+// ReadMessage returns the next Message from Contact
+func (c *Contact) ReadMessage() (*Message, error) {
+	c.Lock()
+	defer c.Unlock()
+	m := new(Message)
+	err := c.Transport.CBORDecode(m)
+	if err == nil {
+		return m, nil
+	}
+	return nil, err
+}
+
+func (c *Contact) Messages(stop <-chan interface{}) chan *Message {
+	// start a reader routine that reads Messages from stream for this contact
+	resp := make(chan *Message)
+	c.Transport.Go(func() {
+		defer close(resp)
+		defer c.Transport.Halt()
+		for {
+			result := c.Transport.CBORDecodeAsync(new(Message))
+			select {
+			case <-stop:
+				return
+			case r, ok := <- result:
+				if !ok {
+					return
+				}
+				switch r := r.(type) {
+				case error:
+					return // closes resp chan
+				case *Message:
+					// return response unless caller has gone away
+					select {
+					case resp <- r:
+					case <-c.Transport.HaltCh():
+						panic("Message has been lost")
+					}
+				}
+			}
+		}
+	})
+	// return a channel where Messages can be read from
+	return resp
+}
+
+func (a *App) readFromContact(id uint64) error {
+	a.Lock()
+	c, ok := a.Contacts[id]
+	if !ok {
+		a.Unlock()
+		return ErrContactNotFound
+	}
+	a.Unlock()
+	result := c.Transport.CBORDecodeAsync(new(Message))
+	var m *Message
+	select {
+	case r := <-result:
+		switch r := r.(type) {
+		case error:
+			return r
+		case *Message:
+			m = r
+		}
+	case <-a.HaltCh():
+		return ErrHalted
+	}
+
+	// Set Sender to our contact ID for this Stream
+	m.Sender = c.ID
+	m.Received = time.Now()
+	// if we have a conversation from this contact
+	co, ok := a.Conversations[m.Conversation]
+	if !ok {
+		// Create a new conversation with this ID
+		co = &Conversation{ID: m.Conversation,
+			Title:    c.Nickname,
+			Contacts: []*Contact{c}, Messages: []*Message{},
+			MessageExpiration: defaultExpiration,
+		}
+		a.Conversations[m.Conversation] = co
+	}
+	co.Lock()
+	defer co.Unlock()
+	co.Messages = append(co.Messages, m)
+	return nil
+}
+
+/*
 // readFromContact is called by the streamWorker
 func (a *App) readFromContact(id uint64) error {
 	a.Lock()
@@ -222,6 +309,7 @@ func (a *App) readFromContact(id uint64) error {
 	co.Messages = append(co.Messages, m)
 	return nil
 }
+*/
 
 // A contactal is a fractal and secret that represents a user identity
 type Contactal struct {
