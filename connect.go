@@ -10,6 +10,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/katzenpost/katzenpost/client"
+	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
@@ -27,6 +28,28 @@ func (a *App) Status() ConnectedState {
 	return a.state
 }
 
+// Session returns the active Session
+func (a *App) Session() *client.Session {
+	a.Lock()
+	defer a.Unlock()
+
+	// XXX: this wont work because eventworker isn't per session
+	if len(a.sessions) == 0 {
+		return nil
+	}
+
+	// kludge
+	n := rand.NewMath().Intn(len(a.sessions))
+	i := 0
+	for _, s := range a.sessions {
+		if i == n {
+			return s
+		}
+		i++
+	}
+	return nil
+}
+
 func (a *App) doConnectClick() {
 	a.Lock()
 	switch a.state {
@@ -41,7 +64,18 @@ func (a *App) doConnectClick() {
 		// but client will support making multiple sessions to different entry nodes
 		a.state = StateOffline
 		// XXX: we need to remove session from client... but how?
-		a.c.Session().Shutdown()
+		wg := new(sync.WaitGroup)
+		wg.Add(len(a.sessions))
+		for _, s := range a.sessions {
+			go func() {
+				s.Shutdown()
+				wg.Done()
+			}()
+		}
+		a.Unlock()
+		wg.Wait()
+		a.Lock()
+		a.sessions = make(map[uint64]*client.Session)
 		a.connectOnce = new(sync.Once)
 		a.Unlock()
 		return
@@ -66,15 +100,19 @@ func (a *App) doConnectClick() {
 			shortNotify("Disconnected", err.Error())
 			return
 		}
-		// start worker routine to consume events from this session
-		a.Go(func() { a.eventSinkWorker(s) })
-		// start worker routine to read from streams
-		a.Go(a.streamWorker)
-		// restart any unfinished key exchanges
 		a.Lock()
+		a.sessions[rand.NewMath().Uint64()] = s
 		a.state = StateOnline
 		a.Unlock()
-		a.Go(func() { a.restartPandaExchanges() })
+
+		// start worker routine to consume events from this session
+		a.Go(func() { a.eventSinkWorker(s) })
+
+		// start worker routine to read from streams
+		a.Go(func() { a.streamWorker(s) })
+
+		// restart any unfinished key exchanges
+		a.Go(a.restartPandaExchanges)
 	})
 }
 
