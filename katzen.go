@@ -38,11 +38,10 @@ const (
 var (
 	dataDirName      = "katzen"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
-	stateFile        = flag.String("s", "statefile", "Path to the client state file.")
 	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 
 	minPasswordLen = 5                // XXX pick something reasonable
-	updateInterval = 30 * time.Second // try to read from contacts every updateInterval
+	updateInterval = 10 * time.Second // try to read from contacts every updateInterval
 
 	notifications = make(map[string]notify.Notification)
 
@@ -166,7 +165,7 @@ func (a *App) streamWorker(s *client.Session) {
 		// see which contacts have messages to read
 		for id, msgCh := range a.messageChans {
 			select {
-			case m, ok := <- msgCh:
+			case m, ok := <-msgCh:
 				if !ok {
 					a.stopReading(id)
 				}

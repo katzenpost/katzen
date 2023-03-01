@@ -174,14 +174,14 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			if err != nil {
 				panic(err)
 			}
-			c.Transport = &stream.BufferedStream{Stream:st}
+			c.Transport = &stream.BufferedStream{Stream: st}
 		} else {
 			l.Notice("Dialing with %x", streamSecret)
 			st, err := stream.DialDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			c.Transport = &stream.BufferedStream{Stream:st}
+			c.Transport = &stream.BufferedStream{Stream: st}
 		}
 
 		c.IsPending = false

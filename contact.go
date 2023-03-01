@@ -42,7 +42,7 @@ var (
 	submitIcon, _ = widget.NewIcon(icons.NavigationCheck)
 	cancelIcon, _ = widget.NewIcon(icons.NavigationCancel)
 
-	ErrAlreadyReading = errors.New("Already Reading Contact")
+	ErrAlreadyReading   = errors.New("Already Reading Contact")
 	ErrContactNotFound  = errors.New("Contact not found")
 	ErrContactNotDialed = errors.New("Contact not Dialed")
 
@@ -170,7 +170,7 @@ func (c *Contact) Messages(stop <-chan interface{}) chan *Message {
 			select {
 			case <-stop:
 				return
-			case r, ok := <- result:
+			case r, ok := <-result:
 				if !ok {
 					return
 				}
