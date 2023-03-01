@@ -82,6 +82,8 @@ type App struct {
 	Conversations map[uint64]*Conversation
 	Settings      map[string]interface{}
 
+	messageChans map[uint64]chan *Message
+
 	stack pageStack
 	focus bool
 	stage system.Stage
@@ -106,71 +108,86 @@ type streamCmd struct {
 	ContactID uint64
 }
 
-func (a *App) startStream(id uint64) error {
+func (a *App) startReading(id uint64) error {
 	c, ok := a.Contacts[id]
 	if !ok {
 		return ErrContactNotFound
 	}
-	if c.Stream == nil {
+	if c.Transport == nil {
 		return ErrContactNotDialed
 	}
 
-	c.Stream.Start()
+	if _, ok := a.messageChans[id]; ok {
+		return ErrAlreadyReading
+	}
+	a.messageChans[id] = c.Messages(a.HaltCh())
 	return nil
 }
 
-func (a *App) stopStream(id uint64) error {
+func (a *App) stopReading(id uint64) error {
 	c, ok := a.Contacts[id]
 	if !ok {
 		return ErrContactNotFound
 	}
-	if c.Stream == nil {
+	if c.Transport == nil {
 		return ErrContactNotDialed
 	}
-	c.Stream.Halt()
+	c.Transport.Halt()
 	return nil
 }
 
-func (a *App) streamWorker() {
+func (a *App) haltAllTransports() {
+	for _, c := range a.Contacts {
+		c.Lock()
+		if !c.IsPending {
+			c.Transport.Halt()
+		}
+		c.Unlock()
+	}
+}
+
+func (a *App) streamWorker(s *client.Session) {
 	// add active streams to active list
 	// read messages from each contact
 	// write to the appropriate conversation
+	// streamWorker returns when session halts
 
-	l := a.c.GetLogger("streamWorker")
 	for {
 		select {
-		case <-a.HaltCh():
-			for _, c := range a.Contacts {
-				c.Stream.Halt()
-			}
-			return
-		case <-a.c.Session().HaltCh():
-			for _, c := range a.Contacts {
-				c.Stream.Halt()
-			}
+		case <-s.HaltCh():
+			a.haltAllTransports()
 			return
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {
 			case Start:
-				a.startStream(cmd.ContactID)
+				a.startReading(cmd.ContactID)
 			case Stop:
-				a.stopStream(cmd.ContactID)
+				a.stopReading(cmd.ContactID)
 			default:
 				panic(cmd)
 			}
 		case <-time.After(updateInterval):
 		}
-		for _, c := range a.Contacts {
-			// start reading from contact in another routine
-			a.Go(func() {
-				err := a.readFromContact(c.ID)
-				switch err {
-				case nil, os.ErrDeadlineExceeded, ErrContactNotDialed:
-				default:
-					l.Errorf("%v", err)
+
+		// see which contacts have messages to read
+		for id, msgCh := range a.messageChans {
+			select {
+			case m, ok := <- msgCh:
+				if !ok {
+					a.stopReading(id)
 				}
-			})
+				a.deliverMessage(m)
+			default:
+				// skip
+			}
 		}
+
+	}
+}
+
+func (a *App) deliverMessage(m *Message) {
+	if c, ok := a.Conversations[m.Conversation]; ok {
+		c.Messages = append(c.Messages, m)
 	}
 }
 
@@ -178,8 +195,6 @@ func (a *App) eventSinkWorker(s *client.Session) {
 	for {
 		select {
 		case <-s.HaltCh(): // session is halted
-			return
-		case <-a.HaltCh(): // client is halted
 			return
 		case e := <-s.EventSink:
 			err := a.handleClientEvent(e)
@@ -195,6 +210,8 @@ func newApp(w *app.Window) *App {
 		Contacts:      make(map[uint64]*Contact),
 		Conversations: make(map[uint64]*Conversation),
 		Settings:      make(map[string]interface{}),
+		sessions:      make(map[uint64]*client.Session),
+		messageChans:  make(map[uint64]chan *Message),
 		w:             w,
 		ops:           &op.Ops{},
 		connectOnce:   new(sync.Once),

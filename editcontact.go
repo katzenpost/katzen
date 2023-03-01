@@ -98,10 +98,11 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 		// TODO: confirmation dialog
 		c, ok := p.a.Contacts[p.id]
 		if ok {
-			if c.Stream != nil {
+			if c.Transport != nil {
 				// if has a stream, halt it
-				c.Stream.Close()
-				c.Stream = nil
+				c.Transport.Close()
+				c.Transport.Halt()
+				c.Transport = nil
 			}
 			delete(p.a.Contacts, p.id)
 			delete(avatars, p.id)
