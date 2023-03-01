@@ -554,12 +554,10 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
 		}
 
-		p.a.Contacts[contact.ID] = contact
 		avatars[contact.ID] = w
-		conv, err := p.a.NewConversation(contact.ID)
+		err = p.a.NewConversation(contact.ID)
 		if err == nil {
 			// create a new conversation with this contact
-			p.a.Conversations[conv.ID] = conv
 			return AddContactComplete{id: contact.ID}
 		}
 		shortNotify("ConnectionStatusEvent", err.Error())

@@ -104,19 +104,19 @@ func (a *App) sendToConversation(id uint64, msg *Message) error {
 			if e != nil {
 				return e
 			}
-		case <-a.c.Session().HaltCh():
+		case <-a.Session().HaltCh():
 			return ErrHalted
 		}
 	}
 	return nil
 }
 
-func (a *App) NewConversation(id uint64) (*Conversation, error) {
+func (a *App) NewConversation(id uint64) error {
 	a.Lock()
 	defer a.Unlock()
 	contact, ok := a.Contacts[id]
 	if !ok {
-		return nil, errors.New("No such contact")
+		return errors.New("No such contact")
 	}
 	// contacts want to agree on a conversation ID so either of them can start a chat and
 	// the conversation id will agree
@@ -128,10 +128,11 @@ func (a *App) NewConversation(id uint64) (*Conversation, error) {
 	}
 	id = binary.LittleEndian.Uint64(tmp[:])
 	if _, ok := a.Conversations[id]; ok {
-		return nil, errors.New("Converation aleady exists")
+		return errors.New("Converation aleady exists")
 	}
 	conv := &Conversation{ID: id, Title: contact.Nickname, Contacts: []*Contact{contact}}
-	return conv, nil
+	a.Conversations[id] = conv
+	return nil
 }
 
 type conversationPage struct {
