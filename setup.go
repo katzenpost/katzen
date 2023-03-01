@@ -120,5 +120,7 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		return
 	}
 
+	// start connecting automatically, if enabled
+
 	result <- c
 }

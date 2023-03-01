@@ -153,8 +153,24 @@ func newSettingsPage(a *App) *SettingsPage {
 		panic(err)
 	}
 
-	// FIXME: put in db
-	p.switchAutoConnect = &widget.Bool{Value: true}
+	// read database for autoConnect setting
+	err = a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get([]byte("AutoConnect"))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			if val[0] == 0xFF {
+				p.switchAutoConnect = &widget.Bool{Value: true}
+			} else {
+				p.switchAutoConnect = &widget.Bool{Value: false}
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		p.switchAutoConnect = &widget.Bool{Value: false}
+	}
 	return p
 }
 

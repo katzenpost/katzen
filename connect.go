@@ -9,6 +9,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
@@ -48,6 +49,27 @@ func (a *App) Session() *client.Session {
 		i++
 	}
 	return nil
+}
+
+// start connecting automtaically if enabled
+func (a *App) maybeAutoConnect() {
+	doAutoConnect := false
+	a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get([]byte("AutoConnect"))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			if val[0] == 0xFF {
+				doAutoConnect = true
+			}
+			return nil
+		})
+	})
+
+	if doAutoConnect {
+		a.doConnectClick()
+	}
 }
 
 func (a *App) doConnectClick() {

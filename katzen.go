@@ -236,6 +236,7 @@ func (a *App) update(gtx layout.Context) {
 			// validate the statefile somehow
 			c := e.client
 			a.c = c
+			go a.maybeAutoConnect()
 			a.stack.Clear(newHomePage(a))
 		case ConnectClick:
 			go a.doConnectClick()
