@@ -198,15 +198,16 @@ func (i *connectIcon) Start(stop <-chan struct{}) {
 
 func (i *connectIcon) Layout(gtx layout.Context) layout.Dimensions {
 	i.Lock()
-	defer i.Unlock()
-	return material.IconButtonStyle{
+	sty := material.IconButtonStyle{
 		Background: th.Palette.Bg,
 		Color:      th.Palette.ContrastFg,
 		Icon:       i.current,
 		Size:       unit.Dp(20),
 		Inset:      layout.UniformInset(unit.Dp(8)),
 		Button:     i.clickable,
-	}.Layout(gtx)
+	}
+	i.Unlock()
+	return sty.Layout(gtx)
 }
 
 type connectingPage struct {
