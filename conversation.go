@@ -80,34 +80,19 @@ func (a *App) sendToConversation(id uint64, msg *Message) error {
 		a.Unlock()
 		return ErrConversationNotFound
 	}
-
+	// add message to the conversation view
 	co.Lock()
 	co.Messages = append(co.Messages, msg)
-	n := len(co.Contacts)
-	wg := new(sync.WaitGroup)
-	errCh := make(chan error, n)
-	wg.Add(n)
+
+	// Enqueue message to each contact in conversation
 	for _, c := range co.Contacts {
-		go func() {
-			errCh <- a.sendToContact(c.ID, msg)
-			wg.Done()
-		}()
-	}
-	co.Unlock()
-
-	a.Unlock()
-	wg.Wait() // wait for all workers to return
-
-	for i := 0; i < n; i++ {
-		select {
-		case e := <-errCh:
-			if e != nil {
-				return e
-			}
-		case <-a.Session().HaltCh():
-			return ErrHalted
+		// XXX: if we are unable to send to a single contact, should we abort?
+		err := c.Outbound.Push(msg)
+		if err != nil {
+			return err
 		}
 	}
+	co.Unlock()
 	return nil
 }
 

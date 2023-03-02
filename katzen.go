@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
 	"time"
@@ -110,7 +111,7 @@ type streamCmd struct {
 	ContactID uint64
 }
 
-func (a *App) startReading(id uint64) error {
+func (a *App) startTransport(id uint64) error {
 	c, ok := a.Contacts[id]
 	if !ok {
 		return ErrContactNotFound
@@ -126,7 +127,7 @@ func (a *App) startReading(id uint64) error {
 	return nil
 }
 
-func (a *App) stopReading(id uint64) error {
+func (a *App) stopTransport(id uint64) error {
 	c, ok := a.Contacts[id]
 	if !ok {
 		return ErrContactNotFound
@@ -162,21 +163,42 @@ func (a *App) streamWorker(s *client.Session) {
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {
 			case Start:
-				a.startReading(cmd.ContactID)
+				a.startTransport(cmd.ContactID)
 			case Stop:
-				a.stopReading(cmd.ContactID)
+				a.stopTransport(cmd.ContactID)
 			default:
 				panic(cmd)
 			}
 		case <-time.After(updateInterval):
 		}
 
-		// see which contacts have messages to read
+		// send and receive messages from each contact
 		for id, msgCh := range a.messageChans {
+			// send messages if contact has pending
+			// XXX: refactor
+			a.Lock()
+			c, ok := a.Contacts[id]
+			a.Unlock()
+			if !ok {
+				panic("wtf")
+				a.stopTransport(id)
+			}
+
+			c.Lock()
+			msg, err := c.Outbound.Peek()
+			if err == nil {
+				enc := cbor.NewEncoder(c.Transport)
+				err := enc.Encode(msg)
+				if err == nil {
+					c.Outbound.Pop()
+				}
+			}
+			c.Unlock()
+
 			select {
 			case m, ok := <-msgCh:
 				if !ok {
-					a.stopReading(id)
+					a.stopTransport(id)
 				}
 				a.deliverMessage(m)
 			default:

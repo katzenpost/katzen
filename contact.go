@@ -69,6 +69,10 @@ type Contact struct {
 	// PandaResult contains an error message if the PANDA exchange fails.
 	PandaResult string
 
+	// Outbound holds messages not yet written to Transport
+	// which allows for offline composition to contacts
+	Outbound *Queue
+
 	// Transport is the reliable channel used to communicate with Contact
 	// The BufferedStream varient saves preserves bytes read from Stream that
 	// have not been decoded.
@@ -91,7 +95,8 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 		// generate a new ecdh keypair as a long-term identity with this contact
 		// for re-keying, etc, exchanged as part of PANDA
 		sK := necdh.EcdhScheme.GeneratePrivateKey(rand.Reader)
-		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK, SharedSecret: secret, IsPending: true}
+		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK,
+			SharedSecret: secret, IsPending: true, Outbound: new(Queue)}
 		a.Lock()
 		a.Contacts[id] = c
 		a.Unlock()
