@@ -13,7 +13,7 @@ import (
 )
 
 // checks to see if the local system has a listener on port 9050
-func hasTor() bool {
+func hasDefaultTor() bool {
 	c, err := net.Dial("tcp", "127.0.0.1:9050")
 	if err != nil {
 		return false
@@ -83,7 +83,7 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		})
 		// default to using Tor if Tor is available
 		if err == badger.ErrKeyNotFound {
-			if hasTor() {
+			if hasDefaultTor() {
 				useTor = true
 				err = a.db.Update(func(txn *badger.Txn) error {
 					return txn.Set([]byte("UseTor"), []byte{0xFF})

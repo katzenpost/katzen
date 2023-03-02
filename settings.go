@@ -81,7 +81,7 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 		return BackEvent{}
 	}
 	if p.switchUseTor.Changed() {
-		if p.switchUseTor.Value && !hasTor() {
+		if p.switchUseTor.Value && !hasDefaultTor() {
 			p.switchUseTor.Value = false
 
 			// set UseTor to false
@@ -148,9 +148,9 @@ func newSettingsPage(a *App) *SettingsPage {
 			return nil
 		})
 	})
-	// XXX: this is defaulted in setup.go
 	if err != nil {
-		panic(err)
+		// but not if you specified your own cfg file
+		p.switchUseTor = &widget.Bool{Value: false}
 	}
 
 	// read database for autoConnect setting
