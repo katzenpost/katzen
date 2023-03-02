@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -36,7 +37,15 @@ const (
 )
 
 var (
-	dataDirName      = "katzen"
+	dataDirName = "katzen"
+
+	// obtain the default data location
+	dir, _ = app.DataDir()
+
+	// path to default profile
+	dataDir = filepath.Join(dir, dataDirName, "default")
+
+	profilePath      = flag.String("p", dataDir, "Path to application profile")
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 

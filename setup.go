@@ -3,9 +3,7 @@ package main
 import (
 	"net"
 	"os"
-	"path/filepath"
 
-	"gioui.org/app"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/client/config"
@@ -23,20 +21,10 @@ func hasDefaultTor() bool {
 }
 
 func setupClient(a *App, passphrase []byte, result chan interface{}) {
-	// obtain the default data location
-	dir, err := app.DataDir()
-	if err != nil {
-		result <- err
-		return
-	}
-
-	// dir does not appear to point to ~/.config/katzen but rather ~/.config on linux?
-	// create directory for application data
-	datadir := filepath.Join(dir, dataDirName)
-	_, err = os.Stat(datadir)
+	_, err := os.Stat(*profilePath)
 	if os.IsNotExist(err) {
 		// create the application data directory
-		err := os.Mkdir(datadir, os.ModeDir|os.FileMode(0700))
+		err := os.Mkdir(*profilePath, os.ModeDir|os.FileMode(0700))
 		if err != nil {
 			result <- err
 			return
@@ -45,7 +33,7 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 
 	// expand passphrase
 	key := argon2.Key(passphrase, nil, 3, 32*1024, 4, keySize)
-	db, err := badger.Open(badger.DefaultOptions(datadir).WithIndexCacheSize(10 << 20).WithEncryptionKey(key).WithSyncWrites(true))
+	db, err := badger.Open(badger.DefaultOptions(*profilePath).WithIndexCacheSize(10 << 20).WithEncryptionKey(key).WithSyncWrites(true))
 	if err != nil {
 		result <- err
 		return
