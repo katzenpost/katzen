@@ -131,11 +131,12 @@ func (a *App) pandaWorker(pandaChan chan panda.PandaUpdate) {
 
 func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 	a.Lock()
-	defer a.Unlock()
 	c, ok := a.Contacts[update.ID]
 	if !ok {
+		a.Unlock()
 		return false, ErrContactNotFound
 	}
+	a.Unlock()
 
 	l := a.c.GetLogger("pandaUpdate " + c.Nickname)
 
