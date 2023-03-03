@@ -80,6 +80,7 @@ func (a *App) sendToConversation(id uint64, msg *Message) error {
 		a.Unlock()
 		return ErrConversationNotFound
 	}
+	a.Unlock()
 	// add message to the conversation view
 	co.Lock()
 	co.Messages = append(co.Messages, msg)
