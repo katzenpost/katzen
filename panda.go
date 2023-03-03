@@ -189,6 +189,12 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		l.Info("Stream initialized with " + c.Nickname)
 		// c.SharedSecret = nil // XXX: zero original shared secret after exchange ???
 		shortNotify("PANDA Completed", "Contact "+c.Nickname)
+
+		// by default, of course we want to start chatting, right?
+		err = a.startTransport(c.ID)
+		if err != nil {
+			return true, err
+		}
 		return true, nil
 	}
 	return false, nil

@@ -51,7 +51,7 @@ var (
 	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 
 	minPasswordLen = 5                // XXX pick something reasonable
-	updateInterval = 10 * time.Second // try to read from contacts every updateInterval
+	updateInterval = 1 * time.Second // try to read from contacts every updateInterval
 
 	notifications = make(map[string]notify.Notification)
 
@@ -197,6 +197,8 @@ func (a *App) streamWorker(s *client.Session) {
 
 			select {
 			case m, ok := <-msgCh:
+				// apply our ID to the Message
+				m.Sender = id
 				if !ok {
 					a.stopTransport(id)
 				}
@@ -211,6 +213,7 @@ func (a *App) streamWorker(s *client.Session) {
 
 func (a *App) deliverMessage(m *Message) {
 	if c, ok := a.Conversations[m.Conversation]; ok {
+		m.Received = time.Now()
 		c.Messages = append(c.Messages, m)
 	}
 }
