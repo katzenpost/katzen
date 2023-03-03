@@ -13,7 +13,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.0.1
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.22-0.20230301172231-2eb815fee349
+	github.com/katzenpost/katzenpost v0.0.22-0.20230303190946-dfab2455fbfb
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.4.0
 	golang.org/x/exp/shiny v0.0.0-20221230185412-738e83a70c30
