@@ -197,11 +197,11 @@ func (a *App) streamWorker(s *client.Session) {
 
 			select {
 			case m, ok := <-msgCh:
-				// apply our ID to the Message
-				m.Sender = id
 				if !ok {
 					a.stopTransport(id)
 				}
+				// apply our ID to the Message
+				m.Sender = id
 				a.deliverMessage(m)
 			default:
 				// skip
