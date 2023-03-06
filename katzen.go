@@ -215,6 +215,7 @@ func (a *App) deliverMessage(m *Message) {
 	if c, ok := a.Conversations[m.Conversation]; ok {
 		m.Received = time.Now()
 		c.Messages = append(c.Messages, m)
+		a.w.Invalidate() // redraw
 	}
 }
 
