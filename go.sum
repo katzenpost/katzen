@@ -93,10 +93,8 @@ github.com/jfreymuth/vorbis v1.0.0/go.mod h1:8zy3lUAm9K/rJJk223RKy6vjCZTWC61NA2Q
 github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 h1:9gHByAWH1LydGefFGorN1ZBRZ/Oz9iozdzMvRTWpyRw=
 github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556/go.mod h1:d9kxwmGOcutgP6bQwr2xaLInaW5yJsxsoPRyUIG0J/E=
 github.com/katzenpost/ctidh_cgo v0.0.0-20230221154820-a332f2af8202 h1:1Q1OxBqejEQZX/dI6nXIs8LHm4SslBJjlb15s6/Rgvo=
-github.com/katzenpost/katzenpost v0.0.22-0.20230301172231-2eb815fee349 h1:SauFNv9zkoxIgio7jc1ZERmhwBzFJ8JmGNHwa332EA8=
-github.com/katzenpost/katzenpost v0.0.22-0.20230301172231-2eb815fee349/go.mod h1:RSNTSZ74l4lKdNlihT6nNsugRHZZqIHrzN1H+7n61Gg=
-github.com/katzenpost/katzenpost v0.0.22-0.20230303190946-dfab2455fbfb h1:54Z1IcbWJWSFvcaudWBS7g3+cP4dFAcxy3ePqOnGjaY=
-github.com/katzenpost/katzenpost v0.0.22-0.20230303190946-dfab2455fbfb/go.mod h1:RSNTSZ74l4lKdNlihT6nNsugRHZZqIHrzN1H+7n61Gg=
+github.com/katzenpost/katzenpost v0.0.22-0.20230306093824-4c6f02184628 h1:LgFubaxk0DARxdz9qmiY5vEMfYFFQFGMtMZsgU7hAF4=
+github.com/katzenpost/katzenpost v0.0.22-0.20230306093824-4c6f02184628/go.mod h1:RSNTSZ74l4lKdNlihT6nNsugRHZZqIHrzN1H+7n61Gg=
 github.com/katzenpost/noise v0.0.3 h1:bpYnozkk8j0XE1FAX9iRYgKtfIywuAINF+vMdBOidrM=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf h1:iTvu+cdByoEzF1Hatwbl8AoFfTEB2ZITE2FOeJUyz78=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf/go.mod h1:wzbXAL9lcBAiryER2XStcCww3HGTKl7jjzf2BCgHWrI=
