@@ -51,13 +51,14 @@ func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if p.submit.Clicked() {
-		contact, ok := p.a.Contacts[p.contactID]
-		if ok {
+		contact, err := p.a.GetContact(p.contactID)
+		if err == nil {
 			// XXX: SetNickname() Nickname() methods ?
-			contact.Lock()
 			contact.Nickname = p.newnickname.Text()
-			contact.Unlock()
-			return EditContactComplete{}
+			err = p.a.PutContact(contact)
+			if err == nil {
+				return EditContactComplete{}
+			}
 		}
 		p.newnickname.SetText("")
 	}
