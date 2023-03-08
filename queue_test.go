@@ -34,7 +34,7 @@ func TestQueue(t *testing.T) {
 
 	sent := make([]*Message, 0)
 	for i := 0; i < MaxQueueSize; i++ {
-		b = &Message{Body: fmt.Sprintf("foo %d", i)}
+		b = &Message{Body: []byte(fmt.Sprintf("foo %d", i))}
 		sent = append(sent, b)
 		err := newq.Push(b)
 		assert.NoError(err)
