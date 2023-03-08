@@ -14,6 +14,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
+	"github.com/katzenpost/katzenpost/stream"
 	"time"
 
 	"gioui.org/app"
@@ -82,12 +83,12 @@ type App struct {
 
 	db *badger.DB
 
-	cancelConn    func()
-	state         ConnectedState
-	sessions      map[uint64]*client.Session
-	Contacts      map[uint64]*Contact
-	Conversations map[uint64]*Conversation
-	messageChans  map[uint64]chan *Message
+	cancelConn func()
+	state      ConnectedState
+	sessions   map[uint64]*client.Session
+
+	transports   map[uint64]*stream.BufferedStream
+	messageChans map[uint64]chan *Message
 
 	stack pageStack
 	focus bool
@@ -112,40 +113,52 @@ type streamCmd struct {
 }
 
 func (a *App) startTransport(id uint64) error {
-	c, ok := a.Contacts[id]
-	if !ok {
+	_, err := a.GetContact(id)
+	if err != nil {
 		return ErrContactNotFound
 	}
-	if c.Transport == nil {
-		return ErrContactNotDialed
-	}
-
+	a.Lock()
+	defer a.Unlock()
 	if _, ok := a.messageChans[id]; ok {
 		return ErrAlreadyReading
 	}
-	a.messageChans[id] = c.Messages(a.HaltCh())
+	a.messageChans[id] = a.Messages(id, a.HaltCh())
 	return nil
 }
 
-func (a *App) stopTransport(id uint64) error {
-	c, ok := a.Contacts[id]
+func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
+	_, err := a.GetContact(id)
+	if err != nil {
+		return nil, ErrContactNotFound
+	}
+	transport, ok := a.transports[id]
 	if !ok {
+		return nil, ErrNotReading
+	}
+	return transport, nil
+}
+
+func (a *App) stopTransport(id uint64) error {
+	_, err := a.GetContact(id)
+	if err != nil {
 		return ErrContactNotFound
 	}
-	if c.Transport == nil {
-		return ErrContactNotDialed
+	a.Lock()
+	defer a.Unlock()
+	transport, ok := a.transports[id]
+	if !ok {
+		return ErrNotReading
 	}
-	c.Transport.Halt()
+	transport.Halt()
+	delete(a.transports, id)
 	return nil
 }
 
 func (a *App) haltAllTransports() {
-	for _, c := range a.Contacts {
-		c.Lock()
-		if !c.IsPending {
-			c.Transport.Halt()
-		}
-		c.Unlock()
+	a.Lock()
+	defer a.Unlock()
+	for _, transport := range a.transports {
+		transport.Halt()
 	}
 }
 
@@ -176,24 +189,33 @@ func (a *App) streamWorker(s *client.Session) {
 		for id, msgCh := range a.messageChans {
 			// send messages if contact has pending
 			// XXX: refactor
-			a.Lock()
-			c, ok := a.Contacts[id]
-			a.Unlock()
-			if !ok {
-				panic("wtf")
+			// XXX: get outbound queue associated with contact
+			_, err := a.GetContact(id)
+			if err != nil {
 				a.stopTransport(id)
+				delete(a.messageChans, id)
+				continue
 			}
 
-			c.Lock()
-			msg, err := c.Outbound.Peek()
+			// XXX: figure out how to manipulate transport inside
+			// of a badger transaction
+			// ideally we'd save the state of transport as well as
+			bq := NewBadgerQueue(a.db, []byte(fmt.Sprintf("contact:%d:queue", id)))
+			msg, err := bq.Peek()
 			if err == nil {
-				enc := cbor.NewEncoder(c.Transport)
-				err := enc.Encode(msg)
+				transport, err := a.getTransport(id)
 				if err == nil {
-					c.Outbound.Pop()
+					enc := cbor.NewEncoder(transport)
+					err := enc.Encode(msg)
+					if err == nil {
+						// XXX: wait for the writeBuf to flush
+						// then remove from Outbound Queue
+						// wait for the transport to flush?
+						transport.Stream.Sync()
+						_, err = bq.Pop()
+					}
 				}
 			}
-			c.Unlock()
 
 			select {
 			case m, ok := <-msgCh:
@@ -202,20 +224,12 @@ func (a *App) streamWorker(s *client.Session) {
 				}
 				// apply our ID to the Message
 				m.Sender = id
-				a.deliverMessage(m)
+				a.DeliverMessage(m)
 			default:
 				// skip
 			}
 		}
 
-	}
-}
-
-func (a *App) deliverMessage(m *Message) {
-	if c, ok := a.Conversations[m.Conversation]; ok {
-		m.Received = time.Now()
-		c.Messages = append(c.Messages, m)
-		a.w.Invalidate() // redraw
 	}
 }
 
@@ -235,13 +249,11 @@ func (a *App) eventSinkWorker(s *client.Session) {
 
 func newApp(w *app.Window) *App {
 	a := &App{
-		Contacts:      make(map[uint64]*Contact),
-		Conversations: make(map[uint64]*Conversation),
-		sessions:      make(map[uint64]*client.Session),
-		messageChans:  make(map[uint64]chan *Message),
-		w:             w,
-		ops:           &op.Ops{},
-		connectOnce:   new(sync.Once),
+		sessions:     make(map[uint64]*client.Session),
+		messageChans: make(map[uint64]chan *Message),
+		w:            w,
+		ops:          &op.Ops{},
+		connectOnce:  new(sync.Once),
 	}
 	return a
 }
