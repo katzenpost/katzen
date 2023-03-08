@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"image"
 	"runtime"
@@ -19,8 +17,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/hako/durafmt"
-	"golang.org/x/crypto/hkdf"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
@@ -49,7 +47,7 @@ type Conversation struct {
 	ID uint64
 
 	// Contacts are the contacts present in this conversation
-	Contacts []*Contact
+	Contacts []uint64
 
 	// Messages are the messages in this conversation
 	Messages []*Message
@@ -70,54 +68,6 @@ func (c *Conversation) Remove(contactID uint64) error {
 
 func (c *Conversation) Destroy() error {
 	panic("NotImplemented")
-	return nil
-}
-
-func (a *App) sendToConversation(id uint64, msg *Message) error {
-	a.Lock()
-	co, ok := a.Conversations[id]
-	if !ok {
-		a.Unlock()
-		return ErrConversationNotFound
-	}
-	a.Unlock()
-	// add message to the conversation view
-	co.Lock()
-	co.Messages = append(co.Messages, msg)
-
-	// Enqueue message to each contact in conversation
-	for _, c := range co.Contacts {
-		// XXX: if we are unable to send to a single contact, should we abort?
-		err := c.Outbound.Push(msg)
-		if err != nil {
-			return err
-		}
-	}
-	co.Unlock()
-	return nil
-}
-
-func (a *App) NewConversation(id uint64) error {
-	a.Lock()
-	defer a.Unlock()
-	contact, ok := a.Contacts[id]
-	if !ok {
-		return errors.New("No such contact")
-	}
-	// contacts want to agree on a conversation ID so either of them can start a chat and
-	// the conversation id will agree
-	r := hkdf.New(sha256.New, []byte(contact.SharedSecret), []byte("our first rendezvous"), nil)
-	tmp := [8]byte{}
-	_, err := r.Read(tmp[:])
-	if err != nil {
-		panic(err)
-	}
-	id = binary.LittleEndian.Uint64(tmp[:])
-	if _, ok := a.Conversations[id]; ok {
-		return errors.New("Converation aleady exists")
-	}
-	conv := &Conversation{ID: id, Title: contact.Nickname, Contacts: []*Contact{contact}}
-	a.Conversations[id] = conv
 	return nil
 }
 
@@ -213,7 +163,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			Body:         []byte(c.compose.Text()),
 		}
 		// XXX handle case without session
-		err := c.a.sendToConversation(c.conversation.ID, msg)
+		err := c.a.SendMessage(c.conversation.ID, msg)
 		if err == nil {
 			c.compose.SetText("")
 			return MessageSent{conversation: c.conversation.ID}
@@ -455,12 +405,11 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		ed.Submit = false
 	}
 
-	var conv *Conversation
-	var ok bool
-	conv, ok = a.Conversations[conversationId]
-	if !ok {
+	conv, err := a.GetConversation(conversationId)
+	if err == badger.ErrKeyNotFound {
 		conv = new(Conversation)
-		a.Conversations[conversationId] = conv
+		conv.ID = conversationId
+		a.PutConversation(conv)
 	}
 
 	p := &conversationPage{a: a, conversation: conv,
