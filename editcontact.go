@@ -96,17 +96,22 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 	}
 	if p.remove.Clicked() {
 		// TODO: confirmation dialog
-		c, ok := p.a.Contacts[p.id]
-		if ok {
-			if c.Transport != nil {
+		_, err := p.a.GetContact(p.id)
+		if err != nil {
+			p.a.Lock()
+			defer p.a.Unlock()
+			transport, ok := p.a.transports[p.id]
+			if ok {
 				// if has a stream, halt it
-				c.Transport.Close()
-				c.Transport.Halt()
-				c.Transport = nil
+				transport.Close()
+				transport.Halt()
+				delete(p.a.transports, p.id)
 			}
-			delete(p.a.Contacts, p.id)
-			delete(avatars, p.id)
-			return EditContactComplete{id: p.id}
+			err = p.a.RemoveContact(p.id)
+			if err == nil {
+				delete(avatars, p.id)
+				return EditContactComplete{id: p.id}
+			}
 		}
 	}
 	return nil
