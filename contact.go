@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"image"
 	mrand "math/rand"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -22,11 +21,8 @@ import (
 	"gioui.org/widget/material"
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/core/crypto/nike"
-	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
-	"github.com/katzenpost/katzenpost/stream"
 	qrcode "github.com/skip2/go-qrcode"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
@@ -43,8 +39,10 @@ var (
 	cancelIcon, _ = widget.NewIcon(icons.NavigationCancel)
 
 	ErrAlreadyReading   = errors.New("Already Reading Contact")
+	ErrNotReading       = errors.New("Not Reading Contact")
 	ErrContactNotFound  = errors.New("Contact not found")
 	ErrContactNotDialed = errors.New("Contact not Dialed")
+	ErrOffline          = errors.New("Cannot send offline")
 
 	week              = 7 * 24 * time.Hour
 	defaultExpiration = week
@@ -73,11 +71,6 @@ type Contact struct {
 	// which allows for offline composition to contacts
 	Outbound *Queue
 
-	// Transport is the reliable channel used to communicate with Contact
-	// The BufferedStream varient saves preserves bytes read from Stream that
-	// have not been decoded.
-	Transport *stream.BufferedStream
-
 	// MyIdentity is the ecdh.PrivateKey used with PANDA
 	MyIdentity nike.PrivateKey
 
@@ -85,93 +78,21 @@ type Contact struct {
 	SharedSecret []byte
 }
 
-// NewContact creates a new Contact from a shared secret (dialer)
-func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
-	for {
-		id := uint64(rand.NewMath().Int63())
-		if _, ok := a.Contacts[id]; ok {
-			continue
-		}
-		// generate a new ecdh keypair as a long-term identity with this contact
-		// for re-keying, etc, exchanged as part of PANDA
-		sK := necdh.EcdhScheme.GeneratePrivateKey(rand.Reader)
-		c := &Contact{ID: id, Nickname: nickname, MyIdentity: sK,
-			SharedSecret: secret, IsPending: true, Outbound: new(Queue)}
-		a.Lock()
-		a.Contacts[id] = c
-		a.Unlock()
-
-		// if we are online, start a PANDA exchange immediately
-		// if not, the exchange must be started when the client comes online and tries to send a message.
-		if a.Status() == StateOnline {
-			// start a panda' exchange with contact
-			err := a.doPANDAExchange(id)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return c, nil
-	}
-}
-
-func (a *App) sendToContact(id uint64, msg *Message) error {
-	a.Lock()
-	defer a.Unlock()
-	c, ok := a.Contacts[id]
-	if !ok {
-		return ErrContactNotFound
-	}
-	if a.state != StateOnline { // we hold a.Lock()
-		return errors.New("Cannot send offline")
-	}
-	l := a.c.GetLogger("sendToContact" + c.Nickname)
-	l.Debugf("sendToContact1")
-	// Send a Message to Contact
-	c.Lock()
-	defer c.Unlock()
-
-	if c.Transport == nil {
-		return ErrContactNotDialed
-	}
-
-	// This can also block the UX thread because Write() to a Stream can block...
-	// We probably want to use the SetDeadline method  (but how? does cbor.NewEncoder support
-	// a context or similar for cancelling a write?
-	enc := cbor.NewEncoder(c.Transport)
-	c.Transport.Stream.Timeout = 42 * time.Second
-	err := enc.Encode(msg)
-	if err == os.ErrDeadlineExceeded {
-		l.Debugf("ok %s", err)
-		// set status of Message kj
-	} else {
-		// do stuff if the stream isn't running, etc
-	}
-
-	// XXX: how do we know when the stream has transmitted messages to the network?
-	// XXX: how do we know when the message has been acknowledged?
-	return err
-}
-
-// ReadMessage returns the next Message from Contact
-func (c *Contact) ReadMessage() (*Message, error) {
-	c.Lock()
-	defer c.Unlock()
-	m := new(Message)
-	err := c.Transport.CBORDecode(m)
-	if err == nil {
-		return m, nil
-	}
-	return nil, err
-}
-
-func (c *Contact) Messages(stop <-chan interface{}) chan *Message {
+// Messages starts a worker that returns a channel of Messages
+func (a *App) Messages(contactID uint64, stop <-chan interface{}) chan *Message {
 	// start a reader routine that reads Messages from stream for this contact
 	resp := make(chan *Message)
-	c.Transport.Go(func() {
+
+	a.Lock()
+	transport, ok := a.transports[contactID]
+	if !ok {
+		return resp
+	}
+	transport.Go(func() {
 		defer close(resp)
-		defer c.Transport.Halt()
+		defer transport.Halt()
 		for {
-			result := c.Transport.CBORDecodeAsync(new(Message))
+			result := transport.CBORDecodeAsync(new(Message))
 			select {
 			case <-stop:
 				return
@@ -186,7 +107,7 @@ func (c *Contact) Messages(stop <-chan interface{}) chan *Message {
 					// return response unless caller has gone away
 					select {
 					case resp <- r:
-					case <-c.Transport.HaltCh():
+					case <-transport.HaltCh():
 						panic("Message has been lost")
 					}
 				}
@@ -196,125 +117,6 @@ func (c *Contact) Messages(stop <-chan interface{}) chan *Message {
 	// return a channel where Messages can be read from
 	return resp
 }
-
-func (a *App) readFromContact(id uint64) error {
-	a.Lock()
-	c, ok := a.Contacts[id]
-	if !ok {
-		a.Unlock()
-		return ErrContactNotFound
-	}
-	a.Unlock()
-	result := c.Transport.CBORDecodeAsync(new(Message))
-	var m *Message
-	select {
-	case r := <-result:
-		switch r := r.(type) {
-		case error:
-			return r
-		case *Message:
-			m = r
-		}
-	case <-a.HaltCh():
-		return ErrHalted
-	}
-
-	// Set Sender to our contact ID for this Stream
-	m.Sender = c.ID
-	m.Received = time.Now()
-	// if we have a conversation from this contact
-	co, ok := a.Conversations[m.Conversation]
-	if !ok {
-		// Create a new conversation with this ID
-		co = &Conversation{ID: m.Conversation,
-			Title:    c.Nickname,
-			Contacts: []*Contact{c}, Messages: []*Message{},
-			MessageExpiration: defaultExpiration,
-		}
-		a.Conversations[m.Conversation] = co
-	}
-	co.Lock()
-	defer co.Unlock()
-	co.Messages = append(co.Messages, m)
-	return nil
-}
-
-/*
-// readFromContact is called by the streamWorker
-func (a *App) readFromContact(id uint64) error {
-	a.Lock()
-	c, ok := a.Contacts[id]
-	if !ok {
-		a.Unlock()
-		return ErrContactNotFound
-	}
-	a.Unlock()
-	// try to read any buffered data
-	// XXX: unclear what happens here if a cbor object
-	// spans multiple messages and we get a partial read
-	// maybe we need a buffered reader that accumulates
-	// things read from Stream so that we dont throw away
-	// any data on a timeout that doesn't deserialize into
-	// a struct
-	//c.Stream.Timeout = 2 * time.Second
-
-	c.Lock()
-	if c.Stream == nil {
-		c.Unlock()
-		return ErrContactNotDialed
-	}
-	if c.CborBuffer == nil {
-		c.CborBuffer = new(bytes.Buffer)
-	}
-	var dec *cbor.Decoder
-	newBuf := new(bytes.Buffer)
-
-	// if previously undecoded bytes exist, read those first
-	if c.CborBuffer.Len() > 0 {
-		dec = cbor.NewDecoder(io.TeeReader(io.MultiReader(c.CborBuffer, c.Stream), newBuf))
-	} else {
-		dec = cbor.NewDecoder(io.TeeReader(c.Stream, newBuf))
-	}
-	c.Unlock()
-
-	m := new(Message)
-	err := dec.Decode(m)
-
-	// regardless of error, drain unread CborBuffer into newBuf
-	l := a.c.GetLogger("readFromContact")
-
-	c.Lock()
-	if err != nil {
-		if c.CborBuffer.Len() > 0 {
-			io.Copy(newBuf, c.CborBuffer)
-		}
-		c.CborBuffer = newBuf
-		l.Debugf("c.CborBuffer.Len(): %d", c.CborBuffer.Len())
-		c.Unlock()
-		return err
-	}
-	c.Unlock()
-
-	// Set Sender to our contact ID for this Stream
-	m.Sender = c.ID
-	m.Received = time.Now()
-	// if we have a conversation from this contact
-	co, ok := a.Conversations[m.Conversation]
-	if !ok {
-		// Create a new conversation with this ID
-		co = &Conversation{ID: m.Conversation,
-			Title:    c.Nickname,
-			Contacts: []*Contact{c}, Messages: []*Message{},
-			MessageExpiration: defaultExpiration,
-		}
-		a.Conversations[m.Conversation] = co
-	}
-	co.Lock()
-	defer co.Unlock()
-	co.Messages = append(co.Messages, m)
-	return nil
-}
-*/
 
 // A contactal is a fractal and secret that represents a user identity
 type Contactal struct {
