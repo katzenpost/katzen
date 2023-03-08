@@ -345,17 +345,16 @@ func (a *App) layoutAvatar(gtx C, id uint64) D {
 			if w, ok := avatars[id]; ok {
 				return w(gtx)
 			} else {
-				if contact, ok := a.Contacts[id]; ok {
-					co := Contactal{SharedSecret: string(contact.SharedSecret)}
-					i := co.Render(sz)
-					w = func(gtx C) D {
-						return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
-					}
+				i, err := a.GetAvatar(id, sz)
+				if err != nil {
+					return layout.Dimensions{}
+				}
+				w = func(gtx C) D {
+					return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
 				}
 				avatars[id] = w
 				return w(gtx)
 			}
-			panic("Unknown contact ID requested passed to layoutAvatar")
 		})
 	})
 }
