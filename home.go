@@ -86,10 +86,12 @@ func getSortedConvos(a *App) (convos sortedConvos) {
 	if a.c == nil {
 		return
 	}
-
-	// returns map[string]*Contact
-	for _, convo := range a.Conversations {
-		convos = append(convos, convo)
+	conversationIDs := a.GetConversationIDs()
+	for _, cid := range conversationIDs {
+		convo, err := a.GetConversation(cid)
+		if err != nil {
+			convos = append(convos, convo)
+		}
 	}
 	sort.Sort(convos)
 	return
