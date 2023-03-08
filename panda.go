@@ -21,14 +21,12 @@ var (
 
 func (a *App) restartPandaExchanges() {
 	l := a.c.GetLogger("restartPandaExchanges")
-	for id, c := range a.Contacts {
-		c.Lock()
+	for _, id := range a.GetContactIDs() {
+		c, err := a.GetContact(id)
 		if !c.IsPending {
-			c.Unlock()
 			continue
 		}
-		c.Unlock()
-		err := a.doPANDAExchange(id)
+		err = a.doPANDAExchange(id)
 		if err != nil {
 			l.Debug("error restarting exchange for %s: %s", c.Nickname, err.Error())
 		}
@@ -41,13 +39,10 @@ func (a *App) doPANDAExchange(id uint64) error {
 		return ErrNotOnline
 	}
 
-	a.Lock()
-	c, ok := a.Contacts[id]
-	if !ok {
-		a.Unlock()
+	c, err := a.GetContact(id)
+	if err != nil {
 		return ErrContactNotFound
 	}
-	a.Unlock()
 
 	l := a.c.GetLogger("panda " + c.Nickname)
 
@@ -131,8 +126,8 @@ func (a *App) pandaWorker(pandaChan chan panda.PandaUpdate) {
 
 func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 	a.Lock()
-	c, ok := a.Contacts[update.ID]
-	if !ok {
+	c, err := a.GetContact(update.ID)
+	if err != nil {
 		a.Unlock()
 		return false, ErrContactNotFound
 	}
@@ -171,18 +166,21 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		if bytes.Compare(myPublic.Bytes(), theirPublic.Bytes()) == 1 {
 			// we go first, so we are the "listener"
 			l.Notice("Listening with %x", streamSecret)
+
+			// XXX: need to create and store the transport in badger
 			st, err := stream.ListenDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			c.Transport = &stream.BufferedStream{Stream: st}
+			// XXX: need to create and store the transport in badger
+			a.transports[c.ID] = &stream.BufferedStream{Stream: st}
 		} else {
 			l.Notice("Dialing with %x", streamSecret)
 			st, err := stream.DialDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			c.Transport = &stream.BufferedStream{Stream: st}
+			a.transports[c.ID] = &stream.BufferedStream{Stream: st}
 		}
 
 		c.IsPending = false
