@@ -136,9 +136,6 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 	l := a.c.GetLogger("pandaUpdate " + c.Nickname)
 
 	// hold lock over contact
-	c.Lock()
-	defer c.Unlock()
-
 	switch {
 	case update.Err != nil:
 		c.PandaResult = update.Err.Error()
