@@ -154,6 +154,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			l.Error(err.Error())
 			c.PandaResult = err.Error()
 			c.IsPending = false
+			c.Identity = theirPublic
 			return false, err
 		}
 
