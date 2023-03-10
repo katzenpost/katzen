@@ -83,13 +83,10 @@ func (s sortedConvos) Len() int {
 }
 
 func getSortedConvos(a *App) (convos sortedConvos) {
-	if a.c == nil {
-		return
-	}
 	conversationIDs := a.GetConversationIDs()
-	for _, cid := range conversationIDs {
+	for cid, _ := range conversationIDs {
 		convo, err := a.GetConversation(cid)
-		if err != nil {
+		if err == nil {
 			convos = append(convos, convo)
 		}
 	}
