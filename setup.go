@@ -40,6 +40,13 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 	}
 	a.db = db
 
+	// Create or update any db entries as necessary
+	err = a.InitDB()
+	if err != nil {
+		result <- err
+		return
+	}
+
 	// halt the db at app shutdown
 	a.Go(func() {
 		<-a.HaltCh()
