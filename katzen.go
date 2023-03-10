@@ -118,11 +118,15 @@ func (a *App) startTransport(id uint64) error {
 		return ErrContactNotFound
 	}
 	a.Lock()
-	defer a.Unlock()
 	if _, ok := a.messageChans[id]; ok {
+		a.Unlock()
 		return ErrAlreadyReading
 	}
-	a.messageChans[id] = a.Messages(id, a.HaltCh())
+	a.Unlock()
+	m := a.Messages(id, a.HaltCh())
+	a.Lock()
+	a.messageChans[id] = m
+	a.Unlock()
 	return nil
 }
 
@@ -131,7 +135,9 @@ func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
 	if err != nil {
 		return nil, ErrContactNotFound
 	}
+	a.Lock()
 	transport, ok := a.transports[id]
+	a.Unlock()
 	if !ok {
 		return nil, ErrNotReading
 	}
