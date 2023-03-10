@@ -87,6 +87,7 @@ func (a *App) Messages(contactID uint64, stop <-chan interface{}) chan *Message 
 	resp := make(chan *Message)
 
 	a.Lock()
+	defer a.Unlock()
 	transport, ok := a.transports[contactID]
 	if !ok {
 		return resp
