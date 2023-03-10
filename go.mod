@@ -38,9 +38,11 @@ require (
 	github.com/henrydcase/nobs v0.0.0-20210422124615-3a8ac85da11b // indirect
 	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
 	github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 // indirect
+	github.com/katzenpost/ctidh_cgo v0.0.0-20230221154820-a332f2af8202 // indirect
 	github.com/katzenpost/doubleratchet v0.0.15 // indirect
 	github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-pointer v0.0.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/oasislabs/deoxysii v0.0.0-20190807103041-6159f99c2236 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
