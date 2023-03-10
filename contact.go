@@ -71,8 +71,11 @@ type Contact struct {
 	// which allows for offline composition to contacts
 	Outbound *Queue
 
-	// MyIdentity is the ecdh.PrivateKey used with PANDA
+	// MyIdentity is the nike.PrivateKey used with PANDA
 	MyIdentity nike.PrivateKey
+
+	// Identity is the nike.PublicKey learned from PANDA
+	Identity nike.PublicKey
 
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
