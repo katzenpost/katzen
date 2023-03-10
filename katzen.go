@@ -259,6 +259,7 @@ func newApp(w *app.Window) *App {
 		messageChans: make(map[uint64]chan *Message),
 		w:            w,
 		ops:          &op.Ops{},
+		transports:   make(map[uint64]*stream.BufferedStream),
 		connectOnce:  new(sync.Once),
 	}
 	return a
