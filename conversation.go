@@ -50,10 +50,13 @@ type Conversation struct {
 	Contacts []uint64
 
 	// Messages are the messages in this conversation
-	Messages []*Message
+	Messages []uint64
 
 	// MessageExpiration is the duration after which conversation history is cleared
 	MessageExpiration time.Duration
+
+	// LastMessage is the timestamp of the last sent or received message
+	LastMessage time.Time
 }
 
 func (c *Conversation) Add(contactID uint64) error {
@@ -83,8 +86,8 @@ type conversationPage struct {
 	msgcopy        *widget.Clickable
 	msgpaste       *LongPress
 	msgdetails     *widget.Clickable
-	messageClicked *Message
-	messageClicks  map[*Message]*gesture.Click
+	messageClicked uint64
+	messageClicks  map[uint64]*gesture.Click
 }
 
 func (c *conversationPage) Start(stop <-chan struct{}) {
@@ -176,12 +179,15 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		return BackEvent{}
 	}
 	if c.msgcopy.Clicked() {
-		clipboard.WriteOp{Text: string(c.messageClicked.Body)}.Add(gtx.Ops)
-		c.messageClicked = nil
+		msg, err := c.a.GetMessage(c.messageClicked)
+		if err != nil {
+			clipboard.WriteOp{Text: string(msg.Body)}.Add(gtx.Ops)
+		}
+		c.messageClicked = 0
 		return nil
 	}
 	if c.msgdetails.Clicked() {
-		c.messageClicked = nil // not implemented
+		c.messageClicked = 0 // not implemented
 	}
 
 	for msg, click := range c.messageClicks {
@@ -194,7 +200,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 
 	for _, e := range c.cancel.Events(gtx.Queue) {
 		if e.Type == gesture.TypeClick {
-			c.messageClicked = nil
+			c.messageClicked = 0
 		}
 	}
 
@@ -305,21 +311,33 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 					}
 					inbetween := layout.Inset{Top: unit.Dp(2)}
 					if i > 0 {
-						sent1 := messages[i-1].Sender == 0
-						sent2 := messages[i].Sender == 0
-						if sent1 != sent2 {
-							inbetween = layout.Inset{Top: unit.Dp(8)}
+						msg1, err1 := c.a.GetMessage(messages[i-1])
+						msg2, err2 := c.a.GetMessage(messages[i])
+						if err1 == nil && err2 == nil {
+							sent1 := msg1.Sender == 0
+							sent2 := msg2.Sender == 0
+							if sent1 != sent2 {
+								inbetween = layout.Inset{Top: unit.Dp(8)}
+							}
 						}
 					}
 					var dims D
 					isSelected := messages[i] == c.messageClicked
-					if messages[i].Sender == 0 {
+					msg, err := c.a.GetMessage(messages[i])
+					if err != nil {
+						panic(err)
+					}
+					if msg.Sender == 0 {
 						dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
 							layout.Flexed(1, fill{th.Bg}.Layout),
 							layout.Flexed(5, func(gtx C) D {
 								return inbetween.Layout(gtx, func(gtx C) D {
 									return bgSender.Layout(gtx, func(gtx C) D {
-										return layoutMessage(gtx, messages[i], isSelected, expires)
+										msg, err := c.a.GetMessage(messages[i])
+										if err != nil {
+											return layout.Dimensions{}
+										}
+										return layoutMessage(gtx, msg, isSelected, expires)
 									})
 								})
 							}),
@@ -329,7 +347,11 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 							layout.Flexed(5, func(gtx C) D {
 								return inbetween.Layout(gtx, func(gtx C) D {
 									return bgReceiver.Layout(gtx, func(gtx C) D {
-										return layoutMessage(gtx, messages[i], isSelected, expires)
+										msg, err := c.a.GetMessage(messages[i])
+										if err != nil {
+											return layout.Dimensions{}
+										}
+										return layoutMessage(gtx, msg, isSelected, expires)
 									})
 								})
 							}),
@@ -343,7 +365,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 					return dims
 
 				})
-				if c.messageClicked != nil {
+				if c.messageClicked != 0 {
 					a := clip.Rect(image.Rectangle{Max: dims.Size})
 					t := a.Push(gtx.Ops)
 					c.cancel.Add(gtx.Ops)
@@ -358,7 +380,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 				Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(12), Right: unit.Dp(12)},
 			}
 			// return the menu laid out for message actions
-			if c.messageClicked != nil {
+			if c.messageClicked != 0 {
 				return bg.Layout(gtx, func(gtx C) D {
 					return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Baseline}.Layout(gtx,
 						layout.Rigid(material.Button(th, c.msgcopy, "copy").Layout),
@@ -414,7 +436,7 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 
 	p := &conversationPage{a: a, conversation: conv,
 		compose:       ed,
-		messageClicks: make(map[*Message]*gesture.Click),
+		messageClicks: make(map[uint64]*gesture.Click),
 		back:          &widget.Clickable{},
 		msgcopy:       &widget.Clickable{},
 		msgpaste:      NewLongPress(a.w.Invalidate, 800*time.Millisecond),

@@ -51,7 +51,7 @@ var (
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
 
-	minPasswordLen = 5                // XXX pick something reasonable
+	minPasswordLen = 5               // XXX pick something reasonable
 	updateInterval = 1 * time.Second // try to read from contacts every updateInterval
 
 	notifications = make(map[string]notify.Notification)

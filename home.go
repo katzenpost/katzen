@@ -61,16 +61,8 @@ func (s sortedConvos) Less(i, j int) bool {
 		return true
 	} else {
 		var its, jts time.Time
-		if !s[i].Messages[li-1].Sent.IsZero() {
-			its = s[i].Messages[li-1].Sent
-		} else {
-			its = s[i].Messages[li-1].Received
-		}
-		if !s[j].Messages[lj-1].Sent.IsZero() {
-			jts = s[j].Messages[lj-1].Sent
-		} else {
-			jts = s[j].Messages[lj-1].Received
-		}
+		its = s[i].LastMessage
+		jts = s[j].LastMessage
 		return its.After(jts)
 	}
 }
@@ -155,14 +147,10 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 				// the convoList
 				return convoList.Layout(gtx, len(sorted), func(gtx C, i int) layout.Dimensions {
 					// update the last message received
-					var lastMsg *Message
+					var lastMsg uint64
 					var lastTs time.Time
 					if len(sorted[i].Messages) > 0 {
 						lastMsg = sorted[i].Messages[len(sorted[i].Messages)-1]
-						lastTs = lastMsg.Sent
-						if !lastMsg.Received.IsZero() {
-							lastTs = lastMsg.Received
-						}
 					}
 
 					// inset each contact Flex
@@ -199,7 +187,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
 													layout.Rigid(func(gtx C) D {
 														// timestamp
-														if lastMsg != nil {
+														if lastMsg != 0 {
 															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastTs).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
 															return material.Caption(th, messageAge).Layout(gtx)
 														}
@@ -212,10 +200,11 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 									// last message
 									layout.Rigid(func(gtx C) D {
 										in := layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(12), Right: unit.Dp(12)}
-										if lastMsg != nil {
+										if lastMsg != 0 {
 											return in.Layout(gtx, func(gtx C) D {
 												// TODO: set the color based on sent or received
-												return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
+												msg, _ := p.a.GetMessage(lastMsg)
+												return material.Body2(th, string(msg.Body)).Layout(gtx)
 											})
 										} else {
 											return fill{th.Bg}.Layout(gtx)
