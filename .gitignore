@@ -13,6 +13,7 @@
 # Builds
 deploy/
 vendor/
+go_package_cache/
 katzen
 
 # Android

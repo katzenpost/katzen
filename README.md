@@ -10,38 +10,60 @@ A multiplatform chat client using catshadow and gio
 ## Getting the source code
 
     git clone https://github.com/katzenpost/katzen
-    cd katzen
+    cd katzen/
 
-## Building katzen for GNU/Linux
-
-### Using docker or podman
+## Building katzen
 
 The easiest way to build katzen is in a container managed by
 [podman](https://podman.io/) or
-[docker](https://en.wikipedia.org/wiki/Docker_(software)). (Podman is a docker
+[docker](https://en.wikipedia.org/wiki/Docker_(software)). Podman is a docker
 replacement which has the advantages of not requiring root access or a daemon to
-operate.)
+operate and what we use by default. If you already have Docker installed proceed
+to next step, otherwise run:
 
-The Makefile in this repository has targets to create a container image with
-the build environment, and to create a container with that image, and build
-katzen in the container.
+```
+# apt install podman
+```
 
-Although the make target names are prefixed with `docker-`, podman will be used
-by default if it is installed. If you have both podman and docker installed
-and want to force the use of docker, or if you want to specify the path to a
-different docker/podman compatible binary, you can specify `docker=docker` as
-the first argument to the `make` command.
+### Building for GNU/Linux
 
-The default target is `docker-build-linux` which will produce a linux binary.
-Other Makefile targets include `docker-build-windows` and
-`docker-build-android`, which build for those platforms, and `docker-shell`
-which puts you in a shell inside an ephemeral build container with your local
-checkout mounted at `/go/katzen`.
+```
+$ make docker-build-linux
+```
 
-To remove the docker images and containers created by the Makefile, run `make
-docker-clean`. The Makefile contains targets which build intermediate images
-for the Debian and go module dependencies, so that local changes can be built
-without the need for internet access.
+The Makefile in this repository has targets to create a container image with the
+build environment, and to create a container with that image, and build katzen
+in the container. Although the make target names are prefixed with `docker-`,
+podman will be used by default if it is installed. 
+
+- `docker-build-linux` builds GNU/Linux binary (default target)
+- `docker-build-windows` builds Windows
+- `docker-build-android` builds Android APK
+- `docker-shell` puts you in a shell inside an ephemeral build container with your local
+checkout mounted at `/go/katzen`
+
+**Docker or Podman**
+
+If you have both Podman and Docker installed and want to force the use of
+Docker, or if you want to specify the path to a different docker/podman
+compatible binary, you can specify `docker=docker` as the first argument to the
+`make` command. 
+
+```
+$ make docker=docker docker-build-linux
+```
+
+### Cleaning build
+
+To remove the docker images and containers created by the Makefile, run: 
+
+```
+# make docker-clean
+```
+
+The Makefile contains targets which build intermediate images for the Debian 
+and go module dependencies, so that local changes can be built without the 
+need for internet access.
 
 To build using local uncomitted changes from the Katzenpost monorepo, add
 `replace github.com/katzenpost/katzenpost => ./katzenpost` to katzen's `go.mod`
