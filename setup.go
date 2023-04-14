@@ -24,7 +24,7 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 	_, err := os.Stat(*profilePath)
 	if os.IsNotExist(err) {
 		// create the application data directory
-		err := os.Mkdir(*profilePath, os.ModeDir|os.FileMode(0700))
+		err := os.MkdirAll(*profilePath, os.ModeDir|os.FileMode(0700))
 		if err != nil {
 			result <- err
 			return
