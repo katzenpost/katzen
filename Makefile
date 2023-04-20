@@ -10,6 +10,9 @@ distro=debian
 go_package_cache:
 	mkdir -p go_package_cache
 
+build-linux: docker-$(distro)-base
+	go build -trimpath -ldflags="${ldflags}"
+
 docker-build-linux: docker-$(distro)-base
 	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; go build -trimpath -ldflags="${ldflags}"'
 
