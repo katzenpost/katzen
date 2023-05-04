@@ -105,6 +105,8 @@ github.com/katzenpost/katzenpost v0.0.21 h1:eznL3Dy4gAYdK3OWp/UF5Qcp3r1ul2hMmiCp
 github.com/katzenpost/katzenpost v0.0.21/go.mod h1:8X0/kOI0XxZUdE20wC9X/LuRyGXHH6Pe7enwLhrjZfA=
 github.com/katzenpost/katzenpost v0.0.22 h1:jpAJKBBLG243bzyfMCiz0MKNY1J2qV2UZguTTfdCDqI=
 github.com/katzenpost/katzenpost v0.0.22/go.mod h1:7HymLNEQW8KsfnHmaYy+6ZYNcx+5dQNedTwX5+/7GBo=
+github.com/katzenpost/katzenpost v0.0.23-0.20230504032532-f42029a18ac7 h1:prjYpp70eQ9/aiw4rA6w9OEBxI5svOA2DrhrpbA/3lc=
+github.com/katzenpost/katzenpost v0.0.23-0.20230504032532-f42029a18ac7/go.mod h1:7HymLNEQW8KsfnHmaYy+6ZYNcx+5dQNedTwX5+/7GBo=
 github.com/katzenpost/noise v0.0.3 h1:bpYnozkk8j0XE1FAX9iRYgKtfIywuAINF+vMdBOidrM=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf h1:iTvu+cdByoEzF1Hatwbl8AoFfTEB2ZITE2FOeJUyz78=
 github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf/go.mod h1:wzbXAL9lcBAiryER2XStcCww3HGTKl7jjzf2BCgHWrI=
