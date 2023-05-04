@@ -11,7 +11,7 @@ go_package_cache:
 	mkdir -p go_package_cache
 
 docker-build-linux: docker-$(distro)-base
-	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; go build -trimpath -ldflags="${ldflags}"'
+	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; go mod tidy; go build -trimpath -ldflags="${ldflags}"'
 
 docker-build-windows: docker-debian-base
 	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
