@@ -11,7 +11,7 @@ require (
 	gioui.org/x/notify v0.0.0-20211102210401-cead9283b8ff
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/katzenpost v0.0.20
+	github.com/katzenpost/katzenpost v0.0.23
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.0.0-20220722155232-062f8c9fd539
@@ -26,7 +26,7 @@ require (
 	github.com/awnumar/memcall v0.1.2 // indirect
 	github.com/awnumar/memguard v0.22.3 // indirect
 	github.com/benoitkugler/textlayout v0.1.3 // indirect
-	github.com/cloudflare/circl v1.3.1 // indirect
+	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/esiqveland/notify v0.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
@@ -38,9 +38,11 @@ require (
 	github.com/henrydcase/nobs v0.0.0-20210422124615-3a8ac85da11b // indirect
 	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
 	github.com/katzenpost/chacha20poly1305 v0.0.0-20211026103954-7b6fb2fc0129 // indirect
+	github.com/katzenpost/ctidh_cgo v0.0.0-20230221154820-a332f2af8202 // indirect
 	github.com/katzenpost/doubleratchet v0.0.15 // indirect
 	github.com/katzenpost/nyquist v0.0.0-20220905145943-9f7e8b431eaf // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-pointer v0.0.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/oasislabs/deoxysii v0.0.0-20190807103041-6159f99c2236 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
@@ -51,9 +53,9 @@ require (
 	gitlab.com/yawning/slice.git v0.0.0-20190714152416-bc4ae2510529 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/net v0.4.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/eapache/channels.v1 v1.1.0 // indirect

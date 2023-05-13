@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"flag"
@@ -111,7 +112,7 @@ func (a *App) update(gtx layout.Context) {
 			a.c.Start()
 			a.stack.Clear(newHomePage(a))
 			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
-				a.c.Online()
+				a.c.Online(context.TODO())
 				isConnecting = true
 				// if the client does not already have a spool
 				// descriptor, prompt to create one
@@ -125,7 +126,7 @@ func (a *App) update(gtx layout.Context) {
 			isConnected = false
 			isConnecting = false
 		case OnlineClick:
-			go a.c.Online()
+			go a.c.Online(context.TODO())
 			isConnecting = true
 			spool := a.c.SpoolWriteDescriptor()
 			if spool == nil {
