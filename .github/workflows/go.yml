@@ -144,7 +144,7 @@ jobs:
       - name: Hash and commit
         run: |
           sha256sum katzen katzen.apk katzen-macos-arm64 katzen-macos-amd64 katzen.exe > katzen.sha256
-          echo -n "# the nixos output was:" >> katzen.sha256
+          echo -n "# the nixos output was: " >> katzen.sha256
           cat nixos.output >> katzen.sha256
 
       - name: Create release
