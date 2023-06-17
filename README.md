@@ -145,37 +145,9 @@ And then build the Android APK:
 
     gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey sign.keystore -signpass YOURPASSWORD .
 
-To create the Docker build environment:
-
-    docker build --no-cache -t katzenpost/android_build -f Dockerfile.android .
-
-Optional: Before using the build environment, you can `go mod vendor` to copy
-dependencies into a local path (`./vendor`).  This will allow you to use go.mod
-replace directives and copy cached go modules so that they will be available in
-the docker container. This will speed up builds and enable you to make local
-changes to test on android. Do not forget to update or remove the vendor path.
-
-To run the build, execute the following command while in this project root:
-
-    docker run -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey sign.keystore -signpass YOURPASSWORD ."
-
-Note that the contents of the local directory are copied into the docker environment - so your signing keystore ought to be in this path as well.
-
-To install on an Android device using `adb` run the following
-
-    adb install katzen.apk
-
-Between versions you might need to install uninstall a previous build
-
-    adb uninstall chat.katzen
-
-#### Verify build: To verify that your local build matches the CI-built apk, use the included reproducible.keystore to sign the apk:
-
-    docker run --rm -v "$(pwd)":/go/build/ katzenpost/android_build bash -c "go install gioui.org/cmd/gogio && gogio -arch arm64,amd64 -x -target android -appid org.mixnetworks.katzen -version 1 -signkey reproducible.keystore -signpass reproducible ."
-
 ## Run it
 
-    Usage of ./deploy/linux/katzen:
+    Usage of ./katzen:
       -f string
          Path to the client config file. (default to baked-in testnet configuration)
       -s string
