@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"flag"
@@ -88,7 +89,7 @@ func (a *App) doConnectClick() {
 	case catshadow.StateConnecting:
 		// ignore
 	case catshadow.StateOffline:
-		a.c.Online()
+		a.c.Online(context.TODO())
 	}
 }
 
