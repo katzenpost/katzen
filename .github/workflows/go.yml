@@ -109,7 +109,7 @@ jobs:
 
   create_release:
     runs-on: ubuntu-22.04
-    needs: [build_linux, build_windows, build_macos, build_android]
+    needs: [build_linux, build_other_linuxes, build_windows, build_macos, build_android]
     steps:
       - name: Download katzen linux
         uses: actions/download-artifact@v3
