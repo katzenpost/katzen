@@ -14,10 +14,8 @@ $(go_package_cache_dir):
 	mkdir -p $(go_package_cache_dir)
 
 docker-build-linux: docker-$(distro)-base
-	@if ! ([ "$(distro)" == "debian" ] || "$(distro) == "alpine"); then \
-		echo "can only docker-build-linux for debian or alpine"; \
-		false; \
-	fi
+	@([ "$(distro)" = "debian" ] || [ "$(distro)" = "alpine" ]) || \
+		(echo "can only docker-build-linux for debian or alpine, not $(distro)" && false)
 	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; go mod tidy; go build -trimpath -ldflags="${ldflags}"'
 
 docker-build-windows: docker-debian-base
@@ -65,8 +63,8 @@ docker-nix-base: $(go_package_cache_dir)
 docker-build-nix: docker-nix-base
 	# this is for testing and updating the hash (manually).
 	# actual nix users should see README (FIXME put nix command in README)
-	mkdir -p nix_build
-	$(docker) $(docker_run_cmd) --rm -it katzen/nix_base \
+	@mkdir -p nix_build
+	@$(docker) $(docker_run_cmd) --rm -it katzen/nix_base \
 		bash -c ' \
 			nix --extra-experimental-features flakes \
 				--extra-experimental-features nix-command \
@@ -74,7 +72,7 @@ docker-build-nix: docker-nix-base
 			&& cp -rp $$(readlink result) nix_build/'
 
 docker-alpine-base: $(go_package_cache_dir)
-	if ! $(docker) images|grep katzen/alpine_base; then \
+	@if ! $(docker) images|grep katzen/alpine_base; then \
 		$(docker) run --replace --name katzen_alpine_base docker.io/golang:alpine \
 		sh -c 'apk add bash gcc musl-dev libxkbcommon-dev pkgconf wayland-dev \
 					   vulkan-headers mesa-dev libx11-dev libxcursor-dev' \
@@ -104,6 +102,7 @@ docker-android-shell: docker-android-base
 
 docker-clean:
 	-chmod -R 755 $(go_package_cache_dir) ./go_package_cache
+	-rm -rvf nix_build
 	-rm -rvf $(go_package_cache_dir)
 	-rm -rvf ./go_package_cache # for users of old versions of this makefile
 	-$(docker) rm  katzen_debian_base
