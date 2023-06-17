@@ -130,8 +130,8 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 		// truncate messages
 		// TODO: this should split messages and return the set of message IDs sent
-		if len(msg)+4 > catshadow.DoubleRatchetPayloadLength {
-			msg = msg[:catshadow.DoubleRatchetPayloadLength-4]
+		if len(msg)+4 > c.a.c.DoubleRatchetPayloadLength() {
+			msg = msg[:c.a.c.DoubleRatchetPayloadLength()-4]
 		}
 		msgId := c.a.c.SendMessage(c.nickname, msg)
 		return MessageSent{nickname: c.nickname, msgId: msgId}
