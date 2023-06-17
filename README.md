@@ -145,16 +145,16 @@ And then build the Android APK:
 
     gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey sign.keystore -signpass YOURPASSWORD .
 
-#### Building for NixOS
+#### Building for Nix
 
-We have not tested on NixOS, but this command might work? Please open a pull
-request to remove this caveat if you try it and find out that it does :)
+We slightly-tested Nix packaging. This command should work:
 
     nix build --extra-experimental-features flakes \
               --extra-experimental-features nix-command \
-              github:katzenpost/katzen/nix -L
+              github:katzenpost/katzen -L
 
-(The `nix` branch above should be removed when this gets merged to main.)
+(And produce reproducible output which you can compare with the hashes
+published by the github CI run for the commit you built from...)
 
 ## Run it
 

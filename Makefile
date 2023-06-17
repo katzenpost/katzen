@@ -61,7 +61,7 @@ docker-nix-base: $(go_package_cache_dir)
 	fi
 
 docker-build-nix: docker-nix-base
-	# this is for testing and updating the hash (manually).
+	# this is for testing and updating the vendorHash (manually, after running go mod...).
 	# actual nix users should see README (FIXME put nix command in README)
 	@mkdir -p nix_build
 	@$(docker) $(docker_run_cmd) --rm -it katzen/nix_base \
@@ -102,6 +102,7 @@ docker-android-shell: docker-android-base
 
 docker-clean:
 	-chmod -R 755 $(go_package_cache_dir) ./go_package_cache
+	-rm -vf result
 	-rm -rvf nix_build
 	-rm -rvf $(go_package_cache_dir)
 	-rm -rvf ./go_package_cache # for users of old versions of this makefile
