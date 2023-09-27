@@ -2,10 +2,10 @@ module github.com/katzenpost/katzen/replace-gogio
 
 go 1.19
 
-replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20220915145538-a9fefc1d3328
+replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20230926133305-3e18ff4fc2c6
 
 require (
-	gioui.org/cmd v0.0.0-20220818080936-02068d6340fc // indirect
+	gioui.org/cmd v0.0.0-20230822165948-7cb98d0557e7 // indirect
 	github.com/akavel/rsrc v0.10.1 // indirect
 	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d // indirect
 	golang.org/x/mod v0.4.2 // indirect
