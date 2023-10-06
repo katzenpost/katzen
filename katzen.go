@@ -105,7 +105,7 @@ func (a *App) update(gtx layout.Context) {
 			a.c.Start()
 			a.stack.Clear(newHomePage(a))
 			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
-				a.c.Online(context.TODO())
+				go a.c.Online(context.TODO())
 				isConnecting = true
 				// if the client does not already have a spool
 				// descriptor, prompt to create one
