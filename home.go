@@ -8,7 +8,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/text"
+	"gioui.org/font"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -339,6 +339,6 @@ func newHomePage(a *App) *HomePage {
 
 func ContactStyle(th *material.Theme, txt string) material.LabelStyle {
 	l := material.Label(th, th.TextSize, txt)
-	l.Font.Weight = text.Bold
+	l.Font.Weight = font.Bold
 	return l
 }

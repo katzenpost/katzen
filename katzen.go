@@ -17,6 +17,7 @@ import (
 	_ "gioui.org/app/permission/foreground"
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
+	"gioui.org/text"
 	"gioui.org/io/key"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -39,6 +40,8 @@ var (
 	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
 	debug            = flag.Bool("d", false, "Enable golang debug service.")
 
+	th *material.Theme
+
 	minPasswordLen = 5 // XXX pick something reasonable
 
 	notifications = make(map[string]notify.Notification)
@@ -47,16 +50,6 @@ var (
 	cfgWithoutTor []byte
 	//go:embed default_config_with_tor.toml
 	cfgWithTor []byte
-
-	// theme
-	th = func() *material.Theme {
-		th := material.NewTheme(gofont.Collection())
-		th.Bg = rgb(0x0)
-		th.Fg = rgb(0xFFFFFFFF)
-		th.ContrastBg = rgb(0x22222222)
-		th.ContrastFg = rgb(0x77777777)
-		return th
-	}()
 
 	isConnected  bool
 	isConnecting bool
@@ -112,7 +105,7 @@ func (a *App) update(gtx layout.Context) {
 			a.c.Start()
 			a.stack.Clear(newHomePage(a))
 			if _, err := a.c.GetBlob("AutoConnect"); err == nil {
-				a.c.Online(context.TODO())
+				go a.c.Online(context.TODO())
 				isConnecting = true
 				// if the client does not already have a spool
 				// descriptor, prompt to create one
@@ -216,6 +209,18 @@ func uiMain() {
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
 		)
+
+		// theme must be declared AFTER NewWindow on android
+		th = func() *material.Theme {
+			th := material.NewTheme()
+			th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+			th.Bg = rgb(0x0)
+			th.Fg = rgb(0xFFFFFFFF)
+			th.ContrastBg = rgb(0x22222222)
+			th.ContrastFg = rgb(0x77777777)
+			return th
+		}()
+
 		if err := newApp(w).run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed: %v\n", err)
 		}
