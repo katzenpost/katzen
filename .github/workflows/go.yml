@@ -16,7 +16,7 @@ jobs:
           name: katzen
           path: ./katzen
 
-  build_alpine_linux:
+  build_other_linuxes:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -30,6 +30,18 @@ jobs:
         with:
           name: katzen.alpine
           path: ./katzen
+
+      - name: Build for Nix
+        run: make docker-build-nix
+
+      - name: Save output artifact name
+        run: ls nix_build | head -1 > nixos.output
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: nixos.output
+          path: nixos.output
 
   build_windows:
     runs-on: ubuntu-22.04
@@ -50,7 +62,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.19.x]
-        os: [macos-11, macos-12]
+        os: [macos-12]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -97,7 +109,7 @@ jobs:
 
   create_release:
     runs-on: ubuntu-22.04
-    needs: [build_linux, build_windows, build_macos, build_android]
+    needs: [build_linux, build_other_linuxes, build_windows, build_macos, build_android]
     steps:
       - name: Download katzen linux
         uses: actions/download-artifact@v3
@@ -124,9 +136,16 @@ jobs:
         with:
           name: katzen-macos-arm64
 
+      - name: Download nixos output name
+        uses: actions/download-artifact@v3
+        with:
+          name: nixos.output
+
       - name: Hash and commit
         run: |
           sha256sum katzen katzen.apk katzen-macos-arm64 katzen-macos-amd64 katzen.exe > katzen.sha256
+          echo -n "# the nixos output was: " >> katzen.sha256
+          cat nixos.output >> katzen.sha256
 
       - name: Create release
         id: create_release

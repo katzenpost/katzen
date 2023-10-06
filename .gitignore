@@ -19,3 +19,6 @@ sign.keystore
 
 # state files
 *.state
+
+# Nix build symlinks
+result
