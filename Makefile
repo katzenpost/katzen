@@ -74,7 +74,7 @@ docker-build-nix: docker-nix-base
 docker-alpine-base: $(go_package_cache_dir)
 	@if ! $(docker) images|grep katzen/alpine_base; then \
 		$(docker) run --replace --name katzen_alpine_base docker.io/golang:alpine \
-		sh -c 'apk add bash gcc musl-dev libxkbcommon-dev pkgconf wayland-dev \
+		sh -c 'apk add bash git gcc musl-dev libxkbcommon-dev pkgconf wayland-dev \
 					   vulkan-headers mesa-dev libx11-dev libxcursor-dev' \
 		&& $(docker) commit katzen_alpine_base katzen/alpine_base \
 		&& $(docker) rm katzen_alpine_base; \
