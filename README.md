@@ -156,6 +156,9 @@ We slightly-tested Nix packaging. This command should work:
 (And produce reproducible output which you can compare with the hashes
 published by the github CI run for the commit you built from...)
 
+Note that when updating dependencies, the vendorHash line in katzen.nix will need to be updated manually as well.
+After updating a dependency, run the above command (or use make docker-build-nix) which will output the updated vendorHash.
+
 ## Run it
 
     Usage of ./katzen:
