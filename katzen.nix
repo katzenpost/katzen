@@ -7,7 +7,7 @@ buildGoModule rec {
   pname = "katzen";
   inherit src version;
 
-  vendorHash = "sha256-gywMwQjxVqsM7YUSUkwzZERboecxDbR7hWxZAVpALnA=";
+  vendorHash = "sha256-VeQBSDAgCsla93by2NPYR+zmaxqlNJPq/YxMqvet7pE=";
   # This hash is may drift from the actual vendoring and break the build,
   # see https://nixos.org/manual/nixpkgs/unstable/#ssec-language-go.
 
