@@ -1,3 +1,7 @@
+RatchetNIKEScheme = "x25519"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
+
 [UpstreamProxy]
   Type = "none"
 
@@ -13,6 +17,8 @@
   [[VotingAuthority.Peers]]
 # annares
 Identifier = "annares"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
 Addresses = ["131.155.69.135:65534"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 /fjoRTnyDITTtD1ialtNWSzfTp9Vd47kEUa7sc3LM2I+PRgv+JbeuaLpEbJLfAoR
@@ -53,6 +59,8 @@ hm8ySnLAh52a0CsVDKFgYWY6MGJRupt0aiQXIzCZQUdgWsE6AnxHzBgHsAhemrhG
   [[VotingAuthority.Peers]]
 # beeblebrox
 Identifier = "beeblebrox"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
 Addresses = ["37.218.247.39:3333"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 sffL6SrX94zltrKWiCc1bxvgqPaKuCpUsErChV3bUEop4+YrTXDMgH3JzKemFBf8
@@ -92,6 +100,8 @@ VSZNStzaExhQ9wxg7HeRaQ==
   [[VotingAuthority.Peers]]
 # gnunet
 Identifier = "gnunet"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
 Addresses = [ "131.159.74.69:65534", "[2001:4ca0:2001:42:225:90ff:fe6b:d60]:65534" ]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 jclECUIi0bp4f627W/T3q/bVZTV/zBYiT4Ry/9RlTpEr7ul+qPLGaHNbtPwH1kxD
@@ -132,6 +142,8 @@ feOstL0pARWr1YI6PonRbQ==
   [[VotingAuthority.Peers]]
 # marighella
 Identifier = "marighella"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
 Addresses = [ "191.101.71.152:40000", "[2a02:4780:14:af58::1]:40000" ]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 cEAu8JISHrc9n45xz6vUkJfvPnf3LlzowA0pyc443q+TAWiB5+NaRgK42Y01hDiK
@@ -171,6 +183,8 @@ d7pNKav+/Mrl4pfWQT5/kSMNHI+m61VemmQ3HJ5HoSbROjoS4ndumaOAOnFFVUAl
   [[VotingAuthority.Peers]]
 # windfall
 Identifier = "windfall"
+WireKEMScheme = "Kyber768-X25519"
+PKISignatureScheme = "Ed25519 Sphincs+"
 Addresses = ["74.50.67.182:40002"]
 IdentityPublicKey = """-----BEGIN ED25519 SPHINCS+ PUBLIC KEY-----
 +oxlrZurSc3JD/eJsRmSabtFVsbFB/N1fSZSHTEajndgX/rGGZTCiBqMDqXC/qTS
