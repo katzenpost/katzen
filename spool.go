@@ -1,30 +1,30 @@
 package main
 
 import (
-	"gioui.org/layout"
-	"time"
-	"gioui.org/op/clip"
-	"gioui.org/x/notify"
-	"gioui.org/widget"
-	"sync"
-	"image"
 	"gioui.org/gesture"
+	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/notify"
 	"github.com/katzenpost/katzenpost/catshadow"
+	"image"
+	"sync"
+	"time"
 	//"gioui.org/widget/material"
 )
 
 type SpoolPage struct {
-	a        *App
-	provider *layout.List
+	a              *App
+	provider       *layout.List
 	providerClicks map[string]*gesture.Click
-	connect  *widget.Clickable
-	settings *widget.Clickable
-	back     *widget.Clickable
-	submit   *widget.Clickable
-	once     *sync.Once
-	errCh    chan error
+	connect        *widget.Clickable
+	settings       *widget.Clickable
+	back           *widget.Clickable
+	submit         *widget.Clickable
+	once           *sync.Once
+	errCh          chan error
 }
 
 func (p *SpoolPage) Start(stop <-chan struct{}) {
@@ -135,7 +135,7 @@ func (p *SpoolPage) Event(gtx layout.Context) interface{} {
 			if e.Type == gesture.TypeClick {
 				provider := provider // copy reference to provider
 				go p.once.Do(func() {
-					select{
+					select {
 					case p.errCh <- p.a.c.CreateRemoteSpoolOn(provider):
 					case <-p.a.c.HaltCh():
 						return

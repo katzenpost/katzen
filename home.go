@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/font"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -149,21 +149,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 											}),
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
-												layout.Rigid(func(gtx C) D {
-													if contacts[i].IsPending {
-														return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-												layout.Rigid(func(gtx C) D {
-													// timestamp
-													if lastMsg != nil {
-														messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
-														return material.Caption(th, messageAge).Layout(gtx)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-											)}),
+													layout.Rigid(func(gtx C) D {
+														if contacts[i].IsPending {
+															return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+													layout.Rigid(func(gtx C) D {
+														// timestamp
+														if lastMsg != nil {
+															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+															return material.Caption(th, messageAge).Layout(gtx)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+												)
+											}),
 										)
 									}),
 									// last message
