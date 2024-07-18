@@ -43,7 +43,7 @@ docker-build-android: $(go_package_cache_dir) docker-android-base $(KEYSTORE)
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base: $(go_package_cache_dir)
 	if ! $(docker) images|grep katzen/debian_base; then \
-		$(docker) run --replace --name katzen_debian_base docker.io/golang:bullseye bash -c "echo -e 'deb https://deb.debian.org/debian bullseye main\ndeb https://deb.debian.org/debian bullseye-updates main\ndeb https://deb.debian.org/debian-security bullseye-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list && apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev gcc-mingw-w64-x86-64" \
+		$(docker) run --replace --name katzen_debian_base docker.io/golang:bookworm bash -c "echo -e 'deb https://deb.debian.org/debian bookworm main\ndeb https://deb.debian.org/debian bookworm-updates main\ndeb https://deb.debian.org/debian-security bookworm-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list && apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev gcc-mingw-w64-x86-64" \
 		&& $(docker) commit katzen_debian_base katzen/debian_base \
 		&& $(docker) rm katzen_debian_base; \
 	fi
