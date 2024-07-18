@@ -6,7 +6,7 @@ KEYPASS := password
 go_package_cache_dir := /tmp/katzen_go_package_cache
 # you can say, eg, 'make go_package_cache_arg= docker-shell' to not use the package cache
 go_package_cache_arg := -v $(go_package_cache_dir):/go/pkg
-docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ $(go_package_cache_arg) --workdir /go/katzen -e CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f"
+docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ $(go_package_cache_arg) --workdir /go/katzen
 
 distro=debian
 
