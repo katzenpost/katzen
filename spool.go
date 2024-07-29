@@ -118,16 +118,16 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *SpoolPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if p.connect.Clicked() {
+	if p.connect.Clicked(gtx) {
 		if !isConnected && !isConnecting {
 			return OnlineClick{}
 		}
 		return OfflineClick{}
 	}
-	if p.settings.Clicked() {
+	if p.settings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
 	for provider, click := range p.providerClicks {

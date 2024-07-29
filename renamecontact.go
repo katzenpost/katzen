@@ -41,16 +41,16 @@ func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
 
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, ev := range p.newnickname.Events() {
+	if ev, ok := p.newnickname.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
 			p.submit.Click()
 		}
 	}
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		err := p.a.c.RenameContact(p.nickname, p.newnickname.Text())
 		if err == nil {
 			return EditContactComplete{}
