@@ -79,7 +79,7 @@ type RenameContact struct {
 
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *EditContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
 	for _, e := range p.avatar.Events(gtx.Queue) {
@@ -87,20 +87,20 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 			return ChooseAvatar{nickname: p.nickname}
 		}
 	}
-	if p.clear.Clicked() {
+	if p.clear.Clicked(gtx) {
 		// TODO: confirmation dialog
 		p.a.c.WipeConversation(p.nickname)
 		return EditContactComplete{nickname: p.nickname}
 	}
-	if p.expiry.Changed() {
+	if p.expiry.Update(gtx) {
 		p.expiry.Value = float32(math.Round(float64(p.expiry.Value)))
 	}
 	// update duration
 	p.duration = time.Duration(int64(p.expiry.Value)) * time.Minute * 60 * 24
-	if p.rename.Clicked() {
+	if p.rename.Clicked(gtx) {
 		return RenameContact{nickname: p.nickname}
 	}
-	if p.remove.Clicked() {
+	if p.remove.Clicked(gtx) {
 		// TODO: confirmation dialog
 		p.a.c.RemoveContact(p.nickname)
 		p.a.c.DeleteBlob("avatar://" + p.nickname)
@@ -108,7 +108,7 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 		delete(avatars, p.nickname)
 		return EditContactComplete{nickname: p.nickname}
 	}
-	if p.apply.Clicked() {
+	if p.apply.Clicked(gtx) {
 		p.a.c.ChangeExpiration(p.nickname, p.duration)
 		return BackEvent{}
 	}

@@ -240,15 +240,15 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 		return RedrawEvent{}
 	}
 
-	for _, e := range p.newAvatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
+	if ev, ok := p.newAvatar.Update(gtx.Source); ok {
+		if ev.Kind == gesture.KindClick {
 			p.contactal = NewContactal()
 			p.secret.SetText(p.contactal.SharedSecret)
 			return RedrawEvent{}
 		}
 	}
 
-	for _, ev := range p.secret.Events() {
+	if ev, ok := p.secret.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
 			p.submit.Click()

@@ -122,7 +122,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 
-	if c.send.Clicked() {
+	if c.send.Clicked(gtx) {
 		msg := []byte(c.compose.Text())
 		c.compose.SetText("")
 		if len(msg) == 0 {
@@ -141,7 +141,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			return EditContact{nickname: c.nickname}
 		}
 	}
-	if c.back.Clicked() {
+	if c.back.Clicked(gtx) {
 		return BackEvent{}
 	}
 	if c.msgcopy.Clicked() {
@@ -149,7 +149,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		c.messageClicked = nil
 		return nil
 	}
-	if c.msgdetails.Clicked() {
+	if c.msgdetails.Clicked(gtx) {
 		c.messageClicked = nil // not implemented
 	}
 
