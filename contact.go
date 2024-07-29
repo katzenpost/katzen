@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
+	"gioui.org/io/key"
+	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -21,9 +23,11 @@ import (
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	"image/png"
+	"io"
 	mrand "math/rand"
 	"runtime"
 	"sort"
+	"strings"
 )
 
 // AddContactComplete is emitted when catshadow.NewContact has been called
@@ -203,18 +207,18 @@ func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
 
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *AddContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, ev := range p.nickname.Events() {
+	if ev, ok := p.nickname.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
-			p.secret.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.secret})
 		}
 	}
 
-	for _, e := range p.newQr.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
+	if ev, ok := p.newQr.Update(gtx.Source); ok {
+		if ev.Kind == gesture.KindClick {
 			p.contactal.Reset()
 			p.secret.SetText(p.contactal.SharedSecret)
 		}
@@ -253,18 +257,18 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			return RedrawEvent{}
 		}
 	}
-	if p.cancel.Clicked() {
+	if p.cancel.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		if len(p.secret.Text()) < minPasswordLen {
 			p.secret.SetText("")
-			p.secret.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.secret})
 			return nil
 		}
 
 		if len(p.nickname.Text()) == 0 {
-			p.nickname.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.nickname})
 			return nil
 		}
 
@@ -304,7 +308,6 @@ func newAddContactPage(a *App) *AddContactPage {
 	// generate random avatar parameters
 	p.contactal = NewContactal()
 	p.secret.SetText(p.contactal.SharedSecret)
-	p.nickname.Focus()
 	return p
 }
 
