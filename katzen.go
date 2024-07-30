@@ -191,10 +191,26 @@ func (a *App) run() error {
 				ackCh <- struct{}{}
 				return err
 			}
+			if a.endBg != nil {
+				a.endBg()
+				a.endBg = nil
+			}
 			ackCh <- struct{}{}
+
+			// if no events arrive for some amount of time, start a foreground servic
 		case <-time.After(1 * time.Minute):
 			// redraw the screen to update the message timestamps once per minute
 			a.w.Invalidate()
+			var err error
+
+			if a.endBg != nil {
+				a.endBg()
+			}
+
+			a.endBg, err = app.Start("Is running in the background", "")
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
