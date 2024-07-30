@@ -263,24 +263,22 @@ type OfflineClick struct {
 
 // Event returns a ChooseContactClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
-	if p.connect.Clicked() {
+	if p.connect.Clicked(gtx) {
 		if !isConnected && !isConnecting {
 			return OnlineClick{}
 		}
 		return OfflineClick{}
 	}
 	// listen for pointer right click events on the addContact widget
-	if p.addContact.Clicked() {
+	if p.addContact.Clicked(gtx) {
 		return AddContactClick{}
 	}
-	if p.showSettings.Clicked() {
+	if p.showSettings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
 	for nickname, click := range p.contactClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
-				return ChooseContactClick{nickname: nickname}
-			}
+		if _, ok := click.Update(gtx.Source); ok {
+			return ChooseContactClick{nickname: nickname}
 		}
 	}
 	// check for keypress events
