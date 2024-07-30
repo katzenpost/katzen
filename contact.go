@@ -224,27 +224,32 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 
-	if p.copy.Clicked() {
-		clipboard.WriteOp{Text: p.secret.Text()}.Add(gtx.Ops)
-		return nil
+	if p.copy.Clicked(gtx) {
+		gtx.Execute(clipboard.WriteCmd{
+			Data: io.NopCloser(strings.NewReader(p.secret.Text())),
+		})
 	}
 
-	if p.paste.Clicked() {
-		clipboard.ReadOp{Tag: p}.Add(gtx.Ops)
+	if p.paste.Clicked(gtx) {
+		gtx.Execute(clipboard.ReadCmd{Tag: p})
 	}
 
-	for _, e := range gtx.Events(p) {
-		ce := e.(clipboard.Event)
-		p.secret.SetText(ce.Text)
-		p.contactal.SharedSecret = ce.Text
-		return RedrawEvent{}
+	if ev, ok := gtx.Event(transfer.TargetFilter{Target: p, Type: "application/text"}); ok {
+		switch e := ev.(type) {
+		case transfer.DataEvent:
+			f := e.Open()
+			defer f.Close()
+			if b, err := io.ReadAll(f); err == nil {
+				p.secret.SetText(string(b))
+				p.contactal.SharedSecret = string(b)
+			}
+		}
 	}
 
 	if ev, ok := p.newAvatar.Update(gtx.Source); ok {
 		if ev.Kind == gesture.KindClick {
 			p.contactal = NewContactal()
 			p.secret.SetText(p.contactal.SharedSecret)
-			return RedrawEvent{}
 		}
 	}
 
@@ -254,7 +259,6 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			p.submit.Click()
 		case widget.ChangeEvent:
 			p.contactal.SharedSecret = p.secret.Text()
-			return RedrawEvent{}
 		}
 	}
 	if p.cancel.Clicked(gtx) {
