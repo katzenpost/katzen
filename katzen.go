@@ -215,8 +215,8 @@ func main() {
 
 func uiMain() {
 	go func() {
-		w := app.NewWindow(
-			app.Size(unit.Dp(400), unit.Dp(400)),
+		w := new(app.Window)
+		w.Option(app.Size(unit.Dp(400), unit.Dp(400)),
 			app.Title("Katzen"),
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
@@ -296,7 +296,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		case *conversationPage:
 			// XXX: on android, input focus is not lost when the application does not have foreground
 			// but system.Stage is changed. On desktop linux, the stage does not change, but window focus is lost.
-			if p.nickname == event.Nickname && a.stage == system.StageRunning && a.focus {
+			if p.nickname == event.Nickname && a.focus {
 				a.w.Invalidate()
 				return nil
 			}
@@ -324,43 +324,12 @@ func (a *App) handleGioEvents(e interface{}) error {
 	switch e := e.(type) {
 	case key.FocusEvent:
 		a.focus = e.Focus
-	case system.DestroyEvent:
+	case app.DestroyEvent:
 		return errors.New("system.DestroyEvent receieved")
-	case system.FrameEvent:
-		gtx := layout.NewContext(a.ops, e)
-		key.InputOp{Tag: a.w, Keys: key.NameEscape + "|" + key.NameBack}.Add(a.ops)
-		for _, e := range gtx.Events(a.w) {
-			switch e := e.(type) {
-			case key.Event:
-				if (e.Name == key.NameEscape && e.State == key.Release) || e.Name == key.NameBack {
-					if a.stack.Len() > 1 {
-						a.stack.Pop()
-						a.w.Invalidate()
-					}
-				}
-			}
-		}
+	case app.FrameEvent:
+		gtx := app.NewContext(a.ops, e)
 		a.Layout(gtx)
 		e.Frame(gtx.Ops)
-	case system.StageEvent:
-		fmt.Printf("StageEvent %s received\n", e.Stage)
-		a.stage = e.Stage
-		if e.Stage >= system.StageRunning {
-			if a.stack.Len() == 0 {
-				a.stack.Push(newSignInPage(a))
-			}
-		}
-		if e.Stage == system.StagePaused {
-			var err error
-			a.endBg, err = app.Start("Is running in the background", "")
-			if err != nil {
-				return err
-			}
-		} else {
-			if a.endBg != nil {
-				a.endBg()
-			}
-		}
 	}
 	return nil
 }
