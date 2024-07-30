@@ -78,6 +78,11 @@ func (a *App) Layout(gtx layout.Context) {
 }
 
 func (a *App) update(gtx layout.Context) {
+	if a.stack.Len() == 0 {
+		a.stack.Push(newSignInPage(a))
+		return
+	}
+
 	page := a.stack.Current()
 	if e := page.Event(gtx); e != nil {
 		switch e := e.(type) {
