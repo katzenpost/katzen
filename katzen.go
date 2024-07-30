@@ -186,10 +186,12 @@ func (a *App) run() error {
 			if err := a.handleCatshadowEvent(e); err != nil {
 				return err
 			}
-		case e := <-a.w.Events():
+		case e := <-evCh:
 			if err := a.handleGioEvents(e); err != nil {
+				ackCh <- struct{}{}
 				return err
 			}
+			ackCh <- struct{}{}
 		case <-time.After(1 * time.Minute):
 			// redraw the screen to update the message timestamps once per minute
 			a.w.Invalidate()
