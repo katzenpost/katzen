@@ -3,9 +3,8 @@ package main
 import (
 	"time"
 
-	"gioui.org/io/event"
 	"gioui.org/io/pointer"
-	"gioui.org/op"
+	"gioui.org/layout"
 )
 
 // LongPressType represents a successful or cancelled LongPress action.
@@ -37,39 +36,28 @@ type LongPress struct {
 	callback func()
 }
 
-// Add the handler to the operation list to receive click events.
-func (l *LongPress) Add(ops *op.Ops) {
-	op := pointer.InputOp{
-		Tag:   l,
-		Types: pointer.Press | pointer.Release | pointer.Leave,
-	}
-	op.Add(ops)
-}
-
-// Events returns the next click event, if any.
-func (l *LongPress) Events(q event.Queue) []LongPressEvent {
-	var events []LongPressEvent
+// Update returns the next click event, if any.
+func (l *LongPress) Update(gtx layout.Context) (*LongPressEvent, bool) {
 	// consume pointer events and start or stop a timer
-	for _, evt := range q.Events(l) {
-		e, ok := evt.(pointer.Event)
-		if !ok {
-			continue
-		}
-		switch e.Type {
-		case pointer.Press:
-			l.pressedAt = time.Now()
-			l.timer = time.NewTimer(l.detectAt)
-			time.AfterFunc(l.detectAt, l.callback)
-			l.pressed = true
-		case pointer.Cancel, pointer.Release, pointer.Leave:
-			if l.pressed {
-				l.pressed = false
-				l.pressedFor = time.Now().Sub(l.pressedAt)
-				if !l.timer.Stop() {
-					<-l.timer.C
+	filt := pointer.Filter{Target: l, Kinds: pointer.Press | pointer.Release | pointer.Leave}
+	if e, ok := gtx.Event(filt); ok {
+		if e, ok := e.(pointer.Event); ok {
+			switch e.Kind {
+			case pointer.Press:
+				l.pressedAt = time.Now()
+				l.timer = time.NewTimer(l.detectAt)
+				time.AfterFunc(l.detectAt, l.callback)
+				l.pressed = true
+			case pointer.Cancel, pointer.Release, pointer.Leave:
+				if l.pressed {
+					l.pressed = false
+					l.pressedFor = time.Now().Sub(l.pressedAt)
+					if !l.timer.Stop() {
+						<-l.timer.C
+					}
+					l.timer = nil
+					return &LongPressEvent{Type: LongPressCancelled}, true
 				}
-				l.timer = nil
-				events = append(events, LongPressEvent{Type: LongPressCancelled})
 			}
 		}
 	}
@@ -82,14 +70,13 @@ func (l *LongPress) Events(q event.Queue) []LongPressEvent {
 			if l.pressed {
 				l.pressed = false
 				l.pressedFor = time.Now().Sub(l.pressedAt)
-				events = append(events, LongPressEvent{Type: LongPressed})
+				return &LongPressEvent{Type: LongPressed}, true
 			}
 		default:
 		}
 	}
 
-	return events
-
+	return &LongPressEvent{}, false
 }
 
 // NewLongPress returns a LongPress that triggers after the duration
