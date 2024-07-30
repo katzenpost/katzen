@@ -33,17 +33,6 @@ var (
 	logo              = getLogo()
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
 	avatars           = make(map[string]layout.Widget)
-	shortcuts         = key.Set(key.NameUpArrow + "|" +
-		key.NameDownArrow + "|" +
-		key.NamePageUp + "|" +
-		key.NamePageDown + "|" +
-		key.NameReturn + "|" +
-		key.NameEscape + "|" +
-		key.NameF1 + "|" + // show help page (not implemented)
-		key.NameF2 + "|" + // add contact
-		key.NameF3 + "|" + // show client settings
-		key.NameF4 + "|" + // toggle connection status
-		key.NameF5) // edit contact
 )
 
 type HomePage struct {
