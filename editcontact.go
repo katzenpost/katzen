@@ -30,8 +30,8 @@ type EditContactPage struct {
 }
 
 const (
-	minExpiration = 0.0  // never delete messages
-	maxExpiration = 14.0 // 2 weeks
+	minExpiration = float32(0.0)  // never delete messages
+	maxExpiration = float32(14.0) // 2 weeks
 )
 
 // Layout returns the contact options menu
@@ -77,15 +77,29 @@ type RenameContact struct {
 	nickname string
 }
 
+func valueToDuration(val float32) time.Duration {
+	// multiply by the maximum range, in days
+	duration := val * maxExpiration
+	// round to a multiple of days
+	duration = float32(math.Round(float64(duration)))
+	// update the slider to a rounded value
+	return time.Duration(int64(duration) * int64(time.Hour) * 24)
+}
+
+func durationToValue(dur time.Duration) float32 {
+	// convert duration to days
+	fdur := float64(int64(dur) / (int64(time.Hour) * 24))
+	// round to a multiple of days and return the scaled slider value
+	return float32(math.Round(fdur)) / maxExpiration
+}
+
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, e := range p.avatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			return ChooseAvatar{nickname: p.nickname}
-		}
+	if _, ok := p.avatar.Update(gtx.Source); ok {
+		return ChooseAvatar{nickname: p.nickname}
 	}
 	if p.clear.Clicked(gtx) {
 		// TODO: confirmation dialog
@@ -93,10 +107,8 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 		return EditContactComplete{nickname: p.nickname}
 	}
 	if p.expiry.Update(gtx) {
-		p.expiry.Value = float32(math.Round(float64(p.expiry.Value)))
+		p.duration = valueToDuration(p.expiry.Value)
 	}
-	// update duration
-	p.duration = time.Duration(int64(p.expiry.Value)) * time.Minute * 60 * 24
 	if p.rename.Clicked(gtx) {
 		return RenameContact{nickname: p.nickname}
 	}
@@ -119,14 +131,14 @@ func (p *EditContactPage) Start(stop <-chan struct{}) {
 }
 
 func newEditContactPage(a *App, contact string) *EditContactPage {
-	expiry, _ := a.c.GetExpiration(contact)
 	p := &EditContactPage{a: a, nickname: contact, back: &widget.Clickable{},
 		avatar: &gesture.Click{}, clear: &widget.Clickable{},
 		expiry: &widget.Float{}, rename: &widget.Clickable{},
 		remove: &widget.Clickable{}, apply: &widget.Clickable{},
 		settings: &layout.List{Axis: layout.Vertical},
 	}
-	p.expiry.Value = float32(math.Round(float64(expiry) / float64(time.Minute*60*24)))
+	p.duration, _ = a.c.GetExpiration(contact)
+	p.expiry.Value = durationToValue(p.duration)
 	p.widgets = []layout.Widget{
 		func(gtx C) D {
 			dims := layout.Center.Layout(gtx, func(gtx C) D {
@@ -141,14 +153,14 @@ func newEditContactPage(a *App, contact string) *EditContactPage {
 		layout.Spacer{Height: unit.Dp(8)}.Layout,
 		func(gtx C) D {
 			var label string
-			if p.expiry.Value < 1.0 {
+			if p.expiry.Value < 1.0/maxExpiration {
 				label = "Delete after: never"
 			} else {
 				label = "Delete after: " + durafmt.Parse(p.duration).Format(units)
 			}
 			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle, Spacing: layout.SpaceBetween}.Layout(gtx,
 				layout.Rigid(material.Body2(th, "Message deletion").Layout),
-				layout.Rigid(material.Slider(th, p.expiry, minExpiration, maxExpiration).Layout),
+				layout.Rigid(material.Slider(th, p.expiry).Layout),
 				layout.Rigid(material.Caption(th, label).Layout),
 			)
 		},
