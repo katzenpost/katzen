@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // AddContactComplete is emitted when catshadow.NewContact has been called
@@ -135,6 +136,7 @@ type AddContactPage struct {
 	secret    *widget.Editor
 	submit    *widget.Clickable
 	cancel    *widget.Clickable
+	initOnce  *sync.Once
 }
 
 // Layout returns a simple centered layout prompting user for contact nickname and secret
@@ -143,6 +145,13 @@ func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
+
+	// set the default window focus to nickname entry on first layout
+	p.initOnce.Do(func() {
+		if len(p.nickname.Text()) == 0 {
+			gtx.Execute(key.FocusCmd{Tag: p.nickname})
+		}
+	})
 
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
@@ -312,6 +321,8 @@ func newAddContactPage(a *App) *AddContactPage {
 	// generate random avatar parameters
 	p.contactal = NewContactal()
 	p.secret.SetText(p.contactal.SharedSecret)
+
+	p.initOnce = new(sync.Once)
 	return p
 }
 
