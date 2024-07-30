@@ -17,8 +17,8 @@ import (
 	_ "gioui.org/app/permission/foreground"
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
+	"gioui.org/io/event"
 	"gioui.org/io/key"
-	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -62,7 +62,6 @@ type App struct {
 	c     *catshadow.Client
 	stack pageStack
 	focus bool
-	stage system.Stage
 }
 
 func newApp(w *app.Window) *App {
@@ -155,7 +154,7 @@ func (a *App) run() error {
 		if a.c != nil {
 			break
 		}
-		e := <-a.w.Events()
+		e := a.w.Event()
 		if err := a.handleGioEvents(e); err != nil {
 			return err
 		}
@@ -164,6 +163,19 @@ func (a *App) run() error {
 		if a.c != nil {
 			a.c.Shutdown()
 			a.c.Wait()
+		}
+	}()
+
+	evCh := make(chan event.Event)
+	ackCh := make(chan struct{})
+	go func() {
+		for {
+			ev := a.w.Event()
+			evCh <- ev
+			<-ackCh
+			if _, ok := ev.(app.DestroyEvent); ok {
+				return
+			}
 		}
 	}()
 
