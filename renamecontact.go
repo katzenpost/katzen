@@ -66,7 +66,6 @@ func (p *RenameContactPage) Start(stop <-chan struct{}) {
 func newRenameContactPage(a *App, nickname string) *RenameContactPage {
 	p := &RenameContactPage{a: a, nickname: nickname}
 	p.newnickname = &widget.Editor{SingleLine: true, Submit: true}
-	p.newnickname.Focus()
 	p.back = &widget.Clickable{}
 	p.submit = &widget.Clickable{}
 	return p
