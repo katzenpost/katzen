@@ -78,6 +78,16 @@ func (a *App) Layout(gtx layout.Context) {
 }
 
 func (a *App) update(gtx layout.Context) {
+	// handle global shortcuts
+	if backEvent(gtx) {
+		// XXX: this means that after signin, the top level page is homescreen
+		// and therefore pressing back won't logout
+		if a.stack.Len() > 1 {
+			a.stack.Pop()
+			return
+		}
+	}
+
 	if a.stack.Len() == 0 {
 		a.stack.Push(newSignInPage(a))
 		return
