@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"gioui.org/font"
 	"gioui.org/gesture"
-	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -35,34 +34,6 @@ var (
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
 	avatars           = make(map[string]layout.Widget)
 )
-
-func readMenuKeys(p event.Tag, gtx layout.Context) (key.Event, bool) {
-	filters := []event.Filter{
-		//key.FocusFilter(p),
-		key.Filter{Focus: p, Name: key.NameF1},
-		key.Filter{Focus: p, Name: key.NameF2},
-		key.Filter{Focus: p, Name: key.NameF3},
-		key.Filter{Focus: p, Name: key.NameF4},
-		key.Filter{Focus: p, Name: key.NameF5},
-		key.Filter{Focus: p, Name: key.NameUpArrow},
-		key.Filter{Focus: p, Name: key.NameDownArrow},
-		key.Filter{Focus: p, Name: key.NamePageUp},
-		key.Filter{Focus: p, Name: key.NamePageDown},
-		key.Filter{Focus: p, Name: key.NameEscape},
-		key.Filter{Focus: p, Name: key.NameReturn},
-	}
-	if ke, ok := gtx.Event(filters...); ok {
-		switch ke := ke.(type) {
-		case key.FocusEvent:
-			//if ke.Focus  {
-			//	gtx.Execute(key.SoftKeyboardCmd{Show: true})
-			//}
-		case key.Event:
-			return ke, true
-		}
-	}
-	return key.Event{}, false
-}
 
 type HomePage struct {
 	a             *App
@@ -300,34 +271,31 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	// check for keypress events
-
-	if e, ok := readMenuKeys(p, gtx); ok {
-		if e.Name == key.NameF1 && e.State == key.Release {
-		}
-		if e.Name == key.NameF2 && e.State == key.Release {
+	if e, ok := shortcutEvents(gtx); ok {
+		if e.Name == key.NameF2 {
 			return AddContactClick{}
 		}
-		if e.Name == key.NameF3 && e.State == key.Release {
+		if e.Name == key.NameF3 {
 			return ShowSettingsClick{}
 		}
-		if e.Name == key.NameF4 && e.State == key.Release {
+		if e.Name == key.NameF4 {
 			if !isConnected {
 				return OnlineClick{}
 			}
 			return OfflineClick{}
 		}
-		if e.Name == key.NameUpArrow && e.State == key.Release {
+		if e.Name == key.NameUpArrow {
 			kb = true
 			selectedIdx = selectedIdx - 1
 		}
-		if e.Name == key.NameDownArrow && e.State == key.Release {
+		if e.Name == key.NameDownArrow {
 			kb = true
 			selectedIdx = selectedIdx + 1
 		}
-		if e.Name == key.NameEscape && e.State == key.Release {
+		if e.Name == key.NameEscape {
 			kb = false
 		}
-		if e.Name == key.NameReturn && e.State == key.Release {
+		if e.Name == key.NameReturn {
 			contacts := getSortedContacts(p.a)
 			kb = false
 			return ChooseContactClick{nickname: contacts[selectedIdx].Nickname}
