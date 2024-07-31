@@ -266,8 +266,10 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 		return ShowSettingsClick{}
 	}
 	for nickname, click := range p.contactClicks {
-		if _, ok := click.Update(gtx.Source); ok {
-			return ChooseContactClick{nickname: nickname}
+		if e, ok := click.Update(gtx.Source); ok {
+			if e.Kind == gesture.KindClick {
+				return ChooseContactClick{nickname: nickname}
+			}
 		}
 	}
 	// check for keypress events
