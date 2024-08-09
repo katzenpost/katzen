@@ -20,6 +20,8 @@ import (
 	"image/png"
 	"strings"
 	"time"
+	"sort"
+	"sync"
 )
 
 var (
@@ -36,7 +38,10 @@ var (
 )
 
 type HomePage struct {
+	l             *sync.Mutex
 	a             *App
+	updateCh      chan interface{}
+	contacts      []*catshadow.Contact
 	addContact    *widget.Clickable
 	connect       *widget.Clickable
 	showSettings  *widget.Clickable
@@ -48,7 +53,7 @@ type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	contacts := getSortedContacts(p.a)
+	contacts := p.contacts
 	// xxx do not request this every frame...
 	bg := Background{
 		Color: th.Bg,
@@ -308,11 +313,46 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 }
 
 func (p *HomePage) Start(stop <-chan struct{}) {
+	// receive commands to update the contact list, e.g. from KeyExchangeCompleted events
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-p.updateCh:
+				p.UpdateContacts()
+			}
+		}
+	}()
+}
+
+func (h *HomePage) UpdateContacts() {
+	h.l.Lock()
+	defer h.l.Unlock()
+	if h.a == nil {
+		return
+	}
+	if h.a.c == nil {
+		return
+	}
+	contacts := make(sortedContacts, 0)
+
+	// GetContacts() returns map[string]*Contact
+	for _, contact := range h.a.c.GetContacts() {
+		contacts = append(contacts, contact)
+	}
+	sort.Sort(contacts)
+	h.contacts = contacts
 }
 
 func newHomePage(a *App) *HomePage {
+	updateCh := make(chan interface{}, 1)
+	updateCh <- struct{}{} // prod page worker to fetch contacts from catshadow
 	return &HomePage{
 		a:             a,
+		l:             new(sync.Mutex),
+		updateCh:      updateCh,
+		contacts:      []*catshadow.Contact{},
 		addContact:    &widget.Clickable{},
 		connect:       &widget.Clickable{},
 		showSettings:  &widget.Clickable{},
