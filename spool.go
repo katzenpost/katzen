@@ -90,7 +90,7 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// if the layout is selected, change background color
 					bg := Background{Inset: in}
-					if kb && i == selectedIdx {
+					if i == selectedIdx {
 						bg.Color = th.ContrastBg
 					} else {
 						bg.Color = th.Bg

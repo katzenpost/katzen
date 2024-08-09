@@ -27,7 +27,6 @@ import (
 var (
 	contactList       = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
 	selectedIdx       = 0
-	kb                = false
 	connectIcon, _    = widget.NewIcon(icons.DeviceSignalWiFi4Bar)
 	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
@@ -69,14 +68,12 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	// re-center list view for keyboard contact selection
-	if kb {
-		if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
-			// list doesn't wrap around view to end, so do not give negative value for First
-			if selectedIdx < contactList.Position.Count-1 {
-				contactList.Position.First = 0
-			} else {
-				contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
-			}
+	if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
+		// list doesn't wrap around view to end, so do not give negative value for First
+		if selectedIdx < contactList.Position.Count-1 {
+			contactList.Position.First = 0
+		} else {
+			contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
 		}
 	}
 
@@ -112,7 +109,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// if the layout is selected, change background color
 					bg := Background{Inset: in}
-					if kb && i == selectedIdx {
+					if i == selectedIdx {
 						bg.Color = th.ContrastBg
 					} else {
 						bg.Color = th.Bg
@@ -292,22 +289,15 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 			return OfflineClick{}
 		}
 		if e.Name == key.NameUpArrow {
-			kb = true
 			selectedIdx = selectedIdx - 1
 		}
 		if e.Name == key.NameDownArrow {
-			kb = true
 			selectedIdx = selectedIdx + 1
 		}
-		if e.Name == key.NameEscape {
-			kb = false
-		}
 		if e.Name == key.NameReturn {
-			kb = false
 			p.l.Lock()
 			defer p.l.Unlock()
 			if len(p.contacts) < selectedIdx + 1 {
-				panic("wtf")
 				return nil
 			}
 			return ChooseContactClick{nickname: p.contacts[selectedIdx].Nickname}
