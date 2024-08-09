@@ -303,9 +303,14 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 			kb = false
 		}
 		if e.Name == key.NameReturn {
-			contacts := getSortedContacts(p.a)
 			kb = false
-			return ChooseContactClick{nickname: contacts[selectedIdx].Nickname}
+			p.l.Lock()
+			defer p.l.Unlock()
+			if len(p.contacts) < selectedIdx + 1 {
+				panic("wtf")
+				return nil
+			}
+			return ChooseContactClick{nickname: p.contacts[selectedIdx].Nickname}
 		}
 	}
 
