@@ -145,6 +145,11 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Push(newAddContactPage(a))
 		case AddContactComplete:
 			a.stack.Pop()
+			p := a.stack.Current()
+			// return to home page, and update the contacts page
+			if h, ok := p.(*HomePage); ok {
+				h.UpdateContacts()
+			}
 		case ChooseContactClick:
 			a.stack.Push(newConversationPage(a, e.nickname))
 		case ChooseAvatar:
