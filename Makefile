@@ -16,7 +16,7 @@ $(go_package_cache_dir):
 docker-build-linux: docker-$(distro)-base
 	@([ "$(distro)" = "debian" ] || [ "$(distro)" = "alpine" ]) || \
 		(echo "can only docker-build-linux for debian or alpine, not $(distro)" && false)
-	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; go mod tidy; go build -trimpath -ldflags="${ldflags}"'
+	$(docker) $(docker_run_cmd) katzen/$(distro)_base go build -trimpath -ldflags="${ldflags}"
 
 docker-build-windows: docker-debian-base
 	@if [ "$(distro)" != "debian" ]; then \
