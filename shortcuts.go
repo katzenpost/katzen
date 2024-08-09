@@ -44,7 +44,7 @@ func shortcutEvents(gtx layout.Context) (key.Event, bool) {
 		switch ke := ke.(type) {
 		case key.Event:
 			// if on android key.Release isn't implemented
-			if runtime.GOOS == "android" || ke.State == key.Release {
+			if runtime.GOOS == "android" || ke.State == key.Press {
 				return ke, true
 			}
 		}
