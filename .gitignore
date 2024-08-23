@@ -22,3 +22,6 @@ sign.keystore
 
 # Nix build symlinks
 result
+
+# cache
+cache/
