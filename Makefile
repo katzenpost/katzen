@@ -3,15 +3,17 @@ warped?=false
 ldflags=-buildid= -X github.com/katzenpost/katzenpost/core/epochtime.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/server/internal/pki.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/minclient/pki.WarpedEpoch=${warped}
 KEYSTORE := sign.keystore
 KEYPASS := password
-go_package_cache_dir := /tmp/katzen_go_package_cache
+cache_dir=cache
 # you can say, eg, 'make go_package_cache_arg= docker-shell' to not use the package cache
-go_package_cache_arg := -v $(go_package_cache_dir):/go/pkg
+go_package_cache_arg := -v $(shell readlink -f .)/$(cache_dir)/go:/go/ -e GOCACHE=/go/cache
 docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ $(go_package_cache_arg) --workdir /go/katzen -e CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f"
 
 distro=debian
 
-$(go_package_cache_dir):
-	mkdir -p $(go_package_cache_dir)
+$(cache_dir): $(cache_dir)/go
+
+$(cache_dir)/go:
+	mkdir -p $(cache_dir)/go
 
 docker-build-linux: docker-$(distro)-base
 	@([ "$(distro)" = "debian" ] || [ "$(distro)" = "alpine" ]) || \
@@ -33,7 +35,7 @@ docker-android-base:
 $(KEYSTORE):
 	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "keytool -genkey -keystore $(KEYSTORE) -storepass ${KEYPASS} -alias android -keyalg RSA -keysize 2048 -validity 10000 -noprompt -dname CN=android"
 
-docker-build-android: $(go_package_cache_dir) docker-android-base $(KEYSTORE)
+docker-build-android: $(cache_dir) docker-android-base $(KEYSTORE)
 	@if [ "$(distro)" != "debian" ]; then \
 		echo "can only docker-build-android on debian"; \
 		false; \
@@ -41,14 +43,14 @@ docker-build-android: $(go_package_cache_dir) docker-android-base $(KEYSTORE)
 	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "cd replace-gogio && go install gioui.org/cmd/gogio && cd .. && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
-docker-debian-base: $(go_package_cache_dir)
+docker-debian-base: $(cache_dir)
 	if ! $(docker) images|grep katzen/debian_base; then \
 		$(docker) run --replace --name katzen_debian_base docker.io/golang:bookworm bash -c "echo -e 'deb https://deb.debian.org/debian bookworm main\ndeb https://deb.debian.org/debian bookworm-updates main\ndeb https://deb.debian.org/debian-security bookworm-security main' > /etc/apt/sources.list && cat /etc/apt/sources.list && apt update && apt upgrade -y && apt install -y --no-install-recommends build-essential libgles2 libgles2-mesa-dev libglib2.0-dev libxkbcommon-dev libxkbcommon-x11-dev libglu1-mesa-dev libxcursor-dev libwayland-dev libx11-xcb-dev libvulkan-dev gcc-mingw-w64-x86-64" \
 		&& $(docker) commit katzen_debian_base katzen/debian_base \
 		&& $(docker) rm katzen_debian_base; \
 	fi
 
-docker-nix-base: $(go_package_cache_dir)
+docker-nix-base: $(cache_dir)
 	if ! $(docker) images|grep katzen/nix_base; then \
 		$(docker) run --replace --name katzen_nix_base \
 			-v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
@@ -71,7 +73,7 @@ docker-build-nix: docker-nix-base
 				build . -L \
 			&& cp -rp $$(readlink result) nix_build/'
 
-docker-alpine-base: $(go_package_cache_dir)
+docker-alpine-base: $(cache_dir)
 	@if ! $(docker) images|grep katzen/alpine_base; then \
 		$(docker) run --replace --name katzen_alpine_base docker.io/golang:alpine \
 		sh -c 'apk add bash gcc musl-dev libxkbcommon-dev pkgconf wayland-dev \
@@ -101,10 +103,9 @@ docker-android-shell: docker-android-base
 	$(docker) $(docker_run_cmd) --rm -it katzen/android_sdk bash
 
 docker-clean:
-	-chmod -R 755 $(go_package_cache_dir) ./go_package_cache
 	-rm -vf result
 	-rm -rvf nix_build
-	-rm -rvf $(go_package_cache_dir)
+	-rm -rvf $(cache_dir)
 	-rm -rvf ./go_package_cache # for users of old versions of this makefile
 	-$(docker) rm  katzen_debian_base
 	-$(docker) rm  katzen_alpine_base
