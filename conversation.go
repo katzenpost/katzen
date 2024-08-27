@@ -119,8 +119,10 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 
-	if _, ok := c.edit.Update(gtx.Source); ok {
-		return EditContact{nickname: c.nickname}
+	if e, ok := c.edit.Update(gtx.Source); ok {
+		if e.Kind == gesture.KindClick {
+			return EditContact{nickname: c.nickname}
+		}
 	}
 	if c.back.Clicked(gtx) {
 		return BackEvent{}
