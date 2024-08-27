@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -22,6 +23,7 @@ func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
 		Inset: layout.Inset{},
 	}
 
+	gtx.Execute(key.FocusCmd{Tag: p.newnickname})
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
