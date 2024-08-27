@@ -18,10 +18,10 @@ import (
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	"image/png"
-	"strings"
-	"time"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -297,7 +297,7 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 		if e.Name == key.NameReturn {
 			p.l.Lock()
 			defer p.l.Unlock()
-			if len(p.contacts) < selectedIdx + 1 {
+			if len(p.contacts) < selectedIdx+1 {
 				return nil
 			}
 			return ChooseContactClick{nickname: p.contacts[selectedIdx].Nickname}
