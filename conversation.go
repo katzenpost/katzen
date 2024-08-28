@@ -243,10 +243,8 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	contact := c.a.c.GetContacts()[c.nickname]
 	if n, ok := notifications[c.nickname]; ok {
-		if c.a.focus {
-			n.Cancel()
-			delete(notifications, c.nickname)
-		}
+		n.Cancel()
+		delete(notifications, c.nickname)
 	}
 	messages := c.a.c.GetSortedConversation(c.nickname)
 	expires, _ := c.a.c.GetExpiration(c.nickname)
