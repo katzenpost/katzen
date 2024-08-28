@@ -61,7 +61,6 @@ type App struct {
 	ops   *op.Ops
 	c     *catshadow.Client
 	stack pageStack
-	focus bool
 }
 
 func newApp(w *app.Window) *App {
@@ -318,7 +317,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		case *conversationPage:
 			// XXX: on android, input focus is not lost when the application does not have foreground
 			// but system.Stage is changed. On desktop linux, the stage does not change, but window focus is lost.
-			if p.nickname == event.Nickname && a.focus {
+			if p.nickname == event.Nickname {
 				a.w.Invalidate()
 				return nil
 			}
@@ -345,7 +344,6 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 func (a *App) handleGioEvents(e interface{}) error {
 	switch e := e.(type) {
 	case key.FocusEvent:
-		a.focus = e.Focus
 	case app.DestroyEvent:
 		return errors.New("system.DestroyEvent receieved")
 	case app.FrameEvent:
