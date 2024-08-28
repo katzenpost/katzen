@@ -338,6 +338,7 @@ func (h *HomePage) UpdateContacts() {
 	}
 	sort.Sort(contacts)
 	h.contacts = contacts
+	h.a.w.Invalidate()
 }
 
 func newHomePage(a *App) *HomePage {
