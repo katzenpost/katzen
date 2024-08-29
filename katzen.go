@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -18,7 +17,6 @@ import (
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
 	"gioui.org/io/event"
-	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -345,18 +343,5 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 	}
 	// redraw the screen when an event we care about is received
 	a.w.Invalidate()
-	return nil
-}
-
-func (a *App) handleGioEvents(e interface{}) error {
-	switch e := e.(type) {
-	case key.FocusEvent:
-	case app.DestroyEvent:
-		return errors.New("system.DestroyEvent receieved")
-	case app.FrameEvent:
-		gtx := app.NewContext(a.ops, e)
-		a.Layout(gtx)
-		e.Frame(gtx.Ops)
-	}
 	return nil
 }
