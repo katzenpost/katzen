@@ -3,6 +3,11 @@ warped?=false
 ldflags=-buildid= -X github.com/katzenpost/katzenpost/core/epochtime.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/server/internal/pki.WarpedEpoch=${warped} -X github.com/katzenpost/katzenpost/minclient/pki.WarpedEpoch=${warped}
 KEYSTORE := sign.keystore
 KEYPASS := password
+# gogio requires a version string ("%d.%d.%d.%d", &sv.Major, &sv.Minor, &sv.Patch, &sv.VersionCode)
+# this is katzen v1 with katzenpost v0.0.35
+VERSION := 1.35.0
+# this is the app store application version code that must incrememnt with each official release
+VERSIONCODE := 1
 cache_dir=cache
 # you can say, eg, 'make go_package_cache_arg= docker-shell' to not use the package cache
 go_package_cache_arg := -v $(shell readlink -f .)/$(cache_dir)/go:/go/ -e GOCACHE=/go/cache
@@ -40,7 +45,7 @@ docker-build-android: $(cache_dir) docker-android-base $(KEYSTORE)
 		echo "can only docker-build-android on debian"; \
 		false; \
 	fi
-	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "cd replace-gogio && go install gioui.org/cmd/gogio && cd .. && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version 1 -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
+	$(docker) $(docker_run_cmd) katzen/android_sdk bash -c "cd replace-gogio && go install gioui.org/cmd/gogio && cd .. && gogio -arch arm64,amd64 -x -target android -appid chat.katzen -version $(VERSION).$(VERSIONCODE) -signkey $(KEYSTORE) -signpass ${KEYPASS} ."
 
 # this builds the debian base image, ready to have the golang deps installed
 docker-debian-base: $(cache_dir)
