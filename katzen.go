@@ -168,6 +168,13 @@ func (a *App) update(gtx layout.Context) {
 }
 
 func (a *App) run() error {
+	// on Android, this will start a foreground service, and does nothing on other platforms
+	cancelForeground, err := app.Start("Background Connection", "")
+	if err != nil {
+		return err
+	}
+	defer cancelForeground()
+
 	// only read window events until client is established
 	for {
 		if a.c != nil {
