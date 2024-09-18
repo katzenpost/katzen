@@ -2,8 +2,6 @@ module github.com/katzenpost/katzen
 
 go 1.21
 
-toolchain go1.22.6
-
 replace gioui.org => github.com/mixmasala/gio v0.0.0-20240830054638-20227d2a5fc2
 
 require (
