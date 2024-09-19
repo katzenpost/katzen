@@ -55,7 +55,7 @@ buildGoModule rec {
   meta = with lib; {
     description = "Traffic analysis resistant messaging";
     homepage = "https://katzenpost.mixnetworks.org/";
-    license = licenses.agpl3;
+    license = licenses.agpl3Only;
     maintainers = with maintainers; [ ehmry ];
   };
 }
