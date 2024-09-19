@@ -55,19 +55,26 @@ docker-debian-base: $(cache_dir)
 		&& $(docker) rm katzen_debian_base; \
 	fi
 
-docker-nix-base: $(cache_dir)
-	if ! $(docker) images|grep katzen/nix_base; then \
-		$(docker) run --replace --name katzen_nix_base \
-			-v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
-			nixos/nix:master nix \
-				--extra-experimental-features flakes \
-				--extra-experimental-features nix-command \
-				develop --command true \
+docker-nix-base.stamp: $(cache_dir)
+	$(docker) run --replace --name katzen_nix_base \
+		-v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
+		nixos/nix:master nix \
+		--extra-experimental-features flakes \
+		--extra-experimental-features nix-command \
+		develop --command true \
 		&& $(docker) commit katzen_nix_base katzen/nix_base \
-		&& $(docker) rm katzen_nix_base; \
-	fi
+		&& $(docker) rm katzen_nix_base
+		touch $@
 
-docker-build-nix: docker-nix-base
+docker-nix-flake-update: docker-nix-base.stamp
+	$(docker) pull docker.io/nixos/nix:master
+	$(docker) run --rm -v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
+		nixos/nix:master nix \
+		--extra-experimental-features flakes \
+		--extra-experimental-features nix-command \
+		flake update -L
+
+docker-build-nix: docker-nix-base.stamp
 	# this is for testing and updating the vendorHash (manually, after running go mod...).
 	# actual nix users should see README (FIXME put nix command in README)
 	@mkdir -p nix_build
@@ -112,6 +119,7 @@ docker-clean:
 	-rm -rvf nix_build
 	-rm -rvf $(cache_dir)
 	-rm -rvf ./go_package_cache # for users of old versions of this makefile
+	-rm -fv *.stamp
 	-$(docker) rm  katzen_debian_base
 	-$(docker) rm  katzen_alpine_base
 	-$(docker) rm  katzen_nix_base
