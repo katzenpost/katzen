@@ -55,29 +55,6 @@ docker-debian-base: $(cache_dir)
 		&& $(docker) rm katzen_debian_base; \
 	fi
 
-docker-nix-base: $(cache_dir)
-	if ! $(docker) images|grep katzen/nix_base; then \
-		$(docker) run --replace --name katzen_nix_base \
-			-v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
-			nixos/nix:master nix \
-				--extra-experimental-features flakes \
-				--extra-experimental-features nix-command \
-				develop --command true \
-		&& $(docker) commit katzen_nix_base katzen/nix_base \
-		&& $(docker) rm katzen_nix_base; \
-	fi
-
-docker-build-nix: docker-nix-base
-	# this is for testing and updating the vendorHash (manually, after running go mod...).
-	# actual nix users should see README (FIXME put nix command in README)
-	@mkdir -p nix_build
-	@$(docker) $(docker_run_cmd) --rm -it katzen/nix_base \
-		bash -c ' \
-			nix --extra-experimental-features flakes \
-				--extra-experimental-features nix-command \
-				build . -L \
-			&& cp -rp $$(readlink result) nix_build/'
-
 docker-alpine-base: $(cache_dir)
 	@if ! $(docker) images|grep katzen/alpine_base; then \
 		$(docker) run --replace --name katzen_alpine_base docker.io/golang:alpine \
@@ -109,11 +86,9 @@ docker-android-shell: docker-android-base
 
 docker-clean:
 	-rm -vf result
-	-rm -rvf nix_build
 	-rm -rvf $(cache_dir)
 	-rm -rvf ./go_package_cache # for users of old versions of this makefile
 	-$(docker) rm  katzen_debian_base
 	-$(docker) rm  katzen_alpine_base
-	-$(docker) rm  katzen_nix_base
 	-$(docker) rmi katzen/$(distro)_base katzen/android_sdk
 
