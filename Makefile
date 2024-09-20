@@ -58,7 +58,7 @@ docker-debian-base: $(cache_dir)
 docker-nix-base.stamp: $(cache_dir)
 	$(docker) run --replace --name katzen_nix_base \
 		-v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
-		nixos/nix:master nix \
+		docker.io/nixos/nix:master nix \
 		--extra-experimental-features flakes \
 		--extra-experimental-features nix-command \
 		develop --command true \
@@ -69,7 +69,7 @@ docker-nix-base.stamp: $(cache_dir)
 docker-nix-flake-update: docker-nix-base.stamp
 	$(docker) pull docker.io/nixos/nix:master
 	$(docker) run --rm -v "$(shell readlink -f .)":/katzen/ --workdir /katzen \
-		nixos/nix:master nix \
+		docker.io/nixos/nix:master nix \
 		--extra-experimental-features flakes \
 		--extra-experimental-features nix-command \
 		flake update -L
