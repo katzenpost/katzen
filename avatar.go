@@ -198,17 +198,17 @@ func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *AvatarPicker) Event(gtx C) interface{} {
-	if p.up.Clicked() {
+	if p.up.Clicked(gtx) {
 		if u, err := filepath.Abs(filepath.Join(p.path, "..")); err == nil {
 			return ChooseAvatarPath{nickname: p.nickname, path: u}
 		}
 	}
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
 
-	for _, e := range p.avatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
+	if e, ok := p.avatar.Update(gtx.Source); ok {
+		if e.Kind == gesture.KindClick {
 			ct := Contactal{}
 			ct.Reset()
 			sz := image.Point{X: gtx.Dp(96), Y: gtx.Dp(96)}
@@ -223,8 +223,8 @@ func (p *AvatarPicker) Event(gtx C) interface{} {
 	}
 
 	for filename, click := range p.clicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
+		if e, ok := click.Update(gtx.Source); ok {
+			if e.Kind == gesture.KindClick {
 				// if it is a directory path - change the path
 				// if it is a file path, return the file selection event
 				if u, err := filepath.Abs(filepath.Join(p.path, filename)); err == nil {

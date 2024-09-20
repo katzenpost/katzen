@@ -7,7 +7,7 @@ buildGoModule rec {
   pname = "katzen";
   inherit src version;
 
-  vendorHash = "sha256-VeQBSDAgCsla93by2NPYR+zmaxqlNJPq/YxMqvet7pE=";
+  vendorHash = "sha256-bUap2v9fXlrVWbzTe2BRQ1T7K3OhfoMKo6iC7+qliF0=";
   # This hash is may drift from the actual vendoring and break the build,
   # see https://nixos.org/manual/nixpkgs/unstable/#ssec-language-go.
 
@@ -55,7 +55,7 @@ buildGoModule rec {
   meta = with lib; {
     description = "Traffic analysis resistant messaging";
     homepage = "https://katzenpost.mixnetworks.org/";
-    license = licenses.agpl3;
+    license = licenses.agpl3Only;
     maintainers = with maintainers; [ ehmry ];
   };
 }

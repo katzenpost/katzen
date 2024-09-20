@@ -1,30 +1,30 @@
 package main
 
 import (
-	"gioui.org/layout"
-	"time"
-	"gioui.org/op/clip"
-	"gioui.org/x/notify"
-	"gioui.org/widget"
-	"sync"
-	"image"
 	"gioui.org/gesture"
+	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/notify"
 	"github.com/katzenpost/katzenpost/catshadow"
+	"image"
+	"sync"
+	"time"
 	//"gioui.org/widget/material"
 )
 
 type SpoolPage struct {
-	a        *App
-	provider *layout.List
+	a              *App
+	provider       *layout.List
 	providerClicks map[string]*gesture.Click
-	connect  *widget.Clickable
-	settings *widget.Clickable
-	back     *widget.Clickable
-	submit   *widget.Clickable
-	once     *sync.Once
-	errCh    chan error
+	connect        *widget.Clickable
+	settings       *widget.Clickable
+	back           *widget.Clickable
+	submit         *widget.Clickable
+	once           *sync.Once
+	errCh          chan error
 }
 
 func (p *SpoolPage) Start(stop <-chan struct{}) {
@@ -90,7 +90,7 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// if the layout is selected, change background color
 					bg := Background{Inset: in}
-					if kb && i == selectedIdx {
+					if i == selectedIdx {
 						bg.Color = th.ContrastBg
 					} else {
 						bg.Color = th.Bg
@@ -118,30 +118,28 @@ func (p *SpoolPage) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *SpoolPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if p.connect.Clicked() {
+	if p.connect.Clicked(gtx) {
 		if !isConnected && !isConnecting {
 			return OnlineClick{}
 		}
 		return OfflineClick{}
 	}
-	if p.settings.Clicked() {
+	if p.settings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
 	for provider, click := range p.providerClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
-				provider := provider // copy reference to provider
-				go p.once.Do(func() {
-					select{
-					case p.errCh <- p.a.c.CreateRemoteSpoolOn(provider):
-					case <-p.a.c.HaltCh():
-						return
-					}
-				})
-			}
+		if _, ok := click.Update(gtx.Source); ok {
+			provider := provider // copy reference to provider
+			go p.once.Do(func() {
+				select {
+				case p.errCh <- p.a.c.CreateRemoteSpoolOn(provider):
+				case <-p.a.c.HaltCh():
+					return
+				}
+			})
 		}
 	}
 	select {

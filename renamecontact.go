@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -22,6 +23,7 @@ func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
 		Inset: layout.Inset{},
 	}
 
+	gtx.Execute(key.FocusCmd{Tag: p.newnickname})
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
@@ -41,16 +43,16 @@ func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
 
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, ev := range p.newnickname.Events() {
+	if ev, ok := p.newnickname.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
 			p.submit.Click()
 		}
 	}
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		err := p.a.c.RenameContact(p.nickname, p.newnickname.Text())
 		if err == nil {
 			return EditContactComplete{}
@@ -66,7 +68,6 @@ func (p *RenameContactPage) Start(stop <-chan struct{}) {
 func newRenameContactPage(a *App, nickname string) *RenameContactPage {
 	p := &RenameContactPage{a: a, nickname: nickname}
 	p.newnickname = &widget.Editor{SingleLine: true, Submit: true}
-	p.newnickname.Focus()
 	p.back = &widget.Clickable{}
 	p.submit = &widget.Clickable{}
 	return p

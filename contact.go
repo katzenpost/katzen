@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
+	"gioui.org/io/key"
+	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -15,15 +17,16 @@ import (
 	"gioui.org/widget/material"
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
-	"github.com/katzenpost/katzenpost/catshadow"
 	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	qrcode "github.com/skip2/go-qrcode"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	"image/png"
+	"io"
 	mrand "math/rand"
 	"runtime"
-	"sort"
+	"strings"
+	"sync"
 )
 
 // AddContactComplete is emitted when catshadow.NewContact has been called
@@ -131,6 +134,7 @@ type AddContactPage struct {
 	secret    *widget.Editor
 	submit    *widget.Clickable
 	cancel    *widget.Clickable
+	initOnce  *sync.Once
 }
 
 // Layout returns a simple centered layout prompting user for contact nickname and secret
@@ -139,6 +143,13 @@ func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
+
+	// set the default window focus to nickname entry on first layout
+	p.initOnce.Do(func() {
+		if len(p.nickname.Text()) == 0 {
+			gtx.Execute(key.FocusCmd{Tag: p.nickname})
+		}
+	})
 
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
@@ -203,68 +214,72 @@ func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
 
 // Event catches the widget submit events and calls catshadow.NewContact
 func (p *AddContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, ev := range p.nickname.Events() {
+	if ev, ok := p.nickname.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
-			p.secret.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.secret})
 		}
 	}
 
-	for _, e := range p.newQr.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
+	if ev, ok := p.newQr.Update(gtx.Source); ok {
+		if ev.Kind == gesture.KindClick {
 			p.contactal.Reset()
 			p.secret.SetText(p.contactal.SharedSecret)
 		}
 	}
 
-	if p.copy.Clicked() {
-		clipboard.WriteOp{Text: p.secret.Text()}.Add(gtx.Ops)
-		return nil
+	if p.copy.Clicked(gtx) {
+		gtx.Execute(clipboard.WriteCmd{
+			Data: io.NopCloser(strings.NewReader(p.secret.Text())),
+		})
 	}
 
-	if p.paste.Clicked() {
-		clipboard.ReadOp{Tag: p}.Add(gtx.Ops)
+	if p.paste.Clicked(gtx) {
+		gtx.Execute(clipboard.ReadCmd{Tag: p})
 	}
 
-	for _, e := range gtx.Events(p) {
-		ce := e.(clipboard.Event)
-		p.secret.SetText(ce.Text)
-		p.contactal.SharedSecret = ce.Text
-		return RedrawEvent{}
-	}
-
-	for _, e := range p.newAvatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			p.contactal = NewContactal()
-			p.secret.SetText(p.contactal.SharedSecret)
-			return RedrawEvent{}
+	if ev, ok := gtx.Event(transfer.TargetFilter{Target: p, Type: "application/text"}); ok {
+		switch e := ev.(type) {
+		case transfer.DataEvent:
+			f := e.Open()
+			defer f.Close()
+			if b, err := io.ReadAll(f); err == nil {
+				p.secret.SetText(string(b))
+				p.contactal.SharedSecret = string(b)
+			}
 		}
 	}
 
-	for _, ev := range p.secret.Events() {
+	if ev, ok := p.newAvatar.Update(gtx.Source); ok {
+		if ev.Kind == gesture.KindClick {
+			p.contactal = NewContactal()
+			p.secret.SetText(p.contactal.SharedSecret)
+		}
+	}
+
+	if ev, ok := p.secret.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
 			p.submit.Click()
 		case widget.ChangeEvent:
 			p.contactal.SharedSecret = p.secret.Text()
-			return RedrawEvent{}
 		}
 	}
-	if p.cancel.Clicked() {
+	if p.cancel.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		if len(p.secret.Text()) < minPasswordLen {
 			p.secret.SetText("")
-			p.secret.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.secret})
 			return nil
 		}
 
 		if len(p.nickname.Text()) == 0 {
-			p.nickname.Focus()
+			gtx.Execute(key.FocusCmd{Tag: p.nickname})
 			return nil
 		}
 
@@ -304,7 +319,8 @@ func newAddContactPage(a *App) *AddContactPage {
 	// generate random avatar parameters
 	p.contactal = NewContactal()
 	p.secret.SetText(p.contactal.SharedSecret)
-	p.nickname.Focus()
+
+	p.initOnce = new(sync.Once)
 	return p
 }
 
@@ -336,41 +352,6 @@ func (p *AddContactPage) layoutQr(gtx C) D {
 	t.Pop()
 	return dims
 
-}
-
-type sortedContacts []*catshadow.Contact
-
-func (s sortedContacts) Less(i, j int) bool {
-	// sorts contacts with messages most-recent-first, followed by contacts
-	// without messages alphabetically
-	if s[i].LastMessage == nil && s[j].LastMessage == nil {
-		return s[i].Nickname < s[j].Nickname
-	} else if s[i].LastMessage == nil {
-		return false
-	} else if s[j].LastMessage == nil {
-		return true
-	} else {
-		return s[i].LastMessage.Timestamp.After(s[j].LastMessage.Timestamp)
-	}
-}
-func (s sortedContacts) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s sortedContacts) Len() int {
-	return len(s)
-}
-
-func getSortedContacts(a *App) (contacts sortedContacts) {
-	if a.c == nil {
-		return
-	}
-
-	// returns map[string]*Contact
-	for _, contact := range a.c.GetContacts() {
-		contacts = append(contacts, contact)
-	}
-	sort.Sort(contacts)
-	return
 }
 
 func button(th *material.Theme, button *widget.Clickable, icon *widget.Icon) material.IconButtonStyle {

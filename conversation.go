@@ -5,14 +5,17 @@ import (
 	"github.com/katzenpost/katzenpost/catshadow"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
+	"io"
 	"runtime"
 	"strings"
 	"time"
 
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
@@ -60,69 +63,21 @@ type EditContact struct {
 }
 
 func (c *conversationPage) Event(gtx layout.Context) interface{} {
-	// receive keystroke to editor panel
-	for _, ev := range c.compose.Events() {
-		switch ev.(type) {
+	// check for editor SubmitEvents
+	if e, ok := c.compose.Update(gtx); ok {
+		switch e.(type) {
 		case widget.SubmitEvent:
 			c.send.Click()
-		}
-	}
-	for _, ev := range c.msgpaste.Events(gtx.Queue) {
-		switch ev.Type {
-		case LongPressed:
-			clipboard.ReadOp{Tag: c}.Add(gtx.Ops)
-			return RedrawEvent{}
-		default:
-			// return focus to the editor
-			c.compose.Focus()
-		}
-	}
-	key.InputOp{Tag: c, Keys: shortcuts}.Add(gtx.Ops)
-	for _, e := range gtx.Events(c) {
-		switch e := e.(type) {
-		case key.Event:
-			if e.Name == key.NameEscape && e.State == key.Release {
-				return BackEvent{}
-			}
-			if e.Name == key.NameF5 && e.State == key.Release {
-				return EditContact{nickname: c.nickname}
-			}
-			if e.Name == key.NameUpArrow && e.State == key.Release {
-				messageList.ScrollToEnd = false
-				if messageList.Position.First > 0 {
-					messageList.Position.First = messageList.Position.First - 1
-				}
-
-			}
-			if e.Name == key.NameDownArrow && e.State == key.Release {
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + 1
-			}
-			if e.Name == key.NamePageUp && e.State == key.Release {
-				messageList.ScrollToEnd = false
-				if messageList.Position.First-messageList.Position.Count > 0 {
-					messageList.Position.First = messageList.Position.First - messageList.Position.Count
-				}
-
-			}
-			if e.Name == key.NamePageDown && e.State == key.Release {
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + messageList.Position.Count
-			}
-			return RedrawEvent{}
-
-		case clipboard.Event:
-			if c.compose.SelectionLen() > 0 {
-				c.compose.Delete(1) // deletes the selection as a single rune
-			}
-			start, _ := c.compose.Selection()
-			txt := c.compose.Text()
-			c.compose.SetText(txt[:start] + e.Text + txt[start:])
-			c.compose.Focus()
+		case widget.ChangeEvent:
 		}
 	}
 
-	if c.send.Clicked() {
+	// catch clicks on send button, update list view position to bottom
+	if c.send.Clicked(gtx) {
+		messageList.ScrollToEnd = true
+		// XXX: could do this in Layout where we know the # of messages
+		messageList.ScrollTo(0x1 << 32)
+
 		msg := []byte(c.compose.Text())
 		c.compose.SetText("")
 		if len(msg) == 0 {
@@ -136,36 +91,93 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		msgId := c.a.c.SendMessage(c.nickname, msg)
 		return MessageSent{nickname: c.nickname, msgId: msgId}
 	}
-	for _, e := range c.edit.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			return EditContact{nickname: c.nickname}
+
+	// check for long press
+	if e, ok := c.msgpaste.Update(gtx); ok {
+		if e.Type == LongPressed {
+			gtx.Source.Execute(clipboard.ReadCmd{Tag: c.msgpaste})
+		} else { // LongPressCancelled
+			gtx.Execute(key.FocusCmd{Tag: c.compose})
 		}
 	}
-	if c.back.Clicked() {
-		return BackEvent{}
-	}
-	if c.msgcopy.Clicked() {
-		clipboard.WriteOp{Text: string(c.messageClicked.Plaintext)}.Add(gtx.Ops)
-		c.messageClicked = nil
-		return nil
-	}
-	if c.msgdetails.Clicked() {
-		c.messageClicked = nil // not implemented
-	}
 
-	for msg, click := range c.messageClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
-				c.messageClicked = msg
+	// catch clipboard transfer triggered by long press and update composition
+	if ev, ok := gtx.Event(transfer.TargetFilter{Target: c.msgpaste, Type: "application/text"}); ok {
+		switch e := ev.(type) {
+		case transfer.DataEvent:
+			f := e.Open()
+			defer f.Close()
+			if b, err := io.ReadAll(f); err == nil {
+				if c.compose.SelectionLen() > 0 {
+					c.compose.Delete(1) // deletes the selection as a single rune
+				}
+				start, _ := c.compose.Selection()
+				txt := c.compose.Text()
+				c.compose.SetText(txt[:start] + string(b) + txt[start:])
+				gtx.Execute(key.FocusCmd{Tag: c.compose})
 			}
 		}
 	}
 
-	for _, e := range c.cancel.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			c.messageClicked = nil
+	if e, ok := c.edit.Update(gtx.Source); ok {
+		if e.Kind == gesture.KindClick {
+			return EditContact{nickname: c.nickname}
 		}
 	}
+	if c.back.Clicked(gtx) {
+		return BackEvent{}
+	}
+	if c.msgcopy.Clicked(gtx) {
+		gtx.Source.Execute(clipboard.WriteCmd{
+			Data: io.NopCloser(strings.NewReader(string(c.messageClicked.Plaintext))),
+		})
+		c.messageClicked = nil
+	}
+	if c.msgdetails.Clicked(gtx) {
+		c.messageClicked = nil // not implemented
+	}
+
+	for msg, click := range c.messageClicks {
+		if _, ok := click.Update(gtx.Source); ok {
+			c.messageClicked = msg
+		}
+	}
+
+	if _, ok := c.cancel.Update(gtx.Source); ok {
+		c.messageClicked = nil
+	}
+
+	/* XXX: doesn't seem to work yet
+	if e, ok := readMenuKeys(c, gtx); ok {
+		if e.Name == key.NameEscape && e.State == key.Release {
+			return BackEvent{}
+		}
+		if e.Name == key.NameF5 && e.State == key.Release {
+			return EditContact{nickname: c.nickname}
+		}
+		if e.Name == key.NameUpArrow && e.State == key.Release {
+			messageList.ScrollToEnd = false
+			if messageList.Position.First > 0 {
+				messageList.Position.First = messageList.Position.First - 1
+			}
+		}
+		if e.Name == key.NameDownArrow && e.State == key.Release {
+			messageList.ScrollToEnd = true
+			messageList.Position.First = messageList.Position.First + 1
+		}
+		if e.Name == key.NamePageUp && e.State == key.Release {
+			messageList.ScrollToEnd = false
+			if messageList.Position.First-messageList.Position.Count > 0 {
+				messageList.Position.First = messageList.Position.First - messageList.Position.Count
+			}
+		}
+		if e.Name == key.NamePageDown && e.State == key.Release {
+			messageList.ScrollToEnd = true
+			messageList.Position.First = messageList.Position.First + messageList.Position.Count
+		}
+		return RedrawEvent{}
+	}
+	*/
 
 	return nil
 }
@@ -227,12 +239,12 @@ func layoutMessage(gtx C, msg *catshadow.Message, isSelected bool, expires time.
 }
 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
+	// set focus on composition
+	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	contact := c.a.c.GetContacts()[c.nickname]
 	if n, ok := notifications[c.nickname]; ok {
-		if c.a.focus {
-			n.Cancel()
-			delete(notifications, c.nickname)
-		}
+		n.Cancel()
+		delete(notifications, c.nickname)
 	}
 	messages := c.a.c.GetSortedConversation(c.nickname)
 	expires, _ := c.a.c.GetExpiration(c.nickname)
@@ -369,7 +381,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 						a := clip.Rect(image.Rectangle{Max: dims.Size})
 						x := a.Push(gtx.Ops)
 						defer x.Pop()
-						c.msgpaste.Add(gtx.Ops)
+						event.Op(gtx.Ops, c.msgpaste)
 						return dims
 					}),
 					layout.Rigid(func(gtx C) D {
@@ -398,6 +410,5 @@ func newConversationPage(a *App, nickname string) *conversationPage {
 		send:          &widget.Clickable{},
 		edit:          new(gesture.Click),
 	}
-	p.compose.Focus()
 	return p
 }

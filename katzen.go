@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -17,11 +16,10 @@ import (
 	_ "gioui.org/app/permission/foreground"
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
-	"gioui.org/text"
-	"gioui.org/io/key"
-	"gioui.org/io/system"
+	"gioui.org/io/event"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"gioui.org/x/notify"
@@ -38,7 +36,7 @@ var (
 	dataDirName      = "catshadow"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
-	debug            = flag.Bool("d", false, "Enable golang debug service.")
+	debug            = flag.Int("d", 0, "Enable golang debug service.")
 
 	th *material.Theme
 
@@ -61,8 +59,6 @@ type App struct {
 	ops   *op.Ops
 	c     *catshadow.Client
 	stack pageStack
-	focus bool
-	stage system.Stage
 }
 
 func newApp(w *app.Window) *App {
@@ -79,6 +75,21 @@ func (a *App) Layout(gtx layout.Context) {
 }
 
 func (a *App) update(gtx layout.Context) {
+	// handle global shortcuts
+	if backEvent(gtx) {
+		// XXX: this means that after signin, the top level page is homescreen
+		// and therefore pressing back won't logout
+		if a.stack.Len() > 1 {
+			a.stack.Pop()
+			return
+		}
+	}
+
+	if a.stack.Len() == 0 {
+		a.stack.Push(newSignInPage(a))
+		return
+	}
+
 	page := a.stack.Current()
 	if e := page.Event(gtx); e != nil {
 		switch e := e.(type) {
@@ -131,6 +142,11 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Push(newAddContactPage(a))
 		case AddContactComplete:
 			a.stack.Pop()
+			p := a.stack.Current()
+			// return to home page, and update the contacts page
+			if h, ok := p.(*HomePage); ok {
+				h.UpdateContacts()
+			}
 		case ChooseContactClick:
 			a.stack.Push(newConversationPage(a, e.nickname))
 		case ChooseAvatar:
@@ -150,12 +166,19 @@ func (a *App) update(gtx layout.Context) {
 }
 
 func (a *App) run() error {
+	// on Android, this will start a foreground service, and does nothing on other platforms
+	cancelForeground, err := app.Start("Background Connection", "")
+	if err != nil {
+		return err
+	}
+	defer cancelForeground()
+
 	// only read window events until client is established
 	for {
 		if a.c != nil {
 			break
 		}
-		e := <-a.w.Events()
+		e := a.w.Event()
 		if err := a.handleGioEvents(e); err != nil {
 			return err
 		}
@@ -167,6 +190,19 @@ func (a *App) run() error {
 		}
 	}()
 
+	evCh := make(chan event.Event)
+	ackCh := make(chan struct{})
+	go func() {
+		for {
+			ev := a.w.Event()
+			evCh <- ev
+			<-ackCh
+			if _, ok := ev.(app.DestroyEvent); ok {
+				return
+			}
+		}
+	}()
+
 	// select from all event sources
 	for {
 		select {
@@ -174,10 +210,12 @@ func (a *App) run() error {
 			if err := a.handleCatshadowEvent(e); err != nil {
 				return err
 			}
-		case e := <-a.w.Events():
+		case e := <-evCh:
 			if err := a.handleGioEvents(e); err != nil {
+				ackCh <- struct{}{}
 				return err
 			}
+			ackCh <- struct{}{}
 		case <-time.After(1 * time.Minute):
 			// redraw the screen to update the message timestamps once per minute
 			a.w.Invalidate()
@@ -189,9 +227,9 @@ func main() {
 	flag.Parse()
 	fmt.Println("Katzenpost is still pre-alpha.  DO NOT DEPEND ON IT FOR STRONG SECURITY OR ANONYMITY.")
 
-	if *debug {
+	if *debug != 0 {
 		go func() {
-			http.ListenAndServe("localhost:8080", nil)
+			http.ListenAndServe(fmt.Sprintf("localhost:%d", *debug), nil)
 		}()
 		runtime.SetMutexProfileFraction(1)
 		runtime.SetBlockProfileRate(1)
@@ -203,8 +241,8 @@ func main() {
 
 func uiMain() {
 	go func() {
-		w := app.NewWindow(
-			app.Size(unit.Dp(400), unit.Dp(400)),
+		w := new(app.Window)
+		w.Option(app.Size(unit.Dp(400), unit.Dp(400)),
 			app.Title("Katzen"),
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
@@ -284,7 +322,7 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 		case *conversationPage:
 			// XXX: on android, input focus is not lost when the application does not have foreground
 			// but system.Stage is changed. On desktop linux, the stage does not change, but window focus is lost.
-			if p.nickname == event.Nickname && a.stage == system.StageRunning && a.focus {
+			if p.nickname == event.Nickname {
 				a.w.Invalidate()
 				return nil
 			}
@@ -305,50 +343,5 @@ func (a *App) handleCatshadowEvent(e interface{}) error {
 	}
 	// redraw the screen when an event we care about is received
 	a.w.Invalidate()
-	return nil
-}
-
-func (a *App) handleGioEvents(e interface{}) error {
-	switch e := e.(type) {
-	case key.FocusEvent:
-		a.focus = e.Focus
-	case system.DestroyEvent:
-		return errors.New("system.DestroyEvent receieved")
-	case system.FrameEvent:
-		gtx := layout.NewContext(a.ops, e)
-		key.InputOp{Tag: a.w, Keys: key.NameEscape + "|" + key.NameBack}.Add(a.ops)
-		for _, e := range gtx.Events(a.w) {
-			switch e := e.(type) {
-			case key.Event:
-				if (e.Name == key.NameEscape && e.State == key.Release) || e.Name == key.NameBack {
-					if a.stack.Len() > 1 {
-						a.stack.Pop()
-						a.w.Invalidate()
-					}
-				}
-			}
-		}
-		a.Layout(gtx)
-		e.Frame(gtx.Ops)
-	case system.StageEvent:
-		fmt.Printf("StageEvent %s received\n", e.Stage)
-		a.stage = e.Stage
-		if e.Stage >= system.StageRunning {
-			if a.stack.Len() == 0 {
-				a.stack.Push(newSignInPage(a))
-			}
-		}
-		if e.Stage == system.StagePaused {
-			var err error
-			a.endBg, err = app.Start("Is running in the background", "")
-			if err != nil {
-				return err
-			}
-		} else {
-			if a.endBg != nil {
-				a.endBg()
-			}
-		}
-	}
 	return nil
 }

@@ -1,11 +1,13 @@
 module github.com/katzenpost/katzen
 
-go 1.19
+go 1.21
 
-replace gioui.org => github.com/mixmasala/gio v0.0.0-20230917185150-1c97118905a5
+toolchain go1.22.6
+
+replace gioui.org => github.com/mixmasala/gio v0.0.0-20240830054638-20227d2a5fc2
 
 require (
-	gioui.org v0.3.0
+	gioui.org v0.7.0
 	gioui.org/x v0.3.0
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
@@ -18,7 +20,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
 	gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 // indirect
-	gioui.org/shader v1.0.7 // indirect
+	gioui.org/shader v1.0.8 // indirect
 	git.sr.ht/~jackmordaunt/go-toast v1.0.0 // indirect
 	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -29,7 +31,7 @@ require (
 	github.com/esiqveland/notify v0.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-text/typesetting v0.0.0-20230803102845-24e03d8b5372 // indirect
+	github.com/go-text/typesetting v0.1.1 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/henrydcase/nobs v0.0.0-20210422124615-3a8ac85da11b // indirect

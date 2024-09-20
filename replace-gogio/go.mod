@@ -1,17 +1,18 @@
 module github.com/katzenpost/katzen/replace-gogio
 
-go 1.19
+go 1.21
 
-replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20230926133305-3e18ff4fc2c6
+toolchain go1.22.6
+
+replace gioui.org/cmd => github.com/mixmasala/gio-cmd v0.0.0-20240830064144-f7c2488b0736
 
 require (
-	gioui.org/cmd v0.0.0-20230822165948-7cb98d0557e7 // indirect
+	gioui.org/cmd v0.0.0-20240830064144-f7c2488b0736
 	github.com/akavel/rsrc v0.10.1 // indirect
-	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.0 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/image v0.5.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 )

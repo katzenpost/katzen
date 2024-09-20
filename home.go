@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/font"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -18,14 +18,15 @@ import (
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	"image/png"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
 var (
 	contactList       = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
 	selectedIdx       = 0
-	kb                = false
 	connectIcon, _    = widget.NewIcon(icons.DeviceSignalWiFi4Bar)
 	disconnectIcon, _ = widget.NewIcon(icons.DeviceSignalWiFiOff)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
@@ -33,21 +34,13 @@ var (
 	logo              = getLogo()
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
 	avatars           = make(map[string]layout.Widget)
-	shortcuts         = key.Set(key.NameUpArrow + "|" +
-		key.NameDownArrow + "|" +
-		key.NamePageUp + "|" +
-		key.NamePageDown + "|" +
-		key.NameReturn + "|" +
-		key.NameEscape + "|" +
-		key.NameF1 + "|" + // show help page (not implemented)
-		key.NameF2 + "|" + // add contact
-		key.NameF3 + "|" + // show client settings
-		key.NameF4 + "|" + // toggle connection status
-		key.NameF5) // edit contact
 )
 
 type HomePage struct {
+	l             *sync.Mutex
 	a             *App
+	updateCh      chan interface{}
+	contacts      []*catshadow.Contact
 	addContact    *widget.Clickable
 	connect       *widget.Clickable
 	showSettings  *widget.Clickable
@@ -59,7 +52,7 @@ type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	contacts := getSortedContacts(p.a)
+	contacts := p.contacts
 	// xxx do not request this every frame...
 	bg := Background{
 		Color: th.Bg,
@@ -75,14 +68,12 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	// re-center list view for keyboard contact selection
-	if kb {
-		if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
-			// list doesn't wrap around view to end, so do not give negative value for First
-			if selectedIdx < contactList.Position.Count-1 {
-				contactList.Position.First = 0
-			} else {
-				contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
-			}
+	if selectedIdx < contactList.Position.First || selectedIdx >= contactList.Position.First+contactList.Position.Count {
+		// list doesn't wrap around view to end, so do not give negative value for First
+		if selectedIdx < contactList.Position.Count-1 {
+			contactList.Position.First = 0
+		} else {
+			contactList.Position.First = (selectedIdx - contactList.Position.Count + 1)
 		}
 	}
 
@@ -118,7 +109,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// if the layout is selected, change background color
 					bg := Background{Inset: in}
-					if kb && i == selectedIdx {
+					if i == selectedIdx {
 						bg.Color = th.ContrastBg
 					} else {
 						bg.Color = th.Bg
@@ -149,21 +140,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 											}),
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
-												layout.Rigid(func(gtx C) D {
-													if contacts[i].IsPending {
-														return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-												layout.Rigid(func(gtx C) D {
-													// timestamp
-													if lastMsg != nil {
-														messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
-														return material.Caption(th, messageAge).Layout(gtx)
-													}
-													return fill{th.Bg}.Layout(gtx)
-												}),
-											)}),
+													layout.Rigid(func(gtx C) D {
+														if contacts[i].IsPending {
+															return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+													layout.Rigid(func(gtx C) D {
+														// timestamp
+														if lastMsg != nil {
+															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsg.Timestamp).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+															return material.Caption(th, messageAge).Layout(gtx)
+														}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+												)
+											}),
 										)
 									}),
 									// last message
@@ -262,61 +254,53 @@ type OfflineClick struct {
 
 // Event returns a ChooseContactClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
-	if p.connect.Clicked() {
+	if p.connect.Clicked(gtx) {
 		if !isConnected && !isConnecting {
 			return OnlineClick{}
 		}
 		return OfflineClick{}
 	}
 	// listen for pointer right click events on the addContact widget
-	if p.addContact.Clicked() {
+	if p.addContact.Clicked(gtx) {
 		return AddContactClick{}
 	}
-	if p.showSettings.Clicked() {
+	if p.showSettings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
 	for nickname, click := range p.contactClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
+		if e, ok := click.Update(gtx.Source); ok {
+			if e.Kind == gesture.KindClick {
 				return ChooseContactClick{nickname: nickname}
 			}
 		}
 	}
 	// check for keypress events
-	key.InputOp{Tag: p, Keys: shortcuts}.Add(gtx.Ops)
-	for _, e := range gtx.Events(p) {
-		switch e := e.(type) {
-		case key.Event:
-			if e.Name == key.NameF1 && e.State == key.Release {
+	if e, ok := shortcutEvents(gtx); ok {
+		if e.Name == key.NameF2 {
+			return AddContactClick{}
+		}
+		if e.Name == key.NameF3 {
+			return ShowSettingsClick{}
+		}
+		if e.Name == key.NameF4 {
+			if !isConnected {
+				return OnlineClick{}
 			}
-			if e.Name == key.NameF2 && e.State == key.Release {
-				return AddContactClick{}
+			return OfflineClick{}
+		}
+		if e.Name == key.NameUpArrow {
+			selectedIdx = selectedIdx - 1
+		}
+		if e.Name == key.NameDownArrow {
+			selectedIdx = selectedIdx + 1
+		}
+		if e.Name == key.NameReturn {
+			p.l.Lock()
+			defer p.l.Unlock()
+			if len(p.contacts) < selectedIdx+1 {
+				return nil
 			}
-			if e.Name == key.NameF3 && e.State == key.Release {
-				return ShowSettingsClick{}
-			}
-			if e.Name == key.NameF4 && e.State == key.Release {
-				if !isConnected {
-					return OnlineClick{}
-				}
-				return OfflineClick{}
-			}
-			if e.Name == key.NameUpArrow && e.State == key.Release {
-				kb = true
-				selectedIdx = selectedIdx - 1
-			}
-			if e.Name == key.NameDownArrow && e.State == key.Release {
-				kb = true
-				selectedIdx = selectedIdx + 1
-			}
-			if e.Name == key.NameEscape && e.State == key.Release {
-				kb = false
-			}
-			if e.Name == key.NameReturn && e.State == key.Release {
-				contacts := getSortedContacts(p.a)
-				kb = false
-				return ChooseContactClick{nickname: contacts[selectedIdx].Nickname}
-			}
+			return ChooseContactClick{nickname: p.contacts[selectedIdx].Nickname}
 		}
 	}
 
@@ -324,11 +308,47 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 }
 
 func (p *HomePage) Start(stop <-chan struct{}) {
+	// receive commands to update the contact list, e.g. from KeyExchangeCompleted events
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-p.updateCh:
+				p.UpdateContacts()
+			}
+		}
+	}()
+}
+
+func (h *HomePage) UpdateContacts() {
+	h.l.Lock()
+	defer h.l.Unlock()
+	if h.a == nil {
+		return
+	}
+	if h.a.c == nil {
+		return
+	}
+	contacts := make(sortedContacts, 0)
+
+	// GetContacts() returns map[string]*Contact
+	for _, contact := range h.a.c.GetContacts() {
+		contacts = append(contacts, contact)
+	}
+	sort.Sort(contacts)
+	h.contacts = contacts
+	h.a.w.Invalidate()
 }
 
 func newHomePage(a *App) *HomePage {
+	updateCh := make(chan interface{}, 1)
+	updateCh <- struct{}{} // prod page worker to fetch contacts from catshadow
 	return &HomePage{
 		a:             a,
+		l:             new(sync.Mutex),
+		updateCh:      updateCh,
+		contacts:      []*catshadow.Contact{},
 		addContact:    &widget.Clickable{},
 		connect:       &widget.Clickable{},
 		showSettings:  &widget.Clickable{},
