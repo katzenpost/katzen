@@ -24,7 +24,6 @@ import (
 
 var (
 	convoList         = &layout.List{Axis: layout.Vertical, ScrollToEnd: false}
-	sorted            = []*Conversation{}
 	selectedIdx       = 0
 	kb                = false
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
@@ -51,19 +50,18 @@ type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	sorted = p.a.getSortedConvos()
 	// xxx do not request this every frame...
 	bg := Background{
 		Color: th.Bg,
 		Inset: layout.Inset{},
 	}
 
-	if len(sorted) == 0 {
+	if len(p.conversations) == 0 {
 		selectedIdx = 0
 	} else if selectedIdx < 0 {
-		selectedIdx = len(sorted) - 1
+		selectedIdx = len(p.conversations) - 1
 	} else {
-		selectedIdx = selectedIdx % len(sorted)
+		selectedIdx = selectedIdx % len(p.conversations)
 	}
 
 	// re-center list view for keyboard contact selection
@@ -94,7 +92,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 			// show list of conversations
 			layout.Flexed(1, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-				// the convoList layout function evaluates for each element of sorted
+				// the convoList layout function evaluates for each element of conversations
 				return convoList.Layout(gtx, len(p.conversations), func(gtx C, i int) layout.Dimensions {
 					if _, ok := p.convoClicks[p.conversations[i].ID]; !ok {
 						p.convoClicks[p.conversations[i].ID] = new(gesture.Click)
@@ -176,7 +174,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 						)
 						a := clip.Rect(image.Rectangle{Max: dims.Size})
 						t := a.Push(gtx.Ops)
-						p.convoClicks[sorted[i].ID].Add(gtx.Ops)
+						p.convoClicks[p.conversations[i].ID].Add(gtx.Ops)
 						t.Pop()
 						return dims
 					})
@@ -257,7 +255,7 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 			if len(p.contacts) < selectedIdx+1 {
 				return nil
 			}
-			return ChooseConvoClick{id: sorted[selectedIdx].ID}
+			return ChooseConvoClick{id: p.conversations[selectedIdx].ID}
 		}
 	}
 
