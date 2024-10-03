@@ -115,7 +115,6 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 			return err
 		}
 		// save the contact under the
-		fmt.Println("created contact under key %s", string(contactKey(contactID)))
 		err = txn.Set(contactKey(contactID), serialized)
 		if err != nil {
 			panic(err)
@@ -436,10 +435,6 @@ func (a *App) PutConversation(conversation *Conversation) error {
 				return err
 			}
 
-			fmt.Println("conversationsIdx")
-			for k, v := range conversationsIdx {
-				fmt.Println("%s:%s", k, v)
-			}
 			// add conversation to index
 			conversationsIdx[conversation.ID] = struct{}{}
 			serialized, err := cbor.Marshal(conversationsIdx)
