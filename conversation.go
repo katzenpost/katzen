@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"image"
+	"io"
 	"runtime"
 	"strings"
 	"sync"
@@ -10,8 +11,10 @@ import (
 
 	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/io/transfer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
@@ -98,66 +101,24 @@ type MessageSent struct {
 }
 
 func (c *conversationPage) Event(gtx layout.Context) interface{} {
-	// receive keystroke to editor panel
-	for _, ev := range c.compose.Events() {
-		switch ev.(type) {
+	// check for editor SubmitEvents
+	if e, ok := c.compose.Update(gtx); ok {
+		switch e.(type) {
 		case widget.SubmitEvent:
 			c.send.Click()
 		}
 	}
-	for _, ev := range c.msgpaste.Events(gtx.Queue) {
+	if ev, ok := c.msgpaste.Update(gtx); ok {
 		switch ev.Type {
 		case LongPressed:
-			clipboard.ReadOp{Tag: c}.Add(gtx.Ops)
+			gtx.Execute(clipboard.ReadCmd{Tag: c})
 			return RedrawEvent{}
 		default:
 			// return focus to the editor
-			c.compose.Focus()
+			gtx.Execute(key.FocusCmd{Tag: c.compose})
 		}
 	}
-	key.InputOp{Tag: c, Keys: shortcuts}.Add(gtx.Ops)
-	for _, e := range gtx.Events(c) {
-		switch e := e.(type) {
-		case key.Event:
-			if e.Name == key.NameEscape && e.State == key.Release {
-				return BackEvent{}
-			}
-			if e.Name == key.NameUpArrow && e.State == key.Release {
-				messageList.ScrollToEnd = false
-				if messageList.Position.First > 0 {
-					messageList.Position.First = messageList.Position.First - 1
-				}
-
-			}
-			if e.Name == key.NameDownArrow && e.State == key.Release {
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + 1
-			}
-			if e.Name == key.NamePageUp && e.State == key.Release {
-				messageList.ScrollToEnd = false
-				if messageList.Position.First-messageList.Position.Count > 0 {
-					messageList.Position.First = messageList.Position.First - messageList.Position.Count
-				}
-
-			}
-			if e.Name == key.NamePageDown && e.State == key.Release {
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + messageList.Position.Count
-			}
-			return RedrawEvent{}
-
-		case clipboard.Event:
-			if c.compose.SelectionLen() > 0 {
-				c.compose.Delete(1) // deletes the selection as a single rune
-			}
-			start, _ := c.compose.Selection()
-			txt := c.compose.Text()
-			c.compose.SetText(txt[:start] + e.Text + txt[start:])
-			c.compose.Focus()
-		}
-	}
-
-	if c.send.Clicked() {
+	if c.send.Clicked(gtx) {
 		msg := &Message{
 			// XXX: truncate sender timestamps to some lower resolution
 			Sent:         time.Now(),
@@ -175,35 +136,79 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			return nil
 		}
 	}
-	if c.back.Clicked() {
+	if c.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if c.msgcopy.Clicked() {
-		msg, err := c.a.GetMessage(c.messageClicked)
-		if err != nil {
-			clipboard.WriteOp{Text: string(msg.Body)}.Add(gtx.Ops)
-		}
-		c.messageClicked = 0
-		return nil
-	}
-	if c.msgdetails.Clicked() {
+	if c.msgdetails.Clicked(gtx) {
 		c.messageClicked = 0 // not implemented
 	}
-
-	for msg, click := range c.messageClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
-				c.messageClicked = msg
+	if c.msgcopy.Clicked(gtx) {
+		msg, err := c.a.GetMessage(c.messageClicked)
+		if err == nil {
+			gtx.Source.Execute(clipboard.WriteCmd{
+				Data: io.NopCloser(strings.NewReader(string(msg.Body))),
+			})
+			c.messageClicked = 0
+		}
+	}
+	// catch clipboard transfer triggered by long press and update composition
+	if ev, ok := gtx.Event(transfer.TargetFilter{Target: c.msgpaste, Type: "application/text"}); ok {
+		switch e := ev.(type) {
+		case transfer.DataEvent:
+			f := e.Open()
+			defer f.Close()
+			if b, err := io.ReadAll(f); err == nil {
+				if c.compose.SelectionLen() > 0 {
+					c.compose.Delete(1) // deletes the selection as a single rune
+				}
+				start, _ := c.compose.Selection()
+				txt := c.compose.Text()
+				c.compose.SetText(txt[:start] + string(b) + txt[start:])
+				gtx.Execute(key.FocusCmd{Tag: c.compose})
 			}
 		}
 	}
 
-	for _, e := range c.cancel.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			c.messageClicked = 0
+	if e, ok := c.edit.Update(gtx.Source); ok {
+		if e.Kind == gesture.KindClick {
+			return EditConversation{ID: c.conversation.ID}
+		}
+	}
+	for msg, click := range c.messageClicks {
+		if _, ok := click.Update(gtx.Source); ok {
+			c.messageClicked = msg
 		}
 	}
 
+	if _, ok := c.cancel.Update(gtx.Source); ok {
+		c.messageClicked = 0
+	}
+
+	if e, ok := shortcutEvents(gtx); ok {
+		if e.State == key.Release {
+			switch e.Name {
+			case key.NameEscape:
+				return BackEvent{}
+			case key.NameUpArrow:
+				messageList.ScrollToEnd = false
+				if messageList.Position.First > 0 {
+					messageList.Position.First = messageList.Position.First - 1
+				}
+			case key.NameDownArrow:
+				messageList.ScrollToEnd = true
+				messageList.Position.First = messageList.Position.First + 1
+			case key.NamePageUp:
+				messageList.ScrollToEnd = false
+				if messageList.Position.First-messageList.Position.Count > 0 {
+					messageList.Position.First = messageList.Position.First - messageList.Position.Count
+				}
+			case key.NamePageDown:
+				messageList.ScrollToEnd = true
+				messageList.Position.First = messageList.Position.First + messageList.Position.Count
+			}
+			return RedrawEvent{}
+		}
+	}
 	return nil
 }
 
@@ -272,6 +277,8 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 	messages := c.conversation.Messages
 	expires := c.conversation.MessageExpiration
+	// set focus on composition
+	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	bgl := Background{
 		Color: th.Bg,
 		Inset: layout.Inset{Top: unit.Dp(0), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
@@ -409,7 +416,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 						a := clip.Rect(image.Rectangle{Max: dims.Size})
 						x := a.Push(gtx.Ops)
 						defer x.Pop()
-						c.msgpaste.Add(gtx.Ops)
+						event.Op(gtx.Ops, c.msgpaste)
 						return dims
 					}),
 					layout.Rigid(func(gtx C) D {
@@ -445,6 +452,5 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		send:          &widget.Clickable{},
 		edit:          new(gesture.Click),
 	}
-	p.compose.Focus()
 	return p
 }

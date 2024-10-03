@@ -77,10 +77,10 @@ type restartClient struct{}
 
 // Event catches the widget submit events and calls Settings
 func (p *SettingsPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if p.switchUseTor.Changed() {
+	if p.switchUseTor.Update(gtx) {
 		if p.switchUseTor.Value && !hasDefaultTor() {
 			p.switchUseTor.Value = false
 
@@ -101,7 +101,7 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 			})
 		}
 	}
-	if p.switchAutoConnect.Changed() {
+	if p.switchAutoConnect.Update(gtx) {
 		if p.switchAutoConnect.Value {
 			p.a.db.Update(func(txn *badger.Txn) error {
 				return txn.Set([]byte("AutoConnect"), []byte{0xFF})
@@ -112,7 +112,7 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 			})
 		}
 	}
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		go func() {
 			if n, err := notify.Push("Restarting", "Katzen is restarting"); err == nil {
 				<-time.After(notificationTimeout)

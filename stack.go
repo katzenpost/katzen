@@ -129,6 +129,9 @@ func (s *pageStack) Pop() {
 			s.start()
 		}
 	}
+	if len(s.pages) > 0 {
+		s.start() // start new top of stack
+	}
 }
 
 func (s *pageStack) start() {

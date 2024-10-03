@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -16,8 +17,8 @@ import (
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"image"
 	_ "image/png"
-	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -31,75 +32,26 @@ var (
 	logo              = getLogo()
 	units, _          = durafmt.UnitsCoder{PluralSep: ":", UnitsSep: ","}.Decode("y:y,w:w,d:d,h:h,m:m,s:s,ms:ms,us:us")
 	avatars           = make(map[uint64]layout.Widget)
-	shortcuts         = key.Set(key.NameUpArrow + "|" +
-		key.NameDownArrow + "|" +
-		key.NamePageUp + "|" +
-		key.NamePageDown + "|" +
-		key.NameReturn + "|" +
-		key.NameEscape + "|" +
-		key.NameF1 + "|" + // show help page (not implemented)
-		key.NameF2 + "|" + // add contact
-		key.NameF3 + "|" + // show client settings
-		key.NameF4 + "|" + // toggle connection status
-		key.NameF5) // edit contact
 )
 
-type sortedConvos []*Conversation
-
-func (s sortedConvos) Less(i, j int) bool {
-	// sorts conversations by most-recent-first, followed by conversations
-	// without messages by title alphabetically
-
-	li := len(s[i].Messages)
-	lj := len(s[j].Messages)
-
-	if li == 0 && lj == 0 {
-		return s[i].Title < s[j].Title
-	} else if li == 0 {
-		return false
-	} else if lj == 0 {
-		return true
-	} else {
-		var its, jts time.Time
-		its = s[i].LastMessage
-		jts = s[j].LastMessage
-		return its.After(jts)
-	}
-}
-
-func (s sortedConvos) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s sortedConvos) Len() int {
-	return len(s)
-}
-
-func getSortedConvos(a *App) (convos sortedConvos) {
-	conversationIDs := a.GetConversationIDs()
-	for cid, _ := range conversationIDs {
-		convo, err := a.GetConversation(cid)
-		if err == nil {
-			convos = append(convos, convo)
-		}
-	}
-	sort.Sort(convos)
-	return
-}
-
 type HomePage struct {
-	a            *App
-	addContact   *widget.Clickable
-	connect      *widget.Clickable
-	connectIcon  *connectIcon
-	showSettings *widget.Clickable
-	convoClicks  map[uint64]*gesture.Click
+	l             *sync.Mutex
+	a             *App
+	addContact    *widget.Clickable
+	connect       *widget.Clickable
+	connectIcon   *connectIcon
+	showSettings  *widget.Clickable
+	convoClicks   map[uint64]*gesture.Click
+	contacts      []*Contact
+	conversations []*Conversation
+	updateCh      chan interface{}
 }
 
 type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	sorted = getSortedConvos(p.a)
+	sorted = p.a.getSortedConvos()
 	// xxx do not request this every frame...
 	bg := Background{
 		Color: th.Bg,
@@ -115,14 +67,12 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	// re-center list view for keyboard contact selection
-	if kb {
-		if selectedIdx < convoList.Position.First || selectedIdx >= convoList.Position.First+convoList.Position.Count {
-			// list doesn't wrap around view to end, so do not give negative value for First
-			if selectedIdx < convoList.Position.Count-1 {
-				convoList.Position.First = 0
-			} else {
-				convoList.Position.First = (selectedIdx - convoList.Position.Count + 1)
-			}
+	if selectedIdx < convoList.Position.First || selectedIdx >= convoList.Position.First+convoList.Position.Count {
+		// list doesn't wrap around view to end, so do not give negative value for First
+		if selectedIdx < convoList.Position.Count-1 {
+			convoList.Position.First = 0
+		} else {
+			convoList.Position.First = (selectedIdx - convoList.Position.Count + 1)
 		}
 	}
 
@@ -144,13 +94,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 			// show list of conversations
 			layout.Flexed(1, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-				// the convoList
-				return convoList.Layout(gtx, len(sorted), func(gtx C, i int) layout.Dimensions {
+				// the convoList layout function evaluates for each element of sorted
+				return convoList.Layout(gtx, len(p.conversations), func(gtx C, i int) layout.Dimensions {
+					if _, ok := p.convoClicks[p.conversations[i].ID]; !ok {
+						p.convoClicks[p.conversations[i].ID] = new(gesture.Click)
+					}
+
 					// update the last message received
-					var lastMsg uint64
-					var lastTs time.Time
-					if len(sorted[i].Messages) > 0 {
-						lastMsg = sorted[i].Messages[len(sorted[i].Messages)-1]
+					var err error
+					var lastMsgId uint64
+					var lastMsg *Message
+					if len(p.conversations[i].Messages) > 0 {
+						lastMsgId = p.conversations[i].Messages[len(p.conversations[i].Messages)-1]
+						lastMsg, err = p.a.GetMessage(lastMsgId)
+						if err != nil {
+							panic(err)
+						}
 					}
 
 					// inset each contact Flex
@@ -158,19 +117,14 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 
 					// if the layout is selected, change background color
 					bg := Background{Inset: in}
-					if kb && i == selectedIdx {
+					if i == selectedIdx {
 						bg.Color = th.ContrastBg
 					} else {
 						bg.Color = th.Bg
 					}
 
 					return bg.Layout(gtx, func(gtx C) D {
-						// returns Flex of contact icon, contact name, and last message received or sent
-						if _, ok := p.convoClicks[sorted[i].ID]; !ok {
-							c := new(gesture.Click)
-							p.convoClicks[sorted[i].ID] = c
-						}
-
+						// returns Horizontal Flex of contact icon, contact name, and last message received or sent
 						dims := layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceEvenly}.Layout(gtx,
 							// conversation name and last message
 							layout.Flexed(1, func(gtx C) D {
@@ -181,14 +135,22 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 											// conversation Title
 											layout.Rigid(func(gtx C) D {
 												in := layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(12), Right: unit.Dp(12)}
-												return in.Layout(gtx, ConvoStyle(th, sorted[i].Title).Layout)
+												return in.Layout(gtx, ConvoStyle(th, p.conversations[i].Title).Layout)
 											}),
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
 													layout.Rigid(func(gtx C) D {
+														// XXX: how does this apply to multiparty conversations
+														//if contacts[i].IsPending {
+														//	return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
+														//}
+														return fill{th.Bg}.Layout(gtx)
+													}),
+													layout.Rigid(func(gtx C) D {
 														// timestamp
-														if lastMsg != 0 {
-															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastTs).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
+														lastMsgTs := p.conversations[i].LastMessage
+														if !lastMsgTs.IsZero() {
+															messageAge := strings.Replace(durafmt.ParseShort(time.Now().Round(0).Sub(lastMsgTs).Truncate(time.Minute)).Format(units), "0 s", "now", 1)
 															return material.Caption(th, messageAge).Layout(gtx)
 														}
 														return fill{th.Bg}.Layout(gtx)
@@ -200,11 +162,10 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 									// last message
 									layout.Rigid(func(gtx C) D {
 										in := layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(12), Right: unit.Dp(12)}
-										if lastMsg != 0 {
+										if lastMsg != nil {
 											return in.Layout(gtx, func(gtx C) D {
 												// TODO: set the color based on sent or received
-												msg, _ := p.a.GetMessage(lastMsg)
-												return material.Body2(th, string(msg.Body)).Layout(gtx)
+												return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
 											})
 										} else {
 											return fill{th.Bg}.Layout(gtx)
@@ -256,58 +217,47 @@ type ConnectClick struct {
 
 // Event returns a ChooseConvoClick event when a contact is chosen
 func (p *HomePage) Event(gtx layout.Context) interface{} {
-	if p.connect.Clicked() {
+	if p.connect.Clicked(gtx) {
 		return ConnectClick{}
 	}
 	// listen for pointer right click events on the addContact widget
-	if p.addContact.Clicked() {
+	if p.addContact.Clicked(gtx) {
 		return AddContactClick{}
 	}
-	if p.showSettings.Clicked() {
+	if p.showSettings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
 	for id, click := range p.convoClicks {
-		for _, e := range click.Events(gtx.Queue) {
-			if e.Type == gesture.TypeClick {
+		if e, ok := click.Update(gtx.Source); ok {
+			if e.Kind == gesture.KindClick {
 				return ChooseConvoClick{id: id}
 			}
 		}
 	}
 	// check for keypress events
-	key.InputOp{Tag: p, Keys: shortcuts}.Add(gtx.Ops)
-	for _, e := range gtx.Events(p) {
-		switch e := e.(type) {
-		case key.Event:
-			if e.Name == key.NameF1 && e.State == key.Release {
+	if e, ok := shortcutEvents(gtx); ok {
+		if e.Name == key.NameF2 {
+			return AddContactClick{}
+		}
+		if e.Name == key.NameF3 {
+			return ShowSettingsClick{}
+		}
+		if e.Name == key.NameF4 {
+			return ConnectClick{}
+		}
+		if e.Name == key.NameUpArrow {
+			selectedIdx = selectedIdx - 1
+		}
+		if e.Name == key.NameDownArrow {
+			selectedIdx = selectedIdx + 1
+		}
+		if e.Name == key.NameReturn {
+			p.l.Lock()
+			defer p.l.Unlock()
+			if len(p.contacts) < selectedIdx+1 {
+				return nil
 			}
-			if e.Name == key.NameF2 && e.State == key.Release {
-				return AddContactClick{}
-			}
-			if e.Name == key.NameF3 && e.State == key.Release {
-				return ShowSettingsClick{}
-			}
-			if e.Name == key.NameF4 && e.State == key.Release {
-				return ConnectClick{}
-			}
-			if e.Name == key.NameUpArrow && e.State == key.Release {
-				kb = true
-				selectedIdx = selectedIdx - 1
-			}
-			if e.Name == key.NameDownArrow && e.State == key.Release {
-				kb = true
-				selectedIdx = selectedIdx + 1
-			}
-			if e.Name == key.NameEscape && e.State == key.Release {
-				kb = false
-			}
-			if e.Name == key.NameReturn && e.State == key.Release {
-				kb = false
-				// editor event isn't consuming the kb input upon addcontact return.
-				if len(sorted) <= selectedIdx {
-					return nil
-				}
-				return ChooseConvoClick{id: sorted[selectedIdx].ID}
-			}
+			return ChooseConvoClick{id: sorted[selectedIdx].ID}
 		}
 	}
 
@@ -316,15 +266,56 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 
 func (p *HomePage) Start(stop <-chan struct{}) {
 	p.connectIcon.Start(stop)
+	// receive commands to update the contact list, e.g. from KeyExchangeCompleted events
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-p.updateCh:
+				p.UpdateContacts()
+				p.UpdateConversations()
+			}
+		}
+	}()
+}
+
+func (h *HomePage) UpdateConversations() {
+	h.l.Lock()
+	defer h.l.Unlock()
+	if h.a == nil {
+		return
+	}
+	if h.a.c == nil {
+		return
+	}
+	h.conversations = h.a.getSortedConvos()
+}
+
+func (h *HomePage) UpdateContacts() {
+	h.l.Lock()
+	defer h.l.Unlock()
+	if h.a == nil {
+		return
+	}
+	if h.a.c == nil {
+		return
+	}
+	h.contacts = h.a.getSortedContacts()
+	h.a.w.Invalidate()
 }
 
 func newHomePage(a *App) *HomePage {
-	cl := &widget.Clickable{}
+	updateCh := make(chan interface{}, 1)
+	updateCh <- struct{}{} // prod page worker to fetch contacts from catshadow
+	connectButton := &widget.Clickable{}
 	return &HomePage{
 		a:            a,
+		l:            new(sync.Mutex),
+		updateCh:     updateCh,
 		addContact:   &widget.Clickable{},
-		connect:      cl,
-		connectIcon:  NewConnectIcon(a, th, cl),
+		connect:      connectButton,
+		connectIcon:  NewConnectIcon(a, th, connectButton),
 		showSettings: &widget.Clickable{},
 		convoClicks:  make(map[uint64]*gesture.Click),
 	}
@@ -332,5 +323,6 @@ func newHomePage(a *App) *HomePage {
 
 func ConvoStyle(th *material.Theme, txt string) material.LabelStyle {
 	l := material.Label(th, th.TextSize, txt)
+	l.Font.Weight = font.Bold
 	return l
 }

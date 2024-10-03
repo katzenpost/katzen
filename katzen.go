@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -21,13 +20,12 @@ import (
 	_ "gioui.org/app/permission/foreground"
 	_ "gioui.org/app/permission/storage"
 	"gioui.org/font/gofont"
-	"gioui.org/io/key"
-	"gioui.org/io/system"
+	"gioui.org/io/event"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"gioui.org/x/notify"
 	"net/http"
 	_ "net/http/pprof"
 )
@@ -39,7 +37,12 @@ const (
 )
 
 var (
-	dataDirName = "katzen"
+	dataDirName      = "katzen"
+	clientConfigFile = flag.String("f", "", "Path to the client config file.")
+	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
+	debug            = flag.Int("d", 0, "Enable golang debug service.")
+
+	th *material.Theme
 
 	// obtain the default data location
 	dir, _ = app.DataDir()
@@ -47,39 +50,27 @@ var (
 	// path to default profile
 	dataDir = filepath.Join(dir, dataDirName, "default")
 
-	profilePath      = flag.String("p", dataDir, "Path to application profile")
-	clientConfigFile = flag.String("f", "", "Path to the client config file.")
-	debug            = flag.Int("d", 0, "Port for net/http/pprof listener")
+	profilePath = flag.String("p", dataDir, "Path to application profile")
 
 	minPasswordLen = 5               // XXX pick something reasonable
 	updateInterval = 1 * time.Second // try to read from contacts every updateInterval
-
-	notifications = make(map[string]notify.Notification)
 
 	//go:embed default_config_without_tor.toml
 	cfgWithoutTor []byte
 	//go:embed default_config_with_tor.toml
 	cfgWithTor []byte
 
-	// theme
-	th = func() *material.Theme {
-		th := material.NewTheme(gofont.Collection())
-		th.Bg = rgb(0x0)
-		th.Fg = rgb(0xFFFFFFFF)
-		th.ContrastBg = rgb(0x22222222)
-		th.ContrastFg = rgb(0x77777777)
-		return th
-	}()
+	isConnected  bool
+	isConnecting bool
 )
 
 type App struct {
 	sync.Mutex
 	worker.Worker
 
-	endBg func()
-	w     *app.Window
-	ops   *op.Ops
-	c     *client.Client
+	w   *app.Window
+	ops *op.Ops
+	c   *client.Client
 
 	db *badger.DB
 
@@ -92,7 +83,6 @@ type App struct {
 
 	stack pageStack
 	focus bool
-	stage system.Stage
 
 	connectOnce *sync.Once
 
@@ -271,6 +261,21 @@ func (a *App) Layout(gtx layout.Context) {
 }
 
 func (a *App) update(gtx layout.Context) {
+	// handle global shortcuts
+	if backEvent(gtx) {
+		// XXX: this means that after signin, the top level page is homescreen
+		// and therefore pressing back won't logout
+		if a.stack.Len() > 1 {
+			a.stack.Pop()
+			return
+		}
+	}
+
+	if a.stack.Len() == 0 {
+		a.stack.Push(newSignInPage(a))
+		return
+	}
+
 	page := a.stack.Current()
 	if e := page.Event(gtx); e != nil {
 		switch e := e.(type) {
@@ -313,26 +318,45 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Push(newEditContactPage(a, e.id))
 		case EditContactComplete:
 			a.stack.Clear(newHomePage(a))
+		case EditConversation:
+			//a.stack.Push(newEditConversationPage(a, e.ID))
+		case EditConversationComplete:
+			a.stack.Pop()
 		case MessageSent:
 		}
 	}
 }
 
 func (a *App) run() error {
-	// teardown client at exit for any reason
-	defer func() {
-		if a.c != nil {
-			a.c.Shutdown()
-			a.c.Wait()
+	// on Android, this will start a foreground service, and does nothing on other platforms
+	cancelForeground, err := app.Start("Background Connection", "")
+	if err != nil {
+		return err
+	}
+	defer cancelForeground()
+
+	evCh := make(chan event.Event)
+	ackCh := make(chan struct{})
+	go func() {
+		for {
+			ev := a.w.Event()
+			evCh <- ev
+			<-ackCh
+			if _, ok := ev.(app.DestroyEvent); ok {
+				return
+			}
 		}
 	}()
 
+	// select from all event sources
 	for {
 		select {
-		case e := <-a.w.Events():
+		case e := <-evCh:
 			if err := a.handleGioEvents(e); err != nil {
+				ackCh <- struct{}{}
 				return err
 			}
+			ackCh <- struct{}{}
 		case <-time.After(1 * time.Minute):
 			// redraw the screen to update the message timestamps once per minute
 			a.w.Invalidate()
@@ -358,12 +382,24 @@ func main() {
 
 func uiMain() {
 	go func() {
-		w := app.NewWindow(
-			app.Size(unit.Dp(400), unit.Dp(400)),
+		w := new(app.Window)
+		w.Option(app.Size(unit.Dp(400), unit.Dp(400)),
 			app.Title("Katzen"),
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
 		)
+
+		// theme must be declared AFTER NewWindow on android
+		th = func() *material.Theme {
+			th := material.NewTheme()
+			th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+			th.Bg = rgb(0x0)
+			th.Fg = rgb(0xFFFFFFFF)
+			th.ContrastBg = rgb(0x22222222)
+			th.ContrastFg = rgb(0x77777777)
+			return th
+		}()
+
 		if err := newApp(w).run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed: %v\n", err)
 		}
@@ -391,51 +427,6 @@ func (a *App) handleClientEvent(e interface{}) error {
 		shortNotify("NewDocument", e.String())
 	default:
 		panic(e)
-	}
-	return nil
-}
-
-func (a *App) handleGioEvents(e interface{}) error {
-	switch e := e.(type) {
-	case key.FocusEvent:
-		a.focus = e.Focus
-	case system.DestroyEvent:
-		return errors.New("system.DestroyEvent receieved")
-	case system.FrameEvent:
-		gtx := layout.NewContext(a.ops, e)
-		key.InputOp{Tag: a.w, Keys: key.NameEscape + "|" + key.NameBack}.Add(a.ops)
-		for _, e := range gtx.Events(a.w) {
-			switch e := e.(type) {
-			case key.Event:
-				if (e.Name == key.NameEscape && e.State == key.Release) || e.Name == key.NameBack {
-					if a.stack.Len() > 1 {
-						a.stack.Pop()
-						a.w.Invalidate()
-					}
-				}
-			}
-		}
-		a.Layout(gtx)
-		e.Frame(gtx.Ops)
-	case system.StageEvent:
-		fmt.Printf("StageEvent %s received\n", e.Stage)
-		a.stage = e.Stage
-		if e.Stage >= system.StageRunning {
-			if a.stack.Len() == 0 {
-				a.stack.Push(newSignInPage(a))
-			}
-		}
-		if e.Stage == system.StagePaused {
-			var err error
-			a.endBg, err = app.Start("Is running in the background", "")
-			if err != nil {
-				return err
-			}
-		} else {
-			if a.endBg != nil {
-				a.endBg()
-			}
-		}
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -21,7 +22,7 @@ func (p *signInPage) Start(stop <-chan struct{}) {
 }
 
 func (p *signInPage) Layout(gtx layout.Context) layout.Dimensions {
-	p.password.Focus()
+	gtx.Execute(key.FocusCmd{Tag: p.password})
 	bg := Background{
 		Color: th.Bg,
 		Inset: layout.Inset{},
@@ -46,14 +47,14 @@ type signInStarted struct {
 }
 
 func (p *signInPage) Event(gtx layout.Context) interface{} {
-	for _, ev := range p.password.Events() {
+	if ev, ok := p.password.Update(gtx); ok {
 		switch ev.(type) {
 		case widget.SubmitEvent:
 			p.submit.Click()
 		}
 	}
 
-	if p.submit.Clicked() {
+	if p.submit.Clicked(gtx) {
 		p.connecting = true
 		pw := p.password.Text()
 		p.password.SetText("")

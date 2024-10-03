@@ -14,14 +14,15 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/fxamacker/cbor/v2"
-	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
-	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"github.com/katzenpost/hpqc/nike/schemes"
+	"github.com/katzenpost/hpqc/rand"
 	"golang.org/x/crypto/hkdf"
 )
 
 var (
 	ErrConversationAlreadyExists = errors.New("Conversation already exists")
 	DBVersion                    = []byte("0.0.0")
+	necdh                        = schemes.ByName("x25519")
 )
 
 func (a *App) InitDB() error {
@@ -104,8 +105,8 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 
 		// generate a new ecdh keypair as a long-term identity with this contact
 		// for re-keying, etc, exchanged as part of PANDA
-		sK := necdh.EcdhScheme.GeneratePrivateKey(rand.Reader)
-		emptyPk := necdh.EcdhScheme.NewEmptyPublicKey()
+		sK := necdh.GeneratePrivateKey(rand.Reader)
+		emptyPk := necdh.NewEmptyPublicKey()
 		contact = &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: new(Queue)}
 
 		serialized, err := cbor.Marshal(contact)
@@ -144,8 +145,8 @@ func (a *App) NewConversation(contactID uint64) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		// Create a Contact to deserialize into
 		contact := new(Contact)
-		contact.MyIdentity = necdh.EcdhScheme.NewEmptyPrivateKey()
-		contact.Identity = necdh.EcdhScheme.NewEmptyPublicKey()
+		contact.MyIdentity = necdh.NewEmptyPrivateKey()
+		contact.Identity = necdh.NewEmptyPublicKey()
 		// verify that the contact exists, and retrieve it
 		i, err := txn.Get(contactKey(contactID))
 		if err != nil {
@@ -297,8 +298,8 @@ func (a *App) GetContactIDs() []uint64 {
 func (a *App) GetContact(contactID uint64) (*Contact, error) {
 	contact := new(Contact)
 	// initialize concrete types to deserialize into
-	contact.MyIdentity = necdh.EcdhScheme.NewEmptyPrivateKey()
-	contact.Identity = necdh.EcdhScheme.NewEmptyPublicKey()
+	contact.MyIdentity = necdh.NewEmptyPrivateKey()
+	contact.Identity = necdh.NewEmptyPublicKey()
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(contactKey(contactID))
 		if err != nil {
@@ -368,8 +369,8 @@ func (a *App) PutContact(contact *Contact) error {
 }
 
 // GetConversationIDs returns a slice of all Conversation IDs
-func (a *App) GetConversationIDs() map[uint64]struct{} {
-	conversationIDs := make(map[uint64]struct{})
+func (a *App) GetConversationIDs() []uint64 {
+	var conversationIDs []uint64
 	a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationsKey())
 		if err != nil {

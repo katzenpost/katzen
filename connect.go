@@ -10,8 +10,8 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/katzenpost/client"
-	"github.com/katzenpost/katzenpost/core/crypto/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 

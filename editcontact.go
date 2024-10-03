@@ -7,7 +7,9 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/hako/durafmt"
 	"image"
+	"math"
 	"time"
 )
 
@@ -28,8 +30,8 @@ type EditContactPage struct {
 }
 
 const (
-	minExpiration = 0.0  // never delete messages
-	maxExpiration = 14.0 // 2 weeks
+	minExpiration = float32(0.0)  // never delete messages
+	maxExpiration = float32(14.0) // 2 weeks
 )
 
 // Layout returns the contact options menu
@@ -80,21 +82,42 @@ type RenameContact struct {
 }
 
 // Event catches the widget submit events and calls NewContact
+func valueToDuration(val float32) time.Duration {
+	// multiply by the maximum range, in days
+	duration := val * maxExpiration
+	// round to a multiple of days
+	duration = float32(math.Round(float64(duration)))
+	// update the slider to a rounded value
+	return time.Duration(int64(duration) * int64(time.Hour) * 24)
+}
+
+func durationToValue(dur time.Duration) float32 {
+	// convert duration to days
+	fdur := float64(int64(dur) / (int64(time.Hour) * 24))
+	// round to a multiple of days and return the scaled slider value
+	return float32(math.Round(fdur)) / maxExpiration
+}
+
+// Event catches the widget submit events and calls catshadow.NewContact
 func (p *EditContactPage) Event(gtx layout.Context) interface{} {
-	if p.back.Clicked() {
+	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	for _, e := range p.avatar.Events(gtx.Queue) {
-		if e.Type == gesture.TypeClick {
-			return ChooseAvatar{id: p.id}
-		}
+	if _, ok := p.avatar.Update(gtx.Source); ok {
+		return ChooseAvatar{id: p.id}
 	}
-	// update duration
-	p.duration = time.Duration(int64(p.expiry.Value)) * time.Minute * 60 * 24
-	if p.rename.Clicked() {
+	if p.clear.Clicked(gtx) {
+		// TODO: confirmation dialog
+		// XXX: p.a.c.WipeConversation(p.id)
+		return EditContactComplete{id: p.id}
+	}
+	if p.expiry.Update(gtx) {
+		p.duration = valueToDuration(p.expiry.Value)
+	}
+	if p.rename.Clicked(gtx) {
 		return RenameContact{id: p.id}
 	}
-	if p.remove.Clicked() {
+	if p.remove.Clicked(gtx) {
 		// TODO: confirmation dialog
 		_, err := p.a.GetContact(p.id)
 		if err != nil {
@@ -114,6 +137,10 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 			}
 		}
 	}
+	if p.apply.Clicked(gtx) {
+		//p.a.c.ChangeExpiration(p.di, p.duration)
+		return BackEvent{}
+	}
 	return nil
 }
 
@@ -127,6 +154,8 @@ func newEditContactPage(a *App, id uint64) *EditContactPage {
 		remove: &widget.Clickable{}, apply: &widget.Clickable{},
 		settings: &layout.List{Axis: layout.Vertical},
 	}
+	//p.duration, _ = a.c.GetExpiration(id)
+	p.expiry.Value = durationToValue(p.duration)
 	p.widgets = []layout.Widget{
 		func(gtx C) D {
 			dims := layout.Center.Layout(gtx, func(gtx C) D {
@@ -138,6 +167,22 @@ func newEditContactPage(a *App, id uint64) *EditContactPage {
 			t.Pop()
 			return dims
 		},
+		layout.Spacer{Height: unit.Dp(8)}.Layout,
+		func(gtx C) D {
+			var label string
+			if p.expiry.Value < 1.0/maxExpiration {
+				label = "Delete after: never"
+			} else {
+				label = "Delete after: " + durafmt.Parse(p.duration).Format(units)
+			}
+			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle, Spacing: layout.SpaceBetween}.Layout(gtx,
+				layout.Rigid(material.Body2(th, "Message deletion").Layout),
+				layout.Rigid(material.Slider(th, p.expiry).Layout),
+				layout.Rigid(material.Caption(th, label).Layout),
+			)
+		},
+		layout.Spacer{Height: unit.Dp(8)}.Layout,
+		material.Button(th, p.clear, "Clear History").Layout,
 		layout.Spacer{Height: unit.Dp(8)}.Layout,
 		material.Button(th, p.rename, "Rename Contact").Layout,
 		layout.Spacer{Height: unit.Dp(8)}.Layout,

@@ -2,11 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/katzenpost/katzenpost/core/crypto/ecdh"
-	necdh "github.com/katzenpost/katzenpost/core/crypto/nike/ecdh"
-	"github.com/katzenpost/katzenpost/core/crypto/rand"
+	"github.com/katzenpost/hpqc/rand"
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
 	panda "github.com/katzenpost/katzenpost/panda/crypto"
@@ -53,7 +52,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 		return err
 	}
 	// minimum blob size to exchange a ecdh.PublicKey
-	blobSize := 24 /* nonce */ + 4 /* length */ + ecdh.PublicKeySize + secretbox.Overhead
+	blobSize := 24 /* nonce */ + 4 /* length */ + necdh.PublicKeySize() + secretbox.Overhead
 
 	meetingPlace := pclient.New(blobSize, s, l, p.Name, p.Provider)
 	// get the current document and shared random
@@ -69,8 +68,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 	pandaChan := make(chan panda.PandaUpdate)
 
 	// our ecdh public key
-	ecdhNike := necdh.NewEcdhNike(rand.Reader)
-	myPublic := ecdhNike.DerivePublicKey(c.MyIdentity)
+	myPublic := necdh.DerivePublicKey(c.MyIdentity)
 	if c.PandaKeyExchange != nil {
 		kx, err = panda.UnmarshalKeyExchange(rand.Reader, l, meetingPlace, c.PandaKeyExchange, id, pandaChan, s.HaltCh())
 		if err != nil {
@@ -147,8 +145,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		c.PandaKeyExchange = nil
 
 		// get the exchanged keys and figure out who goes first
-		ecdhNike := necdh.NewEcdhNike(rand.Reader)
-		theirPublic, err := ecdhNike.UnmarshalBinaryPublicKey(update.Result)
+		theirPublic, err := necdh.UnmarshalBinaryPublicKey(update.Result)
 		if err != nil {
 			err = fmt.Errorf("failed to parse contact public key bytes: %s", err)
 			l.Error(err.Error())
@@ -159,8 +156,8 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		}
 
 		// get our nike (ecdh) public key for this contact
-		myPublic := ecdhNike.DerivePublicKey(c.MyIdentity)
-		streamSecret := ecdhNike.DeriveSecret(c.MyIdentity, theirPublic)
+		myPublic := necdh.DerivePublicKey(c.MyIdentity)
+		streamSecret := base64.StdEncoding.EncodeToString(necdh.DeriveSecret(c.MyIdentity, theirPublic))
 		if bytes.Compare(myPublic.Bytes(), theirPublic.Bytes()) == 1 {
 			// we go first, so we are the "listener"
 			l.Notice("Listening with %x", streamSecret)
