@@ -281,7 +281,7 @@ func (a *App) SendMessage(conversation uint64, msg *Message) error {
 
 // GetContactIDs returns a slice of all Contact IDs
 func (a *App) GetContactIDs() []uint64 {
-	var contacts []uint64
+	contacts := make(map[uint64]struct{})
 	a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(contactsKey())
 		if err != nil {
@@ -291,7 +291,11 @@ func (a *App) GetContactIDs() []uint64 {
 			return cbor.Unmarshal(val, contacts)
 		})
 	})
-	return contacts
+	ids := make([]uint64, 0, len(contacts))
+	for k, _ := range contacts {
+		ids = append(ids, k)
+	}
+	return ids
 }
 
 // GetContact retrieves a Contact from badger
@@ -370,7 +374,7 @@ func (a *App) PutContact(contact *Contact) error {
 
 // GetConversationIDs returns a slice of all Conversation IDs
 func (a *App) GetConversationIDs() []uint64 {
-	var conversationIDs []uint64
+	var conversationIDs map[uint64]struct{}
 	a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationsKey())
 		if err != nil {
@@ -380,7 +384,11 @@ func (a *App) GetConversationIDs() []uint64 {
 			return cbor.Unmarshal(val, &conversationIDs)
 		})
 	})
-	return conversationIDs
+	ids := make([]uint64, 0, len(conversationIDs))
+	for k, _ := range conversationIDs {
+		ids = append(ids, k)
+	}
+	return ids
 }
 
 // GetConversation retrieves Conversation from badger
