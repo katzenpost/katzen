@@ -22,6 +22,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/hako/durafmt"
+	"github.com/katzenpost/hpqc/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
@@ -119,8 +120,10 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if c.send.Clicked(gtx) {
+
 		msg := &Message{
 			// XXX: truncate sender timestamps to some lower resolution
+			ID:           rand.NewMath().Uint64(),
 			Sent:         time.Now(),
 			Type:         Text,
 			Conversation: c.conversation.ID,
