@@ -44,7 +44,7 @@ var (
 type Conversation struct {
 	sync.Mutex
 
-	// Title is the string set to dispaly at header of conversation
+	// Title is the string set to display at header of conversation
 	Title string
 
 	// ID is the group identifier for this conversation to tag messages to/from
