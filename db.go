@@ -80,6 +80,10 @@ func messageKey(id uint64) []byte {
 	return []byte(fmt.Sprintf("message:%d", id))
 }
 
+func outboundKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("outbound:%d", id))
+}
+
 // RemoveContact removes a contact from the db
 func (a *App) RemoveContact(contactID uint64) error {
 	panic("NotImplemented")
@@ -107,7 +111,7 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 		// for re-keying, etc, exchanged as part of PANDA
 		sK := necdh.GeneratePrivateKey(rand.Reader)
 		emptyPk := necdh.NewEmptyPublicKey()
-		contact = &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: new(Queue)}
+		contact = &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
 
 		serialized, err := cbor.Marshal(contact)
 		if err != nil {
@@ -241,6 +245,17 @@ func (a *App) DeliverMessage(msg *Message) error {
 // SendMessage sends a Message to each Contact in a Conversation
 func (a *App) SendMessage(conversation uint64, msg *Message) error {
 	return a.db.Update(func(txn *badger.Txn) error {
+		// store Message
+		serialized, err := cbor.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(messageKey(msg.ID), serialized)
+		if err != nil {
+			return err
+		}
+
+		// Get the Conversation
 		i, err := txn.Get(conversationKey(conversation))
 		if err != nil {
 			return ErrConversationNotFound
@@ -252,9 +267,7 @@ func (a *App) SendMessage(conversation uint64, msg *Message) error {
 			if err != nil {
 				return err
 			}
-			// add Message to Conversation
-			// XXX: store the message and add the ordered ID to conversation
-			// XXX: this should be the message ID
+			// add MessageID to Conversation
 			co.Messages = append(co.Messages, msg.ID)
 
 			// save Conversation in badger
@@ -266,13 +279,15 @@ func (a *App) SendMessage(conversation uint64, msg *Message) error {
 			if err != nil {
 				return err
 			}
+
 			// Enqueue message to each contact in conversation
-			/*
-				for _, c := range co.Contacts {
-					// XXX: if we are unable to send to a single contact, should we abort?
-					// XXX: Outbound queue should be stored in badger and updated atomicly in this transaction
+			for _, c := range co.Contacts {
+				q := NewBadgerQueue(a.db, outboundKey(c))
+				err := q.Push(msg)
+				if err != nil {
+					return err
 				}
-			*/
+			}
 			return nil
 		})
 	})

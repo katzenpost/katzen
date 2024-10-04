@@ -71,9 +71,9 @@ type Contact struct {
 	// PandaResult contains an error message if the PANDA exchange fails.
 	PandaResult string
 
-	// Outbound holds messages not yet written to Transport
+	// Outbound identifies the queue of messages
 	// which allows for offline composition to contacts
-	Outbound *Queue
+	Outbound uint64
 
 	// MyIdentity is the nike.PrivateKey used with PANDA
 	MyIdentity nike.PrivateKey
