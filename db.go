@@ -478,3 +478,15 @@ func (a *App) GetMessage(msgId uint64) (*Message, error) {
 	}
 	return msg, nil
 }
+
+// PutMessage places Message in db
+func (a *App) PutMessage(msg *Message) error {
+	fmt.Println("PutMessage(", msg.ID, ")")
+	return a.db.View(func(txn *badger.Txn) error {
+		serialized, err := cbor.Marshal(msg)
+		if err != nil {
+			return err
+		}
+		return txn.Set(messageKey(msg.ID), serialized)
+	})
+}
