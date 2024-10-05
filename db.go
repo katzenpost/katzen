@@ -92,41 +92,12 @@ func (a *App) RemoveContact(contactID uint64) error {
 
 // NewContact creates a new Contact from a shared secret (dialer)
 func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
-	var contact *Contact
-	err := a.db.Update(func(txn *badger.Txn) error {
-		// get a new unique ID for this contact
-		// XXX: ddoes this do what we think it does?
-		seq, err := a.db.GetSequence(append(contactsKey(), []byte("id")...), 1)
-		if err != nil {
-			return err
-		}
-		defer seq.Release()
-		contactID, err := seq.Next()
-		if err != nil {
-			return err
-		}
-		fmt.Println("Created contact id", contactID)
-
-		// generate a new ecdh keypair as a long-term identity with this contact
-		// for re-keying, etc, exchanged as part of PANDA
-		sK := necdh.GeneratePrivateKey(rand.Reader)
-		emptyPk := necdh.NewEmptyPublicKey()
-		contact = &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
-
-		serialized, err := cbor.Marshal(contact)
-		if err != nil {
-			panic(err)
-			return err
-		}
-		// save the contact under the
-		err = txn.Set(contactKey(contactID), serialized)
-		if err != nil {
-			panic(err)
-		}
-		return err
-	})
+	sK := necdh.GeneratePrivateKey(rand.Reader)
+	emptyPk := necdh.NewEmptyPublicKey()
+	contactID := rand.NewMath().Uint64()
+	contact := &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
+	err := a.PutContact(contact)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 
