@@ -41,7 +41,15 @@ var (
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
 	debug            = flag.Int("d", 0, "Enable golang debug service.")
 
-	th *material.Theme
+	th = func() *material.Theme {
+		th := material.NewTheme()
+		th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+		th.Bg = rgb(0x0)
+		th.Fg = rgb(0xFFFFFFFF)
+		th.ContrastBg = rgb(0x22222222)
+		th.ContrastFg = rgb(0x77777777)
+		return th
+	}()
 
 	// obtain the default data location
 	dir, _ = app.DataDir()
@@ -394,17 +402,6 @@ func uiMain() {
 			app.NavigationColor(rgb(0x0)),
 			app.StatusColor(rgb(0x0)),
 		)
-
-		// theme must be declared AFTER NewWindow on android
-		th = func() *material.Theme {
-			th := material.NewTheme()
-			th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
-			th.Bg = rgb(0x0)
-			th.Fg = rgb(0xFFFFFFFF)
-			th.ContrastBg = rgb(0x22222222)
-			th.ContrastFg = rgb(0x77777777)
-			return th
-		}()
 
 		if err := newApp(w).run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed: %v\n", err)
