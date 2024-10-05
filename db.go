@@ -203,8 +203,6 @@ func (a *App) DeliverMessage(msg *Message) error {
 				return err
 			}
 			// add Message to Conversation
-			// XXX: store the message and add the ordered ID to conversation
-			// XXX: this should be the message ID
 			co.Messages = append(co.Messages, msg.ID)
 
 			// save Conversation in badger
