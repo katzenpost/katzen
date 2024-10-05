@@ -382,6 +382,7 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 		c.messageClicks[messages[i]] = new(gesture.Click)
 	}
 
+	// make message bubbles separated when different people speak
 	if i > 0 {
 		msg1, err1 := c.a.GetMessage(messages[i-1])
 		msg2, err2 := c.a.GetMessage(messages[i])
@@ -399,30 +400,24 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 	if err != nil {
 		panic(err)
 	}
+	// if this is a message sent by us
 	if msg.Sender == 0 {
 		dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
 			layout.Flexed(1, fill{th.Bg}.Layout),
 			layout.Flexed(5, func(gtx C) D {
 				return inbetween.Layout(gtx, func(gtx C) D {
 					return bgSender.Layout(gtx, func(gtx C) D {
-						msg, err := c.a.GetMessage(messages[i])
-						if err != nil {
-							return layout.Dimensions{}
-						}
 						return layoutMessage(gtx, msg, isSelected, expires)
 					})
 				})
 			}),
 		)
+	// or sent by someone else
 	} else {
 		dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
 			layout.Flexed(5, func(gtx C) D {
 				return inbetween.Layout(gtx, func(gtx C) D {
 					return bgReceiver.Layout(gtx, func(gtx C) D {
-						msg, err := c.a.GetMessage(messages[i])
-						if err != nil {
-							return layout.Dimensions{}
-						}
 						return layoutMessage(gtx, msg, isSelected, expires)
 					})
 				})
