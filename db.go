@@ -273,7 +273,7 @@ func (a *App) GetContactIDs() []uint64 {
 			return err
 		}
 		return i.Value(func(val []byte) error {
-			return cbor.Unmarshal(val, contacts)
+			return cbor.Unmarshal(val, &contacts)
 		})
 	})
 	ids := make([]uint64, 0, len(contacts))
@@ -343,7 +343,7 @@ func (a *App) PutContact(contact *Contact) error {
 		return i.Value(func(val []byte) error {
 
 			contactsIdx := make(map[uint64]struct{})
-			err := cbor.Unmarshal(val, contactsIdx)
+			err := cbor.Unmarshal(val, &contactsIdx)
 			if err != nil {
 				return err
 			}
