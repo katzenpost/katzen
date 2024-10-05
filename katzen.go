@@ -39,7 +39,6 @@ const (
 var (
 	dataDirName      = "katzen"
 	clientConfigFile = flag.String("f", "", "Path to the client config file.")
-	stateFile        = flag.String("s", "catshadow_statefile", "Path to the client state file.")
 	debug            = flag.Int("d", 0, "Enable golang debug service.")
 
 	th *material.Theme
@@ -50,6 +49,7 @@ var (
 	// path to default profile
 	dataDir = filepath.Join(dir, dataDirName, "default")
 
+	// profilePath is the path where the application db lives
 	profilePath = flag.String("p", dataDir, "Path to application profile")
 
 	minPasswordLen = 5               // XXX pick something reasonable
