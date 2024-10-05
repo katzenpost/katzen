@@ -153,7 +153,9 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if c.send.Clicked(gtx) {
-
+		if len(c.compose.Text()) == 0 {
+			return nil
+		}
 		msg := &Message{
 			// XXX: truncate sender timestamps to some lower resolution
 			ID:           rand.NewMath().Uint64(),
