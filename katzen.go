@@ -196,6 +196,7 @@ func (a *App) streamWorker(s *client.Session) {
 		}
 
 		// send and receive messages from each contact
+		todelete := []uint64{}
 		for id, msgCh := range a.messageChans {
 			// send messages if contact has pending
 			// XXX: refactor
@@ -203,7 +204,7 @@ func (a *App) streamWorker(s *client.Session) {
 			_, err := a.GetContact(id)
 			if err != nil {
 				a.stopTransport(id)
-				delete(a.messageChans, id)
+				todelete = append(todelete, id)
 				continue
 			}
 
@@ -239,7 +240,9 @@ func (a *App) streamWorker(s *client.Session) {
 				// skip
 			}
 		}
-
+		for _, id := range todelete {
+			delete(a.messageChans, id)
+		}
 	}
 }
 
