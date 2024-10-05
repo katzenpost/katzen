@@ -123,13 +123,11 @@ func (a *App) pandaWorker(pandaChan chan panda.PandaUpdate) {
 }
 
 func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
-	a.Lock()
 	c, err := a.GetContact(update.ID)
 	if err != nil {
-		a.Unlock()
 		return false, ErrContactNotFound
 	}
-	a.Unlock()
+	defer a.PutContact(c) // save updated contact
 
 	l := a.c.GetLogger("pandaUpdate " + c.Nickname)
 
@@ -143,6 +141,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 	case update.Result != nil:
 		l.Infof("PANDA with %s successfully", c.Nickname)
 		c.PandaKeyExchange = nil
+		c.IsPending = false
 
 		// get the exchanged keys and figure out who goes first
 		theirPublic, err := necdh.UnmarshalBinaryPublicKey(update.Result)
@@ -150,10 +149,9 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			err = fmt.Errorf("failed to parse contact public key bytes: %s", err)
 			l.Error(err.Error())
 			c.PandaResult = err.Error()
-			c.IsPending = false
-			c.Identity = theirPublic
 			return false, err
 		}
+		c.Identity = theirPublic
 
 		// get our nike (ecdh) public key for this contact
 		myPublic := necdh.DerivePublicKey(c.MyIdentity)
@@ -178,7 +176,6 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			a.transports[c.ID] = &stream.BufferedStream{Stream: st}
 		}
 
-		c.IsPending = false
 		l.Info("Stream initialized with " + c.Nickname)
 		// c.SharedSecret = nil // XXX: zero original shared secret after exchange ???
 		shortNotify("PANDA Completed", "Contact "+c.Nickname)
