@@ -110,6 +110,42 @@ type streamCmd struct {
 	ContactID uint64
 }
 
+// Messages starts a worker that returns a channel of Messages
+func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}) chan *Message {
+	// start a reader routine that reads Messages from stream for this contact
+	resp := make(chan *Message)
+	transport.Go(func() {
+		defer close(resp)
+		defer transport.Halt()
+		for {
+			result := transport.CBORDecodeAsync(new(Message))
+			select {
+			case <-transport.HaltCh():
+				return
+			case <-stop:
+				return
+			case r, ok := <-result:
+				if !ok {
+					return
+				}
+				switch r := r.(type) {
+				case error:
+					return // closes resp chan
+				case *Message:
+					// return response unless caller has gone away
+					select {
+					case resp <- r:
+					case <-transport.HaltCh():
+						panic("Message has been lost")
+					}
+				}
+			}
+		}
+	})
+	// return a channel where Messages can be read from
+	return resp
+}
+
 func (a *App) startReadingContacts() {
 	l := a.c.GetLogger("startReadingContacts")
 	for _, id := range a.GetContactIDs() {
@@ -150,13 +186,11 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	if err != nil {
 		return err
 	}
-	transport.Start()
-
 	a.Lock()
 	a.transports[id] = transport
-	m := a.Messages(id, a.HaltCh())
-	a.messageChans[id] = m
+	a.messageChans[id] = a.Messages(transport, session.HaltCh())
 	a.Unlock()
+	transport.Start()
 	return nil
 }
 

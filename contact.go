@@ -85,47 +85,6 @@ type Contact struct {
 	SharedSecret []byte
 }
 
-// Messages starts a worker that returns a channel of Messages
-func (a *App) Messages(contactID uint64, stop <-chan interface{}) chan *Message {
-	// start a reader routine that reads Messages from stream for this contact
-	resp := make(chan *Message)
-
-	a.Lock()
-	defer a.Unlock()
-	transport, ok := a.transports[contactID]
-	if !ok {
-		return resp
-	}
-	transport.Go(func() {
-		defer close(resp)
-		defer transport.Halt()
-		for {
-			result := transport.CBORDecodeAsync(new(Message))
-			select {
-			case <-stop:
-				return
-			case r, ok := <-result:
-				if !ok {
-					return
-				}
-				switch r := r.(type) {
-				case error:
-					return // closes resp chan
-				case *Message:
-					// return response unless caller has gone away
-					select {
-					case resp <- r:
-					case <-transport.HaltCh():
-						panic("Message has been lost")
-					}
-				}
-			}
-		}
-	})
-	// return a channel where Messages can be read from
-	return resp
-}
-
 // A contactal is a fractal and secret that represents a user identity
 type Contactal struct {
 	SharedSecret string
