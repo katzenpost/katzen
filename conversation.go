@@ -314,14 +314,10 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 	title := c.conversation.Title
 	// set focus on composition
 	gtx.Execute(key.FocusCmd{Tag: c.compose})
-	bgl := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{Top: unit.Dp(0), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
-	}
-
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
+		// layout back button, title
 		layout.Rigid(func(gtx C) D {
-			return bgl.Layout(gtx, func(gtx C) D {
+			return bgList.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(button(th, c.back, backIcon).Layout),
 					layout.Rigid(material.Caption(th, title).Layout),
@@ -330,83 +326,13 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			},
 			)
 		}),
+		// layout message list
 		layout.Flexed(2, func(gtx C) D {
-			return bgl.Layout(gtx, func(ctx C) D {
-				if len(messages) == 0 {
+			return bgList.Layout(gtx, func(ctx C) D {
+				if len(c.conversation.Messages) == 0 {
 					return fill{th.Bg}.Layout(ctx)
 				}
-
-				dims := messageList.Layout(gtx, len(messages), func(gtx C, i int) layout.Dimensions {
-					if _, ok := c.messageClicks[messages[i]]; !ok {
-						c.messageClicks[messages[i]] = new(gesture.Click)
-					}
-
-					bgSender := Background{
-						Color:  th.ContrastBg,
-						Inset:  layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(8), Right: unit.Dp(12)},
-						Radius: unit.Dp(10),
-					}
-					bgReceiver := Background{
-						Color:  th.ContrastFg,
-						Inset:  layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(8)},
-						Radius: unit.Dp(10),
-					}
-					inbetween := layout.Inset{Top: unit.Dp(2)}
-					if i > 0 {
-						msg1, err1 := c.a.GetMessage(messages[i-1])
-						msg2, err2 := c.a.GetMessage(messages[i])
-						if err1 == nil && err2 == nil {
-							sent1 := msg1.Sender == 0
-							sent2 := msg2.Sender == 0
-							if sent1 != sent2 {
-								inbetween = layout.Inset{Top: unit.Dp(8)}
-							}
-						}
-					}
-					var dims D
-					isSelected := messages[i] == c.messageClicked
-					msg, err := c.a.GetMessage(messages[i])
-					if err != nil {
-						panic(err)
-					}
-					if msg.Sender == 0 {
-						dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
-							layout.Flexed(1, fill{th.Bg}.Layout),
-							layout.Flexed(5, func(gtx C) D {
-								return inbetween.Layout(gtx, func(gtx C) D {
-									return bgSender.Layout(gtx, func(gtx C) D {
-										msg, err := c.a.GetMessage(messages[i])
-										if err != nil {
-											return layout.Dimensions{}
-										}
-										return layoutMessage(gtx, msg, isSelected, expires)
-									})
-								})
-							}),
-						)
-					} else {
-						dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
-							layout.Flexed(5, func(gtx C) D {
-								return inbetween.Layout(gtx, func(gtx C) D {
-									return bgReceiver.Layout(gtx, func(gtx C) D {
-										msg, err := c.a.GetMessage(messages[i])
-										if err != nil {
-											return layout.Dimensions{}
-										}
-										return layoutMessage(gtx, msg, isSelected, expires)
-									})
-								})
-							}),
-							layout.Flexed(1, fill{th.Bg}.Layout),
-						)
-					}
-					a := clip.Rect(image.Rectangle{Max: dims.Size})
-					t := a.Push(gtx.Ops)
-					c.messageClicks[messages[i]].Add(gtx.Ops)
-					t.Pop()
-					return dims
-
-				})
+				dims := messageList.Layout(gtx, len(c.conversation.Messages), c.layoutConversation)
 				if c.messageClicked != 0 {
 					a := clip.Rect(image.Rectangle{Max: dims.Size})
 					t := a.Push(gtx.Ops)
@@ -417,10 +343,6 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			})
 		}),
 		layout.Rigid(func(gtx C) D {
-			bg := Background{
-				Color: th.ContrastBg,
-				Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(12), Right: unit.Dp(12)},
-			}
 			// return the menu laid out for message actions
 			if c.messageClicked != 0 {
 				return bg.Layout(gtx, func(gtx C) D {
@@ -431,17 +353,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 					)
 				})
 			}
-			bgSender := Background{
-				Color:  th.ContrastBg,
-				Inset:  layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(8), Left: unit.Dp(12), Right: unit.Dp(12)},
-				Radius: unit.Dp(10),
-			}
-			bgl := Background{
-				Color: th.Bg,
-				Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
-			}
-
-			return bgl.Layout(gtx, func(gtx C) D {
+			return bgList.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 					layout.Flexed(1, fill{th.Bg}.Layout),
 					layout.Flexed(5, func(gtx C) D {
@@ -461,6 +373,68 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			})
 		}),
 	)
+}
+
+func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
+	messages := c.conversation.Messages
+	expires := c.conversation.MessageExpiration
+	if _, ok := c.messageClicks[messages[i]]; !ok {
+		c.messageClicks[messages[i]] = new(gesture.Click)
+	}
+
+	if i > 0 {
+		msg1, err1 := c.a.GetMessage(messages[i-1])
+		msg2, err2 := c.a.GetMessage(messages[i])
+		if err1 == nil && err2 == nil {
+			sent1 := msg1.Sender == 0
+			sent2 := msg2.Sender == 0
+			if sent1 != sent2 {
+				inbetween = layout.Inset{Top: unit.Dp(8)}
+			}
+		}
+	}
+	var dims D
+	isSelected := messages[i] == c.messageClicked
+	msg, err := c.a.GetMessage(messages[i])
+	if err != nil {
+		panic(err)
+	}
+	if msg.Sender == 0 {
+		dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
+			layout.Flexed(1, fill{th.Bg}.Layout),
+			layout.Flexed(5, func(gtx C) D {
+				return inbetween.Layout(gtx, func(gtx C) D {
+					return bgSender.Layout(gtx, func(gtx C) D {
+						msg, err := c.a.GetMessage(messages[i])
+						if err != nil {
+							return layout.Dimensions{}
+						}
+						return layoutMessage(gtx, msg, isSelected, expires)
+					})
+				})
+			}),
+		)
+	} else {
+		dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
+			layout.Flexed(5, func(gtx C) D {
+				return inbetween.Layout(gtx, func(gtx C) D {
+					return bgReceiver.Layout(gtx, func(gtx C) D {
+						msg, err := c.a.GetMessage(messages[i])
+						if err != nil {
+							return layout.Dimensions{}
+						}
+						return layoutMessage(gtx, msg, isSelected, expires)
+					})
+				})
+			}),
+			layout.Flexed(1, fill{th.Bg}.Layout),
+		)
+	}
+	a := clip.Rect(image.Rectangle{Max: dims.Size})
+	t := a.Push(gtx.Ops)
+	c.messageClicks[messages[i]].Add(gtx.Ops)
+	t.Pop()
+	return dims
 }
 
 func newConversationPage(a *App, conversationId uint64) *conversationPage {
