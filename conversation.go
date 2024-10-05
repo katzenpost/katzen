@@ -309,11 +309,10 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 }
 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
-	c.l.Lock()
-	messages := c.conversation.Messages
+	c.Lock() // protect modification of c.conversation throughout Layout
+	defer c.Unlock()
 	expires := c.conversation.MessageExpiration
 	title := c.conversation.Title
-	c.l.Unlock()
 	// set focus on composition
 	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	bgl := Background{
