@@ -186,6 +186,10 @@ func (a *App) NewConversation(contactID uint64) error {
 // DeliverMessage adds a Message to the Conversation
 func (a *App) DeliverMessage(msg *Message) error {
 	msg.Received = time.Now()
+	err := a.PutMessage(msg)
+	if err != nil {
+		return err
+	}
 	return a.db.Update(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationKey(msg.Conversation))
 		if err != nil {
@@ -453,7 +457,7 @@ func (a *App) GetMessage(msgId uint64) (*Message, error) {
 // PutMessage places Message in db
 func (a *App) PutMessage(msg *Message) error {
 	fmt.Println("PutMessage(", msg.ID, ")")
-	return a.db.View(func(txn *badger.Txn) error {
+	return a.db.Update(func(txn *badger.Txn) error {
 		serialized, err := cbor.Marshal(msg)
 		if err != nil {
 			return err

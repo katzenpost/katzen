@@ -196,7 +196,7 @@ func (a *App) streamWorker(s *client.Session) {
 			// XXX: figure out how to manipulate transport inside
 			// of a badger transaction
 			// ideally we'd save the state of transport as well as
-			bq := NewBadgerQueue(a.db, []byte(fmt.Sprintf("contact:%d:queue", id)))
+			bq := NewBadgerQueue(a.db, outboundKey(id))
 			msg, err := bq.Peek()
 			if err == nil {
 				transport, err := a.getTransport(id)
