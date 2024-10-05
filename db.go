@@ -16,6 +16,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/hpqc/nike/schemes"
 	"github.com/katzenpost/hpqc/rand"
+	"github.com/katzenpost/katzenpost/stream"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -82,6 +83,10 @@ func messageKey(id uint64) []byte {
 
 func outboundKey(id uint64) []byte {
 	return []byte(fmt.Sprintf("outbound:%d", id))
+}
+
+func streamKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("stream:%d", id))
 }
 
 // RemoveContact removes a contact from the db
@@ -462,5 +467,36 @@ func (a *App) PutMessage(msg *Message) error {
 			return err
 		}
 		return txn.Set(messageKey(msg.ID), serialized)
+	})
+}
+
+// GetStream returns Stream
+func (a *App) GetStream(streamId uint64) (*stream.BufferedStream, error) {
+	// XXX: Stream doesn't unmarshal nicely
+	st := new(stream.BufferedStream)
+	st.Stream = new(stream.Stream)
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(streamKey(streamId))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, st)
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+// PutStream places a Halted Stream in db
+func (a *App) PutStream(streamID uint64, stream *stream.BufferedStream) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		serialized, err := cbor.Marshal(stream)
+		if err != nil {
+			return err
+		}
+		return txn.Set(streamKey(streamID), serialized)
 	})
 }
