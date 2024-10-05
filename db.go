@@ -401,7 +401,6 @@ func (a *App) GetConversation(id uint64) (*Conversation, error) {
 
 // PutConversation stores Conversation in badger
 func (a *App) PutConversation(conversation *Conversation) error {
-	fmt.Println("PutConversation")
 	return a.db.Update(func(txn *badger.Txn) error {
 		// serialize the conversation
 		serialized, err := cbor.Marshal(conversation)
@@ -457,7 +456,6 @@ func (a *App) GetMessage(msgId uint64) (*Message, error) {
 
 // PutMessage places Message in db
 func (a *App) PutMessage(msg *Message) error {
-	fmt.Println("PutMessage(", msg.ID, ")")
 	return a.db.Update(func(txn *badger.Txn) error {
 		serialized, err := cbor.Marshal(msg)
 		if err != nil {
