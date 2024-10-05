@@ -34,16 +34,17 @@ var (
 )
 
 type HomePage struct {
-	l             *sync.Mutex
-	a             *App
-	addContact    *widget.Clickable
-	connect       *widget.Clickable
-	connectIcon   *connectIcon
-	showSettings  *widget.Clickable
-	convoClicks   map[uint64]*gesture.Click
-	contacts      []*Contact
-	conversations []*Conversation
-	updateCh      chan interface{}
+	l                *sync.Mutex
+	a                *App
+	addContact       *widget.Clickable
+	connect          *widget.Clickable
+	connectIcon      *connectIcon
+	showSettings     *widget.Clickable
+	convoClicks      map[uint64]*gesture.Click
+	contacts         []*Contact
+	conversations    []*Conversation
+	updateContactsCh chan interface{}
+	updateConvCh     chan interface{}
 }
 
 type AddContactClick struct{}
@@ -263,22 +264,32 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 }
 
 func (p *HomePage) Start(stop <-chan struct{}) {
-	p.connectIcon.Start(stop)
+	go p.connectIcon.Start(stop)
 	// receive commands to update the contact list, e.g. from KeyExchangeCompleted events
 	go func() {
 		for {
 			select {
 			case <-stop:
 				return
-			case <-p.updateCh:
-				p.UpdateContacts()
-				p.UpdateConversations()
+			case <-p.updateContactsCh:
+				p.updateContacts()
+			case <-p.updateConvCh:
+				p.updateConversations()
 			}
 		}
 	}()
+	p.UpdateConversations()
+	p.UpdateContacts()
 }
 
 func (h *HomePage) UpdateConversations() {
+	select {
+	case h.updateConvCh <- struct{}{}:
+	default:
+	}
+}
+
+func (h *HomePage) updateConversations() {
 	h.l.Lock()
 	defer h.l.Unlock()
 	if h.a == nil {
@@ -291,6 +302,13 @@ func (h *HomePage) UpdateConversations() {
 }
 
 func (h *HomePage) UpdateContacts() {
+	select {
+	case h.updateContactsCh <- struct{}{}:
+	default:
+	}
+}
+
+func (h *HomePage) updateContacts() {
 	h.l.Lock()
 	defer h.l.Unlock()
 	if h.a == nil {
@@ -304,19 +322,20 @@ func (h *HomePage) UpdateContacts() {
 }
 
 func newHomePage(a *App) *HomePage {
-	updateCh := make(chan interface{}, 1)
-	updateCh <- struct{}{} // prod page worker to fetch contacts from catshadow
 	connectButton := &widget.Clickable{}
-	return &HomePage{
-		a:            a,
-		l:            new(sync.Mutex),
-		updateCh:     updateCh,
-		addContact:   &widget.Clickable{},
-		connect:      connectButton,
-		connectIcon:  NewConnectIcon(a, th, connectButton),
-		showSettings: &widget.Clickable{},
-		convoClicks:  make(map[uint64]*gesture.Click),
+	p := &HomePage{
+		a:                a,
+		l:                new(sync.Mutex),
+		updateConvCh:     make(chan interface{}, 1),
+		updateContactsCh: make(chan interface{}, 1),
+		addContact:       &widget.Clickable{},
+		connect:          connectButton,
+		connectIcon:      NewConnectIcon(a, th, connectButton),
+		showSettings:     &widget.Clickable{},
+		convoClicks:      make(map[uint64]*gesture.Click),
 	}
+	p.UpdateConversations()
+	return p
 }
 
 func ConvoStyle(th *material.Theme, txt string) material.LabelStyle {
