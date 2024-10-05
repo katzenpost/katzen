@@ -23,6 +23,7 @@ type pageStack struct {
 
 type Page interface {
 	Start(stop <-chan struct{})
+	Update()
 	Event(gtx layout.Context) interface{}
 	Layout(gtx layout.Context) layout.Dimensions
 }

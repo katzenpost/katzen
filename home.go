@@ -34,17 +34,16 @@ var (
 )
 
 type HomePage struct {
-	l                *sync.Mutex
-	a                *App
-	addContact       *widget.Clickable
-	connect          *widget.Clickable
-	connectIcon      *connectIcon
-	showSettings     *widget.Clickable
-	convoClicks      map[uint64]*gesture.Click
-	contacts         []*Contact
-	conversations    []*Conversation
-	updateContactsCh chan interface{}
-	updateConvCh     chan interface{}
+	l             *sync.Mutex
+	a             *App
+	addContact    *widget.Clickable
+	connect       *widget.Clickable
+	connectIcon   *connectIcon
+	showSettings  *widget.Clickable
+	convoClicks   map[uint64]*gesture.Click
+	contacts      []*Contact
+	conversations []*Conversation
+	updateCh      chan interface{}
 }
 
 type AddContactClick struct{}
@@ -271,20 +270,17 @@ func (p *HomePage) Start(stop <-chan struct{}) {
 			select {
 			case <-stop:
 				return
-			case <-p.updateContactsCh:
-				p.updateContacts()
-			case <-p.updateConvCh:
+			case <-p.updateCh:
 				p.updateConversations()
 			}
 		}
 	}()
-	p.UpdateConversations()
-	p.UpdateContacts()
+	p.Update()
 }
 
-func (h *HomePage) UpdateConversations() {
+func (h *HomePage) Update() {
 	select {
-	case h.updateConvCh <- struct{}{}:
+	case h.updateCh <- struct{}{}:
 	default:
 	}
 }
@@ -301,40 +297,18 @@ func (h *HomePage) updateConversations() {
 	h.conversations = h.a.getSortedConvos()
 }
 
-func (h *HomePage) UpdateContacts() {
-	select {
-	case h.updateContactsCh <- struct{}{}:
-	default:
-	}
-}
-
-func (h *HomePage) updateContacts() {
-	h.l.Lock()
-	defer h.l.Unlock()
-	if h.a == nil {
-		return
-	}
-	if h.a.c == nil {
-		return
-	}
-	h.contacts = h.a.getSortedContacts()
-	h.a.w.Invalidate()
-}
-
 func newHomePage(a *App) *HomePage {
 	connectButton := &widget.Clickable{}
 	p := &HomePage{
-		a:                a,
-		l:                new(sync.Mutex),
-		updateConvCh:     make(chan interface{}, 1),
-		updateContactsCh: make(chan interface{}, 1),
-		addContact:       &widget.Clickable{},
-		connect:          connectButton,
-		connectIcon:      NewConnectIcon(a, th, connectButton),
-		showSettings:     &widget.Clickable{},
-		convoClicks:      make(map[uint64]*gesture.Click),
+		a:            a,
+		l:            new(sync.Mutex),
+		updateCh:     make(chan interface{}, 1),
+		addContact:   &widget.Clickable{},
+		connect:      connectButton,
+		connectIcon:  NewConnectIcon(a, th, connectButton),
+		showSettings: &widget.Clickable{},
+		convoClicks:  make(map[uint64]*gesture.Click),
 	}
-	p.UpdateConversations()
 	return p
 }
 

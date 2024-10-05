@@ -21,6 +21,8 @@ type signInPage struct {
 func (p *signInPage) Start(stop <-chan struct{}) {
 }
 
+func (signInPage) Update() {}
+
 func (p *signInPage) Layout(gtx layout.Context) layout.Dimensions {
 	gtx.Execute(key.FocusCmd{Tag: p.password})
 	bg := Background{

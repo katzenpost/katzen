@@ -24,6 +24,8 @@ func (p *unlockPage) Layout(gtx layout.Context) layout.Dimensions {
 func (p *unlockPage) Start(stop <-chan struct{}) {
 }
 
+func (unlockPage) Update() {}
+
 type unlockError struct {
 	err error
 }

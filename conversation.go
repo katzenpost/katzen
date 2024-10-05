@@ -110,7 +110,7 @@ func (c *conversationPage) Start(stop <-chan struct{}) {
 	}()
 }
 
-func (c *conversationPage) UpdateConversation() {
+func (c *conversationPage) Update() {
 	select {
 	case c.updateCh <- struct{}{}:
 	default:
@@ -164,11 +164,10 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			Conversation: cid,
 			Body:         []byte(c.compose.Text()),
 		}
-		// XXX handle case without session
 		err := c.a.SendMessage(cid, msg)
 		if err == nil {
 			c.compose.SetText("")
-			c.UpdateConversation()
+			c.Update()
 			return MessageSent{conversation: cid}
 		} else {
 			shortNotify("Send failed", err.Error())
@@ -499,6 +498,5 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		updateCh:      make(chan struct{}, 1),
 		//messages:      []*Message, cache messages
 	}
-	p.UpdateConversation()
 	return p
 }

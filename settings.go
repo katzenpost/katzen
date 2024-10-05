@@ -128,6 +128,8 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 func (p *SettingsPage) Start(stop <-chan struct{}) {
 }
 
+func (SettingsPage) Update() {}
+
 func newSettingsPage(a *App) *SettingsPage {
 	p := &SettingsPage{a: a}
 	p.back = &widget.Clickable{}

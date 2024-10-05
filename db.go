@@ -190,6 +190,9 @@ func (a *App) DeliverMessage(msg *Message) error {
 	if err != nil {
 		return err
 	}
+	// update current page
+	a.stack.Current().Update()
+
 	return a.db.Update(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationKey(msg.Conversation))
 		if err != nil {

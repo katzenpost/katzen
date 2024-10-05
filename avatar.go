@@ -266,6 +266,8 @@ func (p *AvatarPicker) Start(stop <-chan struct{}) {
 	}
 }
 
+func (AvatarPicker) Update() {}
+
 func (p *AvatarPicker) makeThumb(fn os.FileInfo, sz int) {
 	f, err := os.Open(filepath.Join(p.path, fn.Name()))
 	if err != nil {

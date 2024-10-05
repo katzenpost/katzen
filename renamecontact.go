@@ -70,6 +70,8 @@ func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 func (p *RenameContactPage) Start(stop <-chan struct{}) {
 }
 
+func (RenameContactPage) Update() {}
+
 func newRenameContactPage(a *App, contactID uint64) *RenameContactPage {
 	p := &RenameContactPage{a: a, contactID: contactID}
 	p.newnickname = &widget.Editor{SingleLine: true, Submit: true}
