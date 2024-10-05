@@ -131,10 +131,6 @@ type MessageSent struct {
 }
 
 func (c *conversationPage) Event(gtx layout.Context) interface{} {
-	c.l.Lock()
-	cid := c.conversation.ID
-	c.l.Unlock()
-
 	// check for editor SubmitEvents
 	if e, ok := c.compose.Update(gtx); ok {
 		switch e.(type) {
@@ -161,14 +157,14 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			ID:           rand.NewMath().Uint64(),
 			Sent:         time.Now(),
 			Type:         Text,
-			Conversation: cid,
+			Conversation: c.id,
 			Body:         []byte(c.compose.Text()),
 		}
-		err := c.a.SendMessage(cid, msg)
+		err := c.a.SendMessage(c.id, msg)
 		if err == nil {
 			c.compose.SetText("")
 			c.Update()
-			return MessageSent{conversation: cid}
+			return MessageSent{conversation: c.id}
 		} else {
 			shortNotify("Send failed", err.Error())
 			return nil
@@ -209,7 +205,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 
 	if e, ok := c.edit.Update(gtx.Source); ok {
 		if e.Kind == gesture.KindClick {
-			return EditConversation{ID: cid}
+			return EditConversation{ID: c.id}
 		}
 	}
 	for msg, click := range c.messageClicks {
