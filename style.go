@@ -19,13 +19,8 @@ var (
 	}
 	inbetween = layout.Inset{Top: unit.Dp(2)}
 
-	bgl = Background{
-		Color: th.Bg,
-		Inset: layout.Inset{Top: unit.Dp(0), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
-	}
-
 	bg = Background{
-		Color: th.ContrastBg,
+		Color: th.Bg,
 		Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(12), Right: unit.Dp(12)},
 	}
 

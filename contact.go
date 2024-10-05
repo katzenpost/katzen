@@ -224,11 +224,6 @@ type AddContactPage struct {
 
 // Layout returns a simple centered layout prompting user for contact nickname and secret
 func (p *AddContactPage) Layout(gtx layout.Context) layout.Dimensions {
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
-
 	// set the default window focus to nickname entry on first layout
 	p.initOnce.Do(func() {
 		if len(p.nickname.Text()) == 0 {

@@ -44,10 +44,6 @@ type AvatarPicker struct {
 
 // Layout displays a file chooser for supported image types
 func (p *AvatarPicker) Layout(gtx layout.Context) layout.Dimensions {
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 			// back to Edit Contact

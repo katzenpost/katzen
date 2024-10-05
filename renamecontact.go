@@ -18,11 +18,6 @@ type RenameContactPage struct {
 
 // Layout returns a simple centered layout prompting user for new contact nickname
 func (p *RenameContactPage) Layout(gtx layout.Context) layout.Dimensions {
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
-
 	gtx.Execute(key.FocusCmd{Tag: p.newnickname})
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,

@@ -215,11 +215,6 @@ type connectingPage struct {
 }
 
 func (p *connectingPage) Layout(gtx layout.Context) layout.Dimensions {
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
-
 	return bg.Layout(gtx, func(gtx C) D { return layout.Center.Layout(gtx, material.Caption(th, "Stand by... connecting").Layout) })
 }
 

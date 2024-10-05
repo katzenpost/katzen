@@ -50,12 +50,6 @@ type AddContactClick struct{}
 type ShowSettingsClick struct{}
 
 func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
-	// xxx do not request this every frame...
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
-
 	if len(p.conversations) == 0 {
 		selectedIdx = 0
 	} else if selectedIdx < 0 {
@@ -74,7 +68,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 		}
 	}
 
-	return bg.Layout(gtx, func(gtx C) D {
+	return bgList.Layout(gtx, func(gtx C) D {
 		// returns a flex consisting of the conversation list and add contact button
 		return layout.Flex{Axis: layout.Vertical, Alignment: layout.End}.Layout(gtx,
 			// topbar: Name, Add Contact, Settings

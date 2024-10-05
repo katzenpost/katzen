@@ -36,11 +36,6 @@ const (
 
 // Layout returns the contact options menu
 func (p *EditContactPage) Layout(gtx layout.Context) layout.Dimensions {
-	bg := Background{
-		Color: th.Bg,
-		Inset: layout.Inset{},
-	}
-
 	return bg.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceEnd, Alignment: layout.Start}.Layout(gtx,
 			// topbar
