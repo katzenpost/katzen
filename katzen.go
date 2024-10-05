@@ -110,7 +110,21 @@ type streamCmd struct {
 	ContactID uint64
 }
 
-func (a *App) startTransport(id uint64) error {
+func (a *App) startReadingContacts() {
+	l := a.c.GetLogger("startReadingContacts")
+	for _, id := range a.GetContactIDs() {
+		c, err := a.GetContact(id)
+		if c.IsPending {
+			continue
+		}
+		err = a.startTransport(a.Session(), id)
+		if err != nil {
+			l.Debug("error starting transport for %s: %s", c.Nickname, err.Error())
+		}
+	}
+}
+
+func (a *App) startTransport(session *client.Session, id uint64) error {
 	_, err := a.GetContact(id)
 	if err != nil {
 		return ErrContactNotFound
@@ -121,8 +135,26 @@ func (a *App) startTransport(id uint64) error {
 		return ErrAlreadyReading
 	}
 	a.Unlock()
-	m := a.Messages(id, a.HaltCh())
+	transport, err := a.GetStream(id)
+	if err != nil {
+		return err
+	}
+	// XXX: embedded Stream does not Unmarshal safely because it needs references to transport
+	// that are created by LoadStream. It should have a way to update the transport, logger, etc
+	// without needing to marshal/unmarshal :-/
+	wtf, err := cbor.Marshal(transport.Stream)
+	if err != nil {
+		return err
+	}
+	transport.Stream, err = stream.LoadStream(session, wtf)
+	if err != nil {
+		return err
+	}
+	transport.Start()
+
 	a.Lock()
+	a.transports[id] = transport
+	m := a.Messages(id, a.HaltCh())
 	a.messageChans[id] = m
 	a.Unlock()
 	return nil
@@ -154,6 +186,7 @@ func (a *App) stopTransport(id uint64) error {
 		return ErrNotReading
 	}
 	transport.Halt()
+	a.PutStream(id, transport)
 	delete(a.transports, id)
 	return nil
 }
@@ -161,8 +194,9 @@ func (a *App) stopTransport(id uint64) error {
 func (a *App) haltAllTransports() {
 	a.Lock()
 	defer a.Unlock()
-	for _, transport := range a.transports {
+	for id, transport := range a.transports {
 		transport.Halt()
+		a.PutStream(id, transport)
 	}
 }
 
@@ -186,7 +220,7 @@ func (a *App) streamWorker(s *client.Session) {
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {
 			case Start:
-				a.startTransport(cmd.ContactID)
+				a.startTransport(s, cmd.ContactID)
 			case Stop:
 				a.stopTransport(cmd.ContactID)
 			default:

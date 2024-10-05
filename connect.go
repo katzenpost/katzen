@@ -135,6 +135,9 @@ func (a *App) doConnectClick() {
 
 		// restart any unfinished key exchanges
 		a.Go(a.restartPandaExchanges)
+
+		// start reading from contacts
+		a.Go(a.startReadingContacts)
 	})
 }
 

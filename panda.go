@@ -156,24 +156,30 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		// get our nike (ecdh) public key for this contact
 		myPublic := necdh.DerivePublicKey(c.MyIdentity)
 		streamSecret := base64.StdEncoding.EncodeToString(necdh.DeriveSecret(c.MyIdentity, theirPublic))
+
+		// XXX: ideally Stream is not actually started here, but both ListenDuplex and DialDuplex call Start..
+		var transport *stream.BufferedStream
 		if bytes.Compare(myPublic.Bytes(), theirPublic.Bytes()) == 1 {
 			// we go first, so we are the "listener"
 			l.Notice("Listening with %x", streamSecret)
-
-			// XXX: need to create and store the transport in badger
 			st, err := stream.ListenDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			// XXX: need to create and store the transport in badger
-			a.transports[c.ID] = &stream.BufferedStream{Stream: st}
+			transport = &stream.BufferedStream{Stream: st}
 		} else {
 			l.Notice("Dialing with %x", streamSecret)
 			st, err := stream.DialDuplex(a.Session(), "", string(streamSecret))
 			if err != nil {
 				panic(err)
 			}
-			a.transports[c.ID] = &stream.BufferedStream{Stream: st}
+			transport = &stream.BufferedStream{Stream: st}
+		}
+		// store stream in db
+		transport.Halt()
+		err = a.PutStream(c.ID, transport)
+		if err != nil {
+			panic(err)
 		}
 
 		l.Info("Stream initialized with " + c.Nickname)
@@ -181,7 +187,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		shortNotify("PANDA Completed", "Contact "+c.Nickname)
 
 		// by default, of course we want to start chatting, right?
-		err = a.startTransport(c.ID)
+		err = a.startTransport(a.Session(), c.ID)
 		if err != nil {
 			return true, err
 		}
