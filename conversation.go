@@ -79,7 +79,9 @@ func (c *Conversation) Destroy() error {
 }
 
 type conversationPage struct {
+	l              *sync.Mutex
 	a              *App
+	id             uint64
 	conversation   *Conversation
 	avatar         *widget.Image
 	edit           *gesture.Click
@@ -92,9 +94,36 @@ type conversationPage struct {
 	msgdetails     *widget.Clickable
 	messageClicked uint64
 	messageClicks  map[uint64]*gesture.Click
+	updateCh       chan struct{}
 }
 
 func (c *conversationPage) Start(stop <-chan struct{}) {
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-c.updateCh:
+				c.updateConversation()
+			}
+		}
+	}()
+}
+
+func (c *conversationPage) UpdateConversation() {
+	select {
+	case c.updateCh <- struct{}{}:
+	default:
+	}
+}
+
+func (c *conversationPage) updateConversation() {
+	updated, err := c.a.GetConversation(c.id)
+	if err == nil {
+		c.l.Lock()
+		c.conversation = updated
+		c.l.Unlock()
+	}
 }
 
 type MessageSent struct {
@@ -102,6 +131,10 @@ type MessageSent struct {
 }
 
 func (c *conversationPage) Event(gtx layout.Context) interface{} {
+	c.l.Lock()
+	cid := c.conversation.ID
+	c.l.Unlock()
+
 	// check for editor SubmitEvents
 	if e, ok := c.compose.Update(gtx); ok {
 		switch e.(type) {
@@ -126,14 +159,15 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			ID:           rand.NewMath().Uint64(),
 			Sent:         time.Now(),
 			Type:         Text,
-			Conversation: c.conversation.ID,
+			Conversation: cid,
 			Body:         []byte(c.compose.Text()),
 		}
 		// XXX handle case without session
-		err := c.a.SendMessage(c.conversation.ID, msg)
+		err := c.a.SendMessage(cid, msg)
 		if err == nil {
 			c.compose.SetText("")
-			return MessageSent{conversation: c.conversation.ID}
+			c.UpdateConversation()
+			return MessageSent{conversation: cid}
 		} else {
 			shortNotify("Send failed", err.Error())
 			return nil
@@ -174,7 +208,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 
 	if e, ok := c.edit.Update(gtx.Source); ok {
 		if e.Kind == gesture.KindClick {
-			return EditConversation{ID: c.conversation.ID}
+			return EditConversation{ID: cid}
 		}
 	}
 	for msg, click := range c.messageClicks {
@@ -278,8 +312,11 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 }
 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
+	c.l.Lock()
 	messages := c.conversation.Messages
 	expires := c.conversation.MessageExpiration
+	title := c.conversation.Title
+	c.l.Unlock()
 	// set focus on composition
 	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	bgl := Background{
@@ -292,7 +329,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			return bgl.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(button(th, c.back, backIcon).Layout),
-					layout.Rigid(material.Caption(th, c.conversation.Title).Layout),
+					layout.Rigid(material.Caption(th, title).Layout),
 					layout.Flexed(1, fill{th.Bg}.Layout),
 				)
 			},
@@ -444,7 +481,10 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		a.PutConversation(conv)
 	}
 
-	p := &conversationPage{a: a, conversation: conv,
+	p := &conversationPage{a: a,
+		l:             new(sync.Mutex),
+		id:            conversationId,
+		conversation:  conv,
 		compose:       ed,
 		messageClicks: make(map[uint64]*gesture.Click),
 		back:          &widget.Clickable{},
@@ -454,6 +494,9 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		cancel:        new(gesture.Click),
 		send:          &widget.Clickable{},
 		edit:          new(gesture.Click),
+		updateCh:      make(chan struct{}, 1),
+		//messages:      []*Message, cache messages
 	}
+	p.UpdateConversation()
 	return p
 }
