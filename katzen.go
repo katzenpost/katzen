@@ -225,12 +225,17 @@ func (a *App) stopTransport(id uint64) error {
 	return nil
 }
 
-func (a *App) haltAllTransports() {
+func (a *App) saveAllTransports() {
 	a.Lock()
 	defer a.Unlock()
 	for id, transport := range a.transports {
-		transport.Halt()
-		a.PutStream(id, transport)
+               // XXX: deadlocks
+		transport.Wait() // wait until halted
+		err := a.PutStream(id, transport)
+		if err != nil {
+			panic(err)
+		}
+
 	}
 }
 
@@ -249,7 +254,7 @@ func (a *App) streamWorker(s *client.Session) {
 	for {
 		select {
 		case <-s.HaltCh():
-			a.haltAllTransports()
+			a.saveAllTransports()
 			return
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {

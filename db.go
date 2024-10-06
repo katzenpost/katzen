@@ -197,6 +197,7 @@ func (a *App) DeliverMessage(msg *Message) error {
 	}
 	// update current page
 	a.stack.Current().Update()
+	a.w.Invalidate()
 
 	return a.db.Update(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationKey(msg.Conversation))
