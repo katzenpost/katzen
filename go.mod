@@ -12,7 +12,7 @@ require (
 	github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/katzenpost/hpqc v0.0.45
-	github.com/katzenpost/katzenpost v0.0.37
+	github.com/katzenpost/katzenpost v0.0.41
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.7.0
