@@ -116,7 +116,6 @@ func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}
 	resp := make(chan *Message)
 	transport.Go(func() {
 		defer close(resp)
-		defer transport.Halt()
 		for {
 			result := transport.CBORDecodeAsync(new(Message))
 			select {
@@ -194,6 +193,16 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	return nil
 }
 
+func (a *App) getTransports() []uint64 {
+	a.Lock()
+	transports := make([]uint64, 0, len(a.transports))
+	for id, _ := range a.transports {
+		transports = append(transports, id)
+	}
+	a.Unlock()
+	return transports
+}
+
 func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
 	_, err := a.GetContact(id)
 	if err != nil {
@@ -222,20 +231,13 @@ func (a *App) stopTransport(id uint64) error {
 	transport.Halt()
 	a.PutStream(id, transport)
 	delete(a.transports, id)
+	delete(a.messageChans, id)
 	return nil
 }
 
-func (a *App) saveAllTransports() {
-	a.Lock()
-	defer a.Unlock()
-	for id, transport := range a.transports {
-               // XXX: deadlocks
-		transport.Wait() // wait until halted
-		err := a.PutStream(id, transport)
-		if err != nil {
-			panic(err)
-		}
-
+func (a *App) stopAllTransports() {
+	for _, id := range a.getTransports() {
+		a.stopTransport(id)
 	}
 }
 
@@ -254,7 +256,7 @@ func (a *App) streamWorker(s *client.Session) {
 	for {
 		select {
 		case <-s.HaltCh():
-			a.saveAllTransports()
+			a.stopAllTransports()
 			return
 		case cmd := <-a.cmdCh:
 			switch cmd.Command {
@@ -269,15 +271,14 @@ func (a *App) streamWorker(s *client.Session) {
 		}
 
 		// send and receive messages from each contact
-		todelete := []uint64{}
+		tostop := []uint64{}
 		for id, msgCh := range a.messageChans {
 			// send messages if contact has pending
 			// XXX: refactor
 			// XXX: get outbound queue associated with contact
 			_, err := a.GetContact(id)
 			if err != nil {
-				a.stopTransport(id)
-				todelete = append(todelete, id)
+				tostop = append(tostop, id)
 				continue
 			}
 
@@ -298,13 +299,17 @@ func (a *App) streamWorker(s *client.Session) {
 						transport.Stream.Sync()
 						_, err = bq.Pop()
 					}
+				} else {
+					tostop = append(tostop, id)
+					continue
 				}
 			}
 
 			select {
 			case m, ok := <-msgCh:
 				if !ok {
-					a.stopTransport(id)
+					tostop = append(tostop, id)
+					continue
 				}
 				// apply our ID to the Message
 				m.Sender = id
@@ -313,8 +318,9 @@ func (a *App) streamWorker(s *client.Session) {
 				// skip
 			}
 		}
-		for _, id := range todelete {
-			delete(a.messageChans, id)
+		// stop any transports that returned errors
+		for _, id := range tostop {
+			a.stopTransport(id)
 		}
 	}
 }
