@@ -188,7 +188,7 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	}
 	a.Lock()
 	a.transports[id] = transport
-	a.messageChans[id] = a.Messages(transport, session.HaltCh())
+	a.messageChans[id] = a.Messages(transport, transport.HaltCh())
 	a.Unlock()
 	transport.Start()
 	return nil
