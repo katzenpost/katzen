@@ -78,6 +78,7 @@ func (a *App) doConnectClick() {
 	case StateOffline:
 	case StateConnecting:
 		a.cancelConn()
+		a.state = StateOffline
 		a.Unlock()
 		return
 	case StateOnline:
