@@ -38,10 +38,10 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		result <- err
 		return
 	}
-	a.db = db
+	a.db = &BadgerStore{db: db}
 
 	// Create or update any db entries as necessary
-	err = a.InitDB()
+	err = a.db.InitDB()
 	if err != nil {
 		result <- err
 		return
@@ -62,38 +62,8 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 			return
 		}
 	} else {
-		// detect running Tor and use configuration
-		var useTor bool
-		err := a.db.View(func(txn *badger.Txn) error {
-			i, err := txn.Get([]byte("UseTor"))
-			if err != nil {
-				return err
-			}
-			return i.Value(func(val []byte) error {
-				if val[0] == 0xFF {
-					useTor = true
-				}
-				return nil
-			})
-		})
-		// default to using Tor if Tor is available
-		if err == badger.ErrKeyNotFound {
-			if hasDefaultTor() {
-				useTor = true
-				err = a.db.Update(func(txn *badger.Txn) error {
-					return txn.Set([]byte("UseTor"), []byte{0xFF})
-				})
-			} else {
-				err = a.db.Update(func(txn *badger.Txn) error {
-					return txn.Set([]byte("UseTor"), []byte{0x0})
-				})
-			}
-			if err != nil {
-				result <- err
-				return
-			}
-		}
-		if useTor {
+		// Use Tor if configured, defaults to True if Tor was available at first run
+		if a.db.UseTor() {
 			cfg, err = config.Load(cfgWithTor)
 			if err != nil {
 				result <- err

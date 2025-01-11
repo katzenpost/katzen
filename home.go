@@ -98,7 +98,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 					var lastMsg *Message
 					if len(p.conversations[i].Messages) > 0 {
 						lastMsgId = p.conversations[i].Messages[len(p.conversations[i].Messages)-1]
-						lastMsg, err = p.a.GetMessage(lastMsgId)
+						lastMsg, err = p.a.db.GetMessage(lastMsgId)
 						if err != nil {
 							panic(err)
 						}

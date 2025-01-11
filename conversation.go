@@ -118,7 +118,7 @@ func (c *conversationPage) Update() {
 }
 
 func (c *conversationPage) updateConversation() {
-	updated, err := c.a.GetConversation(c.id)
+	updated, err := c.a.db.GetConversation(c.id)
 	if err == nil {
 		c.l.Lock()
 		c.conversation = updated
@@ -160,7 +160,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			Conversation: c.id,
 			Body:         []byte(c.compose.Text()),
 		}
-		err := c.a.SendMessage(c.id, msg)
+		err := c.a.db.SendMessage(c.id, msg)
 		if err == nil {
 			c.compose.SetText("")
 			c.Update()
@@ -177,7 +177,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		c.messageClicked = 0 // not implemented
 	}
 	if c.msgcopy.Clicked(gtx) {
-		msg, err := c.a.GetMessage(c.messageClicked)
+		msg, err := c.a.db.GetMessage(c.messageClicked)
 		if err == nil {
 			gtx.Source.Execute(clipboard.WriteCmd{
 				Data: io.NopCloser(strings.NewReader(string(msg.Body))),
@@ -384,8 +384,8 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 
 	// make message bubbles separated when different people speak
 	if i > 0 {
-		msg1, err1 := c.a.GetMessage(messages[i-1])
-		msg2, err2 := c.a.GetMessage(messages[i])
+		msg1, err1 := c.a.db.GetMessage(messages[i-1])
+		msg2, err2 := c.a.db.GetMessage(messages[i])
 		if err1 == nil && err2 == nil {
 			sent1 := msg1.Sender == 0
 			sent2 := msg2.Sender == 0
@@ -396,7 +396,7 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 	}
 	var dims D
 	isSelected := messages[i] == c.messageClicked
-	msg, err := c.a.GetMessage(messages[i])
+	msg, err := c.a.db.GetMessage(messages[i])
 	if err != nil {
 		panic(err)
 	}
@@ -438,11 +438,11 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		ed.Submit = false
 	}
 
-	conv, err := a.GetConversation(conversationId)
+	conv, err := a.db.GetConversation(conversationId)
 	if err == badger.ErrKeyNotFound {
 		conv = new(Conversation)
 		conv.ID = conversationId
-		a.PutConversation(conv)
+		a.db.PutConversation(conv)
 	}
 
 	p := &conversationPage{a: a,

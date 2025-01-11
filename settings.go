@@ -8,7 +8,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/notify"
-	"github.com/dgraph-io/badger/v4"
 )
 
 // SettingsPage is for user settings
@@ -83,34 +82,12 @@ func (p *SettingsPage) Event(gtx layout.Context) interface{} {
 	if p.switchUseTor.Update(gtx) {
 		if p.switchUseTor.Value && !hasDefaultTor() {
 			p.switchUseTor.Value = false
-
-			// set UseTor to false
-			p.a.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte("UseTor"), []byte{0x0})
-			})
 			warnNoTor()
-			return nil
 		}
-		if p.switchUseTor.Value {
-			p.a.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte("UseTor"), []byte{0xFF})
-			})
-		} else {
-			p.a.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte("UseTor"), []byte{0x00})
-			})
-		}
+		p.a.db.SetUseTor(p.switchUseTor.Value)
 	}
 	if p.switchAutoConnect.Update(gtx) {
-		if p.switchAutoConnect.Value {
-			p.a.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte("AutoConnect"), []byte{0xFF})
-			})
-		} else {
-			p.a.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte("AutoConnect"), []byte{0x00})
-			})
-		}
+		p.a.db.SetAutoConnect(p.switchAutoConnect.Value)
 	}
 	if p.submit.Clicked(gtx) {
 		go func() {
@@ -135,42 +112,16 @@ func newSettingsPage(a *App) *SettingsPage {
 	p.back = &widget.Clickable{}
 	p.submit = &widget.Clickable{}
 
-	// read database for Tor setting (set at startup
-	err := a.db.View(func(txn *badger.Txn) error {
-		i, err := txn.Get([]byte("UseTor"))
-		if err != nil {
-			return err
-		}
-		return i.Value(func(val []byte) error {
-			if val[0] == 0xFF {
-				p.switchUseTor = &widget.Bool{Value: true}
-			} else {
-				p.switchUseTor = &widget.Bool{Value: false}
-			}
-			return nil
-		})
-	})
-	if err != nil {
-		// but not if you specified your own cfg file
+	if a.db.UseTor() {
+		p.switchUseTor = &widget.Bool{Value: true}
+	} else {
 		p.switchUseTor = &widget.Bool{Value: false}
 	}
 
 	// read database for autoConnect setting
-	err = a.db.View(func(txn *badger.Txn) error {
-		i, err := txn.Get([]byte("AutoConnect"))
-		if err != nil {
-			return err
-		}
-		return i.Value(func(val []byte) error {
-			if val[0] == 0xFF {
-				p.switchAutoConnect = &widget.Bool{Value: true}
-			} else {
-				p.switchAutoConnect = &widget.Bool{Value: false}
-			}
-			return nil
-		})
-	})
-	if err != nil {
+	if a.db.AutoConnect() {
+		p.switchAutoConnect = &widget.Bool{Value: true}
+	} else {
 		p.switchAutoConnect = &widget.Bool{Value: false}
 	}
 	return p

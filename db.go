@@ -26,7 +26,11 @@ var (
 	necdh                        = schemes.ByName("x25519")
 )
 
-func (a *App) InitDB() error {
+type BadgerStore struct {
+	db *badger.DB
+}
+
+func (a *BadgerStore) InitDB() error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		_, err := txn.Get(versionKey())
 		if err == nil {
@@ -47,6 +51,18 @@ func (a *App) InitDB() error {
 			err = txn.Set(versionKey(), DBVersion)
 			if err != nil {
 				return err
+			}
+
+			if hasDefaultTor() {
+				err = txn.Set([]byte("UseTor"), []byte{0xFF})
+				if err != nil {
+					return err
+				}
+			} else {
+				err = txn.Set([]byte("UseTor"), []byte{0x00})
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -90,7 +106,7 @@ func streamKey(id uint64) []byte {
 }
 
 // RemoveContact removes a contact from the db
-func (a *App) RemoveContact(contactID uint64) error {
+func (a *BadgerStore) RemoveContact(contactID uint64) error {
 	panic("NotImplemented")
 	return nil
 }
@@ -101,7 +117,7 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 	emptyPk := necdh.NewEmptyPublicKey()
 	contactID := rand.NewMath().Uint64()
 	contact := &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
-	err := a.PutContact(contact)
+	err := a.db.PutContact(contact)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +136,7 @@ func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
 }
 
 // NewConversation creates a Conversation with a Contact
-func (a *App) NewConversation(contactID uint64) error {
+func (a *BadgerStore) NewConversation(contactID uint64) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		// Create a Contact to deserialize into
 		contact := new(Contact)
@@ -189,16 +205,12 @@ func (a *App) NewConversation(contactID uint64) error {
 }
 
 // DeliverMessage adds a Message to the Conversation
-func (a *App) DeliverMessage(msg *Message) error {
+func (a *BadgerStore) DeliverMessage(msg *Message) error {
 	msg.Received = time.Now()
 	err := a.PutMessage(msg)
 	if err != nil {
 		return err
 	}
-	// update current page
-	a.stack.Current().Update()
-	a.w.Invalidate()
-
 	return a.db.Update(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationKey(msg.Conversation))
 		if err != nil {
@@ -225,7 +237,7 @@ func (a *App) DeliverMessage(msg *Message) error {
 }
 
 // SendMessage sends a Message to each Contact in a Conversation
-func (a *App) SendMessage(conversation uint64, msg *Message) error {
+func (a *BadgerStore) SendMessage(conversation uint64, msg *Message) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		// store Message
 		serialized, err := cbor.Marshal(msg)
@@ -276,7 +288,7 @@ func (a *App) SendMessage(conversation uint64, msg *Message) error {
 }
 
 // GetContactIDs returns a slice of all Contact IDs
-func (a *App) GetContactIDs() []uint64 {
+func (a *BadgerStore) GetContactIDs() []uint64 {
 	contacts := make(map[uint64]struct{})
 	a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(contactsKey())
@@ -295,7 +307,7 @@ func (a *App) GetContactIDs() []uint64 {
 }
 
 // GetContact retrieves a Contact from badger
-func (a *App) GetContact(contactID uint64) (*Contact, error) {
+func (a *BadgerStore) GetContact(contactID uint64) (*Contact, error) {
 	contact := new(Contact)
 	// initialize concrete types to deserialize into
 	contact.MyIdentity = necdh.NewEmptyPrivateKey()
@@ -316,7 +328,7 @@ func (a *App) GetContact(contactID uint64) (*Contact, error) {
 }
 
 // GetAvatar retrieves the Contact Avatar image.Image
-func (a *App) GetAvatar(contactID uint64, sz image.Point) (image.Image, error) {
+func (a *BadgerStore) GetAvatar(contactID uint64, sz image.Point) (image.Image, error) {
 	var img image.Image
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(avatarKey(contactID))
@@ -340,7 +352,7 @@ func (a *App) GetAvatar(contactID uint64, sz image.Point) (image.Image, error) {
 }
 
 // PutContact stores a Contact in badger
-func (a *App) PutContact(contact *Contact) error {
+func (a *BadgerStore) PutContact(contact *Contact) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		b, err := cbor.Marshal(contact)
 		if err != nil {
@@ -369,7 +381,7 @@ func (a *App) PutContact(contact *Contact) error {
 }
 
 // GetConversationIDs returns a slice of all Conversation IDs
-func (a *App) GetConversationIDs() []uint64 {
+func (a *BadgerStore) GetConversationIDs() []uint64 {
 	var conversationIDs map[uint64]struct{}
 	a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationsKey())
@@ -388,7 +400,7 @@ func (a *App) GetConversationIDs() []uint64 {
 }
 
 // GetConversation retrieves Conversation from badger
-func (a *App) GetConversation(id uint64) (*Conversation, error) {
+func (a *BadgerStore) GetConversation(id uint64) (*Conversation, error) {
 	conv := new(Conversation)
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(conversationKey(id))
@@ -406,7 +418,7 @@ func (a *App) GetConversation(id uint64) (*Conversation, error) {
 }
 
 // PutConversation stores Conversation in badger
-func (a *App) PutConversation(conversation *Conversation) error {
+func (a *BadgerStore) PutConversation(conversation *Conversation) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		// serialize the conversation
 		serialized, err := cbor.Marshal(conversation)
@@ -443,7 +455,7 @@ func (a *App) PutConversation(conversation *Conversation) error {
 }
 
 // GetMessage returns Message
-func (a *App) GetMessage(msgId uint64) (*Message, error) {
+func (a *BadgerStore) GetMessage(msgId uint64) (*Message, error) {
 	msg := new(Message)
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(messageKey(msgId))
@@ -461,7 +473,7 @@ func (a *App) GetMessage(msgId uint64) (*Message, error) {
 }
 
 // PutMessage places Message in db
-func (a *App) PutMessage(msg *Message) error {
+func (a *BadgerStore) PutMessage(msg *Message) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		serialized, err := cbor.Marshal(msg)
 		if err != nil {
@@ -472,7 +484,7 @@ func (a *App) PutMessage(msg *Message) error {
 }
 
 // GetStream returns Stream
-func (a *App) GetStream(streamId uint64) (*stream.BufferedStream, error) {
+func (a *BadgerStore) GetStream(streamId uint64) (*stream.BufferedStream, error) {
 	// XXX: Stream doesn't unmarshal nicely
 	st := new(stream.BufferedStream)
 	st.Stream = new(stream.Stream)
@@ -492,7 +504,7 @@ func (a *App) GetStream(streamId uint64) (*stream.BufferedStream, error) {
 }
 
 // PutStream places a Halted Stream in db
-func (a *App) PutStream(streamID uint64, stream *stream.BufferedStream) error {
+func (a *BadgerStore) PutStream(streamID uint64, stream *stream.BufferedStream) error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		serialized, err := cbor.Marshal(stream)
 		if err != nil {
@@ -500,4 +512,76 @@ func (a *App) PutStream(streamID uint64, stream *stream.BufferedStream) error {
 		}
 		return txn.Set(streamKey(streamID), serialized)
 	})
+}
+
+func (a *BadgerStore) SetAutoConnect(status bool) {
+	var val []byte
+	if status {
+		val = []byte{0xFF}
+	} else {
+		val = []byte{0x00}
+	}
+	err := a.db.Update(func(txn *badger.Txn) error {
+		return txn.Set([]byte("AutoConnect"), val)
+	})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (a *BadgerStore) AutoConnect() bool {
+	doAutoConnect := false
+	a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get([]byte("AutoConnect"))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			if val[0] == 0xFF {
+				doAutoConnect = true
+			}
+			return nil
+		})
+	})
+	return doAutoConnect
+}
+
+func (a *BadgerStore) SetUseTor(status bool) {
+	var val []byte
+	if status {
+		val = []byte{0xFF}
+	} else {
+		val = []byte{0x00}
+	}
+	a.db.Update(func(txn *badger.Txn) error {
+		return txn.Set([]byte("UseTor"), val)
+	})
+}
+
+func (a *BadgerStore) UseTor() bool {
+	useTor := false
+	// read database for Tor setting (set at startup
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get([]byte("UseTor"))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			if val[0] == 0xFF {
+				useTor = true
+			} else {
+				useTor = false
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		// but not if you specified your own cfg file
+		useTor = false
+	}
+	return useTor
+}
+
+func (a *BadgerStore) Close() {
+	a.db.Close()
 }

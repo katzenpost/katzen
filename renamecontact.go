@@ -48,11 +48,11 @@ func (p *RenameContactPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if p.submit.Clicked(gtx) {
-		contact, err := p.a.GetContact(p.contactID)
+		contact, err := p.a.db.GetContact(p.contactID)
 		if err == nil {
 			// XXX: SetNickname() Nickname() methods ?
 			contact.Nickname = p.newnickname.Text()
-			err = p.a.PutContact(contact)
+			err = p.a.db.PutContact(contact)
 			if err == nil {
 				return EditContactComplete{}
 			}

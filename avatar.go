@@ -359,7 +359,7 @@ func (a *App) layoutAvatar(gtx C, id uint64) D {
 			if w, ok := avatars[id]; ok {
 				return w(gtx)
 			} else {
-				i, err := a.GetAvatar(id, sz)
+				i, err := a.db.GetAvatar(id, sz)
 				if err != nil {
 					return layout.Dimensions{}
 				}

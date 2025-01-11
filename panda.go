@@ -20,8 +20,8 @@ var (
 
 func (a *App) restartPandaExchanges() {
 	l := a.c.GetLogger("restartPandaExchanges")
-	for _, id := range a.GetContactIDs() {
-		c, err := a.GetContact(id)
+	for _, id := range a.db.GetContactIDs() {
+		c, err := a.db.GetContact(id)
 		if !c.IsPending {
 			continue
 		}
@@ -38,7 +38,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 		return ErrNotOnline
 	}
 
-	c, err := a.GetContact(id)
+	c, err := a.db.GetContact(id)
 	if err != nil {
 		return ErrContactNotFound
 	}
@@ -123,11 +123,11 @@ func (a *App) pandaWorker(pandaChan chan panda.PandaUpdate) {
 }
 
 func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
-	c, err := a.GetContact(update.ID)
+	c, err := a.db.GetContact(update.ID)
 	if err != nil {
 		return false, ErrContactNotFound
 	}
-	defer a.PutContact(c) // save updated contact
+	defer a.db.PutContact(c) // save updated contact
 
 	l := a.c.GetLogger("pandaUpdate " + c.Nickname)
 
@@ -177,7 +177,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		}
 		// store stream in db
 		transport.Halt()
-		err = a.PutStream(c.ID, transport)
+		err = a.db.PutStream(c.ID, transport)
 		if err != nil {
 			panic(err)
 		}

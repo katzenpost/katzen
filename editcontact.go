@@ -114,7 +114,7 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 	}
 	if p.remove.Clicked(gtx) {
 		// TODO: confirmation dialog
-		_, err := p.a.GetContact(p.id)
+		_, err := p.a.db.GetContact(p.id)
 		if err != nil {
 			p.a.Lock()
 			defer p.a.Unlock()
@@ -125,7 +125,7 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 				transport.Halt()
 				delete(p.a.transports, p.id)
 			}
-			err = p.a.RemoveContact(p.id)
+			err = p.a.db.RemoveContact(p.id)
 			if err == nil {
 				delete(avatars, p.id)
 				return EditContactComplete{id: p.id}

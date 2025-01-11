@@ -49,8 +49,8 @@ func (s sortedConvos) Len() int {
 }
 
 func (a *App) getSortedContacts() (contacts sortedContacts) {
-	for _, id := range a.GetContactIDs() {
-		contact, err := a.GetContact(id)
+	for _, id := range a.db.GetContactIDs() {
+		contact, err := a.db.GetContact(id)
 		if err != nil {
 			contacts = append(contacts, contact)
 		}
@@ -60,8 +60,8 @@ func (a *App) getSortedContacts() (contacts sortedContacts) {
 }
 
 func (a *App) getSortedConvos() (convos sortedConvos) {
-	for _, id := range a.GetConversationIDs() {
-		convo, err := a.GetConversation(id)
+	for _, id := range a.db.GetConversationIDs() {
+		convo, err := a.db.GetConversation(id)
 		if err == nil {
 			convos = append(convos, convo)
 		}

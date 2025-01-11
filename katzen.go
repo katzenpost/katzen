@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/dgraph-io/badger/v4"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
@@ -80,7 +79,7 @@ type App struct {
 	ops *op.Ops
 	c   *client.Client
 
-	db *badger.DB
+	db *BadgerStore
 
 	cancelConn func()
 	state      ConnectedState
@@ -147,8 +146,8 @@ func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}
 
 func (a *App) startReadingContacts() {
 	l := a.c.GetLogger("startReadingContacts")
-	for _, id := range a.GetContactIDs() {
-		c, err := a.GetContact(id)
+	for _, id := range a.db.GetContactIDs() {
+		c, err := a.db.GetContact(id)
 		if c.IsPending {
 			continue
 		}
@@ -160,7 +159,7 @@ func (a *App) startReadingContacts() {
 }
 
 func (a *App) startTransport(session *client.Session, id uint64) error {
-	_, err := a.GetContact(id)
+	_, err := a.db.GetContact(id)
 	if err != nil {
 		return ErrContactNotFound
 	}
@@ -170,7 +169,7 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 		return ErrAlreadyReading
 	}
 	a.Unlock()
-	transport, err := a.GetStream(id)
+	transport, err := a.db.GetStream(id)
 	if err != nil {
 		return err
 	}
@@ -204,7 +203,7 @@ func (a *App) getTransports() []uint64 {
 }
 
 func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
-	_, err := a.GetContact(id)
+	_, err := a.db.GetContact(id)
 	if err != nil {
 		return nil, ErrContactNotFound
 	}
@@ -218,7 +217,7 @@ func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
 }
 
 func (a *App) stopTransport(id uint64) error {
-	_, err := a.GetContact(id)
+	_, err := a.db.GetContact(id)
 	if err != nil {
 		return ErrContactNotFound
 	}
@@ -229,7 +228,7 @@ func (a *App) stopTransport(id uint64) error {
 		return ErrNotReading
 	}
 	transport.Halt()
-	a.PutStream(id, transport)
+	a.db.PutStream(id, transport)
 	delete(a.transports, id)
 	delete(a.messageChans, id)
 	return nil
@@ -276,7 +275,7 @@ func (a *App) streamWorker(s *client.Session) {
 			// send messages if contact has pending
 			// XXX: refactor
 			// XXX: get outbound queue associated with contact
-			_, err := a.GetContact(id)
+			_, err := a.db.GetContact(id)
 			if err != nil {
 				tostop = append(tostop, id)
 				continue
@@ -285,7 +284,7 @@ func (a *App) streamWorker(s *client.Session) {
 			// XXX: figure out how to manipulate transport inside
 			// of a badger transaction
 			// ideally we'd save the state of transport as well as
-			bq := NewBadgerQueue(a.db, outboundKey(id))
+			bq := NewBadgerQueue(a.db.db, outboundKey(id))
 			msg, err := bq.Peek()
 			if err == nil {
 				transport, err := a.getTransport(id)
@@ -313,7 +312,7 @@ func (a *App) streamWorker(s *client.Session) {
 				}
 				// apply our ID to the Message
 				m.Sender = id
-				a.DeliverMessage(m)
+				a.db.DeliverMessage(m)
 			default:
 				// skip
 			}
