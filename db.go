@@ -363,6 +363,9 @@ func (a *BadgerStore) PutContact(contact *Contact) error {
 			return err
 		}
 		i, err := txn.Get(contactsKey())
+		if err != nil {
+			return err
+		}
 		return i.Value(func(val []byte) error {
 
 			contactsIdx := make(map[uint64]struct{})
