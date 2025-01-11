@@ -346,7 +346,7 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 		}
 
 		avatars[contact.ID] = w
-		err = p.a.db.NewConversation(contact.ID)
+		_, err = p.a.db.NewConversation(contact.ID)
 		if err == nil {
 			// create a new conversation with this contact
 			return AddContactComplete{id: contact.ID}

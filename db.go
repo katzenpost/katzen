@@ -128,8 +128,9 @@ func (a *BadgerStore) NewContact(nickname string, secret []byte) (*Contact, erro
 }
 
 // NewConversation creates a Conversation with a Contact
-func (a *BadgerStore) NewConversation(contactID uint64) error {
-	return a.db.Update(func(txn *badger.Txn) error {
+func (a *BadgerStore) NewConversation(contactID uint64) (*Conversation, error) {
+	conversation := new(Conversation)
+	err := a.db.Update(func(txn *badger.Txn) error {
 		// Create a Contact to deserialize into
 		contact := new(Contact)
 		contact.MyIdentity = necdh.NewEmptyPrivateKey()
@@ -162,8 +163,11 @@ func (a *BadgerStore) NewConversation(contactID uint64) error {
 			return ErrConversationAlreadyExists
 		}
 
-		// Create the conversation and store it in the db
-		conversation := &Conversation{ID: conversationID, Title: contact.Nickname, Contacts: []uint64{contact.ID}}
+		// store conversation in the db
+		conversation.ID = conversationID
+		conversation.Title = contact.Nickname
+		conversation.Contacts = []uint64{contact.ID}
+
 		serialized, err := cbor.Marshal(conversation)
 		if err != nil {
 			return err
@@ -194,6 +198,10 @@ func (a *BadgerStore) NewConversation(contactID uint64) error {
 		}
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
+	return conversation, nil
 }
 
 // DeliverMessage adds a Message to the Conversation
