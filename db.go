@@ -26,10 +26,12 @@ var (
 	necdh                        = schemes.ByName("x25519")
 )
 
+// BadgerStore holds katzen data and wraps a BadgerDB instance
 type BadgerStore struct {
 	db *badger.DB
 }
 
+// InitDB initializes default values of the BadgerStore
 func (a *BadgerStore) InitDB() error {
 	return a.db.Update(func(txn *badger.Txn) error {
 		_, err := txn.Get(versionKey())
