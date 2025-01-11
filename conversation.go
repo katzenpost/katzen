@@ -412,7 +412,7 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 				})
 			}),
 		)
-	// or sent by someone else
+		// or sent by someone else
 	} else {
 		dims = layout.Flex{Axis: layout.Horizontal, Alignment: layout.Baseline, Spacing: layout.SpaceAround}.Layout(gtx,
 			layout.Flexed(5, func(gtx C) D {

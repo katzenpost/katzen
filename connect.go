@@ -170,7 +170,7 @@ func (i *connectIcon) Start(stop <-chan struct{}) {
 			case <-time.After(i.interval):
 				status := i.a.Status()
 				i.Lock()
-				switch  status { // deadlock
+				switch status { // deadlock
 				case StateOffline:
 					i.current = i.disconnected
 				case StateConnecting:

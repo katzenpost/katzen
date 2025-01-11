@@ -244,7 +244,7 @@ type MessageReceivedEvent struct {
 	Conversation, Sender uint64
 }
 
-func (MessageReceivedEvent) ImplementsEvent() { }
+func (MessageReceivedEvent) ImplementsEvent() {}
 
 func (a *App) streamWorker(s *client.Session) {
 	// add active streams to active list
