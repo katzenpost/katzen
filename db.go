@@ -517,6 +517,7 @@ func (a *BadgerStore) PutStream(streamID uint64, stream *stream.BufferedStream) 
 	})
 }
 
+// SetAutoConnect(status) controls whether katzen should connect automatically or not
 func (a *BadgerStore) SetAutoConnect(status bool) {
 	var val []byte
 	if status {
@@ -532,6 +533,7 @@ func (a *BadgerStore) SetAutoConnect(status bool) {
 	}
 }
 
+// AutoConnect returns true if AutoConnect is enabled
 func (a *BadgerStore) AutoConnect() bool {
 	doAutoConnect := false
 	a.db.View(func(txn *badger.Txn) error {
@@ -549,6 +551,7 @@ func (a *BadgerStore) AutoConnect() bool {
 	return doAutoConnect
 }
 
+// SetUseTor(status) controls whether Tor usage is enabled or not
 func (a *BadgerStore) SetUseTor(status bool) {
 	var val []byte
 	if status {
@@ -561,6 +564,7 @@ func (a *BadgerStore) SetUseTor(status bool) {
 	})
 }
 
+// UseTor returns true if Tor usage is enabled
 func (a *BadgerStore) UseTor() bool {
 	useTor := false
 	// read database for Tor setting (set at startup
