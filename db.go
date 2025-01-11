@@ -441,7 +441,7 @@ func (a *BadgerStore) PutConversation(conversation *Conversation) error {
 		}
 		return i.Value(func(val []byte) error {
 			conversationsIdx := make(map[uint64]struct{})
-			err := cbor.Unmarshal(val, conversationsIdx)
+			err := cbor.Unmarshal(val, &conversationsIdx)
 			if err != nil {
 				return err
 			}
