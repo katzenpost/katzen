@@ -114,26 +114,16 @@ func (a *BadgerStore) RemoveContact(contactID uint64) error {
 }
 
 // NewContact creates a new Contact from a shared secret (dialer)
-func (a *App) NewContact(nickname string, secret []byte) (*Contact, error) {
+func (a *BadgerStore) NewContact(nickname string, secret []byte) (*Contact, error) {
 	sK := necdh.GeneratePrivateKey(rand.Reader)
 	emptyPk := necdh.NewEmptyPublicKey()
 	contactID := rand.NewMath().Uint64()
 	contact := &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
-	err := a.db.PutContact(contact)
+	err := a.PutContact(contact)
 	if err != nil {
 		return nil, err
 	}
 
-	// if we are online, start a PANDA exchange immediately
-	// if not, the exchange must be started when the client comes online and tries to send a message.
-	if a.Status() == StateOnline {
-		// start a panda' exchange with contact
-		err := a.doPANDAExchange(contact.ID)
-		if err != nil {
-			panic(err)
-			return nil, err
-		}
-	}
 	return contact, nil
 }
 

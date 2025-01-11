@@ -322,11 +322,21 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			return nil
 		}
 
-		contact, err := p.a.NewContact(p.nickname.Text(), []byte(p.secret.Text()))
+		contact, err := p.a.db.NewContact(p.nickname.Text(), []byte(p.secret.Text()))
 		if err != nil {
 			p.nickname.SetText("")
 			p.secret.SetText("")
 			return nil
+		}
+
+		// if we are online, start a PANDA exchange immediately
+		// if not, the exchange must be started when the client comes online and tries to send a message.
+		if p.a.Status() == StateOnline {
+			// start a panda' exchange with contact
+			err := p.a.doPANDAExchange(contact.ID)
+			if err != nil {
+				shortNotify("DoPANDAExchange", err.Error())
+			}
 		}
 
 		sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
