@@ -313,6 +313,8 @@ func (a *App) streamWorker(s *client.Session) {
 				// apply our ID to the Message
 				m.Sender = id
 				a.db.DeliverMessage(m)
+				a.stack.Current().Update()
+				a.w.Invalidate()
 			default:
 				// skip
 			}
