@@ -75,6 +75,18 @@ func TestBadgerGetContactIDs(t *testing.T) {
 }
 
 func TestBadgerDeleteContact(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+	secret := []byte("alicesecret")
+	contact, err := bs.NewContact("alice", secret)
+	require.NoError(err)
+	err = bs.RemoveContact(contact.ID)
+	require.NoError(err)
+	_, err = bs.GetContact(contact.ID)
+	require.Error(err, badger.ErrKeyNotFound)
+	ids := bs.GetContactIDs()
+	require.NotContains(ids, contact.ID)
 }
 
 func TestBadgerCreateConversation(t *testing.T) {

@@ -109,8 +109,31 @@ func streamKey(id uint64) []byte {
 
 // RemoveContact removes a contact from the db
 func (a *BadgerStore) RemoveContact(contactID uint64) error {
-	panic("NotImplemented")
-	return nil
+	return a.db.Update(func(txn *badger.Txn) error {
+		i, err := txn.Get(contactsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+
+			contactsIdx := make(map[uint64]struct{})
+			err := cbor.Unmarshal(val, &contactsIdx)
+			if err != nil {
+				return err
+			}
+			delete(contactsIdx, contactID)
+			serialized, err := cbor.Marshal(contactsIdx)
+			if err != nil {
+				return err
+			}
+			err = txn.Set(contactsKey(), serialized)
+			if err != nil {
+				return err
+			}
+
+			return txn.Delete(contactKey(contactID))
+		})
+	})
 }
 
 // NewContact creates a new Contact from a shared secret (dialer)
