@@ -227,6 +227,37 @@ func (a *BadgerStore) NewConversation(contactID uint64) (*Conversation, error) {
 	return conversation, nil
 }
 
+// RemoveConversation removes a conversation from the db
+func (a *BadgerStore) RemoveConversation(conversationID uint64) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		i, err := txn.Get(conversationsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+
+			conversationIDs := make(map[uint64]struct{})
+			err := cbor.Unmarshal(val, &conversationIDs)
+			if err != nil {
+				return err
+			}
+			delete(conversationIDs, conversationID)
+			serialized, err := cbor.Marshal(conversationIDs)
+			if err != nil {
+				return err
+			}
+			err = txn.Set(conversationsKey(), serialized)
+			if err != nil {
+				return err
+			}
+
+			return txn.Delete(conversationKey(conversationID))
+		})
+	})
+}
+
+
+
 // DeliverMessage adds a Message to the Conversation
 func (a *BadgerStore) DeliverMessage(msg *Message) error {
 	msg.Received = time.Now()

@@ -124,6 +124,21 @@ func TestBadgerPutGetConversation(t *testing.T) {
 }
 
 func TestBadgerDeleteConversation(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	secret := []byte("somesecret")
+	contact, err := bs.NewContact("alice", secret)
+	require.NoError(err)
+	conv, err := bs.NewConversation(contact.ID)
+	require.NoError(err)
+	err = bs.RemoveConversation(conv.ID)
+	require.NoError(err)
+	_, err = bs.GetConversation(conv.ID)
+	require.Error(err, badger.ErrKeyNotFound)
+	ids := bs.GetConversationIDs()
+	require.NotContains(ids, conv.ID)
 }
 
 func TestBadgerPutGetMessage(t *testing.T) {
