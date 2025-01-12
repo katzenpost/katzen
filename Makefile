@@ -33,7 +33,7 @@ docker-build-windows: docker-debian-base
 		echo "can only docker-build-windows on debian"; \
 		false; \
 	fi
-	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; GOOS=windows CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
+	$(docker) $(docker_run_cmd) katzen/$(distro)_base bash -c 'cd /go/katzen/; HIGHCTIDH_PORTABLE=1 GOOS=windows CGO_ENABLED=1 CGO_LDFLAGS="-Wl,--no-as-needed -Wl,-allow-multiple-definition" CC=x86_64-w64-mingw32-gcc go build -trimpath -ldflags="-H windowsgui ${ldflags}" -o katzen.exe'
 
 docker-android-base:
 	if ! $(docker) images|grep katzen/android_sdk; then \
