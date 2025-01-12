@@ -167,6 +167,30 @@ func TestBadgerPutGetMessage(t *testing.T) {
 
 }
 
+func TestBadgerPutRemoveMessage(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+	ids := make([]uint64, 42)
+	for i := 0; i < 42; i++ {
+		id := rand.NewMath().Uint64()
+		ids[i] = id
+		msg := &Message{ID: id, Conversation: 4242, Sender: rand.NewMath().Uint64(), Body: []byte(fmt.Sprintf("A test message: %d", i))}
+
+		err := bs.PutMessage(msg)
+		require.NoError(err)
+	}
+
+	require.Equal(len(ids), 42)
+	for _, id := range ids {
+		err := bs.RemoveMessage(id)
+		require.NoError(err)
+		msg, err := bs.GetMessage(id)
+		require.Error(err, badger.ErrKeyNotFound)
+		require.Nil(msg)
+	}
+}
+
 func TestBadgerDeliverMessage(t *testing.T) {
 	require := require.New(t)
 	bs := badgerStore(t)

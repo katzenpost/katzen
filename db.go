@@ -256,8 +256,6 @@ func (a *BadgerStore) RemoveConversation(conversationID uint64) error {
 	})
 }
 
-
-
 // DeliverMessage adds a Message to the Conversation
 func (a *BadgerStore) DeliverMessage(msg *Message) error {
 	msg.Received = time.Now()
@@ -537,6 +535,13 @@ func (a *BadgerStore) PutMessage(msg *Message) error {
 			return err
 		}
 		return txn.Set(messageKey(msg.ID), serialized)
+	})
+}
+
+// RemoveMessage removes a Message from the db
+func (a *BadgerStore) RemoveMessage(msgId uint64) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(messageKey(msgId))
 	})
 }
 
