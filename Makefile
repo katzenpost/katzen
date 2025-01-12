@@ -20,8 +20,9 @@ $(cache_dir): $(cache_dir)/go
 $(cache_dir)/go:
 	mkdir -p $(cache_dir)/go
 
-build-linux: docker-$(distro)-base
-	go build -trimpath -ldflags="${ldflags}"
+docker-test: docker-$(distro)-base
+	$(docker) $(docker_run_cmd) --rm katzen/$(distro)_base \
+		go test -coverprofile=coverage.out -race -v -failfast -timeout 30m ./...
 
 docker-build-linux: docker-$(distro)-base
 	@([ "$(distro)" = "debian" ] || [ "$(distro)" = "alpine" ]) || \
