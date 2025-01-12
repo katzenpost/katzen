@@ -78,6 +78,12 @@ func (c *Conversation) Destroy() error {
 	return nil
 }
 
+type EditConversation struct {
+	ID uint64
+}
+
+type EditConversationComplete struct{}
+
 type conversationPage struct {
 	l              *sync.Mutex
 	a              *App
