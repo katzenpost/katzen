@@ -14,7 +14,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/katzenpost/hpqc v0.0.50
-	github.com/katzenpost/katzenpost v0.0.44
+	github.com/katzenpost/katzenpost v0.0.45
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.31.0
