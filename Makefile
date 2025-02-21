@@ -11,7 +11,7 @@ VERSIONCODE := 1
 cache_dir=cache
 # you can say, eg, 'make go_package_cache_arg= docker-shell' to not use the package cache
 go_package_cache_arg := -v $(shell readlink -f .)/$(cache_dir)/go:/go/ -e GOCACHE=/go/cache
-docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ $(go_package_cache_arg) --workdir /go/katzen -e CGO_CFLAGS_ALLOW="-DPARAMS=sphincs-shake-256f"
+docker_run_cmd=run --rm -v "$(shell readlink -f .)":/go/katzen/ $(go_package_cache_arg) --workdir /go/katzen
 
 distro=debian
 
