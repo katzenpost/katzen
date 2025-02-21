@@ -112,7 +112,7 @@ type streamCmd struct {
 // Messages starts a worker that returns a channel of Messages
 func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}) chan *Message {
 	// start a reader routine that reads Messages from stream for this contact
-	resp := make(chan *Message)
+	resp := make(chan *Message, 8)
 	transport.Go(func() {
 		defer close(resp)
 		for {
@@ -131,11 +131,7 @@ func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}
 					return // closes resp chan
 				case *Message:
 					// return response unless caller has gone away
-					select {
-					case resp <- r:
-					case <-transport.HaltCh():
-						panic("Message has been lost")
-					}
+					resp <- r
 				}
 			}
 		}
