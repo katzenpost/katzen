@@ -218,15 +218,16 @@ func (a *App) stopTransport(id uint64) error {
 		return ErrContactNotFound
 	}
 	a.Lock()
-	defer a.Unlock()
 	transport, ok := a.transports[id]
 	if !ok {
+		a.Unlock()
 		return ErrNotReading
 	}
-	transport.Halt()
-	a.db.PutStream(id, transport)
 	delete(a.transports, id)
 	delete(a.messageChans, id)
+	a.Unlock()
+	transport.Halt()
+	a.db.PutStream(id, transport) // save transport
 	return nil
 }
 
