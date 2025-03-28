@@ -329,6 +329,13 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			return nil
 		}
 
+		sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
+		i := p.contactal.Render(sz)
+		err = p.a.db.PutAvatar(contact.ID, i)
+		if err != nil {
+			panic(err)
+		}
+
 		// if we are online, start a PANDA exchange immediately
 		// if not, the exchange must be started when the client comes online and tries to send a message.
 		if p.a.Status() == StateOnline {
@@ -339,13 +346,6 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 			}
 		}
 
-		sz := image.Point{X: gtx.Dp(unit.Dp(96)), Y: gtx.Dp(unit.Dp(96))}
-		i := p.contactal.Render(sz)
-		w := func(gtx C) D {
-			return widget.Image{Fit: widget.Contain, Src: paint.NewImageOp(i)}.Layout(gtx)
-		}
-
-		avatars[contact.ID] = w
 		_, err = p.a.db.NewConversation(contact.ID)
 		if err == nil {
 			// create a new conversation with this contact

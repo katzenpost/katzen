@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/png"
+	"image/png"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -377,6 +377,18 @@ func (a *BadgerStore) GetContact(contactID uint64) (*Contact, error) {
 		return nil, err
 	}
 	return contact, nil
+}
+
+// PutAvatar stores the Contact Avatar image.Image {
+func (a *BadgerStore) PutAvatar(contactID uint64, img image.Image) error {
+	// png encode avatar image
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		return err
+	}
+	return a.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(avatarKey(contactID), buf.Bytes())
+	})
 }
 
 // GetAvatar retrieves the Contact Avatar image.Image
