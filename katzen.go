@@ -12,6 +12,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
+	mClient "github.com/katzenpost/katzenpost/pigeonhole/client"
 	"github.com/katzenpost/katzenpost/stream"
 	"time"
 
@@ -169,17 +170,23 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	if err != nil {
 		return err
 	}
-	// XXX: embedded Stream does not Unmarshal safely because it needs references to transport
-	// that are created by LoadStream. It should have a way to update the transport, logger, etc
-	// without needing to marshal/unmarshal :-/
-	wtf, err := cbor.Marshal(transport.Stream)
-	if err != nil {
-		return err
+
+	// initialize a pigeonhole client with session and make it the current transport
+	c, _ := mClient.NewClient(session)
+	l := a.c.GetLogger("startTransport")
+	l.Debugf("transport.Stream: %v", transport.Stream)
+	l.Debugf("transport.Stream.Addr: %v", transport.Stream.Addr)
+	s := transport.Stream
+	if s == nil {
+		panic("nil stream")
 	}
-	transport.Stream, err = stream.LoadStream(session, wtf)
-	if err != nil {
-		return err
+	addr := s.LocalAddr()
+	if addr == nil {
+		panic("nil addr") // XXX; wtfbbq
 	}
+	trans := mClient.DuplexFromSeed(c, transport.Stream.Initiator, []byte(addr.String()))
+	transport.Stream.SetTransport(trans)
+
 	a.Lock()
 	a.transports[id] = transport
 	a.messageChans[id] = a.Messages(transport, transport.HaltCh())
