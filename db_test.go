@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/katzenpost/hpqc/rand"
+	"github.com/katzenpost/katzenpost/stream"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"sync"
+	"context"
+	"time"
+	"errors"
 )
 
 func badgerStore(t *testing.T) *BadgerStore {
@@ -222,6 +227,24 @@ func TestBadgerDeliverMessage(t *testing.T) {
 		require.Equal(conv.ID, msg.Conversation)
 		require.Equal(contact.ID, msg.Sender)
 	}
+}
+
+// Verify that fields of Stream are stored correctly
+func TestBadgerPutLoadStream(t *testing.T) {
+	require := require.New(t)
+
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	// initialize a stream
+	st := stream.NewStream(stream.NewMockTransport())
+	buf := &stream.BufferedStream{Stream: st}
+	bs.PutStream(1, buf)
+	buf2, err := bs.GetStream(1)
+	require.NoError(err)
+
+	require.Equal(buf.Stream.Initiator, buf2.Stream.Initiator)
+	require.Equal(buf.Stream.Addr.Snetwork, buf2.Stream.Addr.Snetwork)
 }
 
 func TestBadgerSendMessage(t *testing.T) {

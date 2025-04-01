@@ -561,14 +561,18 @@ func (a *BadgerStore) RemoveMessage(msgId uint64) error {
 func (a *BadgerStore) GetStream(streamId uint64) (*stream.BufferedStream, error) {
 	// XXX: Stream doesn't unmarshal nicely
 	st := new(stream.BufferedStream)
-	st.Stream = new(stream.Stream)
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(streamKey(streamId))
 		if err != nil {
 			return err
 		}
 		return i.Value(func(val []byte) error {
-			return cbor.Unmarshal(val, st)
+			if s, err := stream.LoadStream(val); err == nil {
+				st.Stream = s
+			} else {
+				return err
+			}
+			return nil
 		})
 	})
 	if err != nil {
@@ -580,7 +584,7 @@ func (a *BadgerStore) GetStream(streamId uint64) (*stream.BufferedStream, error)
 // PutStream places a Halted Stream in db
 func (a *BadgerStore) PutStream(streamID uint64, stream *stream.BufferedStream) error {
 	return a.db.Update(func(txn *badger.Txn) error {
-		serialized, err := cbor.Marshal(stream)
+		serialized, err := stream.Stream.Save()
 		if err != nil {
 			return err
 		}
