@@ -156,24 +156,27 @@ func (a *App) startReadingContacts() {
 }
 
 func (a *App) startTransport(session *client.Session, id uint64) error {
+	l := a.c.GetLogger("startTransport")
 	_, err := a.db.GetContact(id)
 	if err != nil {
+		l.Errorf("error getting contact %d: %v", id, err)
 		return ErrContactNotFound
 	}
 	a.Lock()
 	if _, ok := a.messageChans[id]; ok {
+		l.Errorf("error startTransport: already reading contact %d", id)
 		a.Unlock()
 		return ErrAlreadyReading
 	}
 	a.Unlock()
 	transport, err := a.db.GetStream(id)
 	if err != nil {
+		l.Errorf("error startTransport: GetStream %d: %v", id, err)
 		return err
 	}
 
 	// initialize a pigeonhole client with session and make it the current transport
 	c, _ := mClient.NewClient(session)
-	l := a.c.GetLogger("startTransport")
 	l.Debugf("transport.Stream: %v", transport.Stream)
 	l.Debugf("transport.Stream.Addr: %v", transport.Stream.Addr)
 	s := transport.Stream
@@ -220,20 +223,27 @@ func (a *App) getTransport(id uint64) (*stream.BufferedStream, error) {
 }
 
 func (a *App) stopTransport(id uint64) error {
+	l := a.c.GetLogger("stopTransport")
 	_, err := a.db.GetContact(id)
 	if err != nil {
+		l.Errorf("contact %d not found", id)
 		return ErrContactNotFound
 	}
 	a.Lock()
 	transport, ok := a.transports[id]
 	if !ok {
 		a.Unlock()
+		l.Errorf("contact %d not reading", id)
 		return ErrNotReading
 	}
 	delete(a.transports, id)
 	delete(a.messageChans, id)
 	a.Unlock()
+	l.Debugf("transport.Halt")
 	transport.Halt()
+	l.Debugf("transport.Wait")
+	transport.Wait()
+	l.Debugf("PutStream %d", id)
 	a.db.PutStream(id, transport) // save transport
 	return nil
 }
