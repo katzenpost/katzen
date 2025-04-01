@@ -110,8 +110,8 @@ type streamCmd struct {
 	ContactID uint64
 }
 
-// Messages starts a worker that returns a channel of Messages
-func (a *App) Messages(transport *stream.BufferedStream, stop <-chan interface{}) chan *Message {
+// ReadMessages starts a worker that returns a channel of Messages
+func (a *App) ReadMessages(transport *stream.BufferedStream, stop <-chan interface{}) chan *Message {
 	// start a reader routine that reads Messages from stream for this contact
 	resp := make(chan *Message, 8)
 	transport.Go(func() {
@@ -189,7 +189,7 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 
 	a.Lock()
 	a.transports[id] = transport
-	a.messageChans[id] = a.Messages(transport, transport.HaltCh())
+	a.messageChans[id] = a.ReadMessages(transport, transport.HaltCh())
 	a.Unlock()
 	transport.Start()
 	return nil
