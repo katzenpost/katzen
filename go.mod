@@ -1,8 +1,8 @@
 module github.com/katzenpost/katzen
 
-go 1.22.3
+go 1.23.0
 
-toolchain go1.22.7
+toolchain go1.23.7
 
 replace gioui.org => github.com/mixmasala/gio v0.0.0-20240830054638-20227d2a5fc2
 
@@ -13,11 +13,11 @@ require (
 	github.com/dgraph-io/badger/v4 v4.3.1
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/hpqc v0.0.50
-	github.com/katzenpost/katzenpost v0.0.45
+	github.com/katzenpost/hpqc v0.0.53
+	github.com/katzenpost/katzenpost v0.0.47
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.36.0
 	golang.org/x/exp/shiny v0.0.0-20220827204233-334a2380cb91
 	golang.org/x/image v0.7.0
 )
@@ -47,7 +47,7 @@ require (
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
 	github.com/google/pprof v0.0.0-20240903155634-a8630aee4ab9 // indirect
 	github.com/henrydcase/nobs v0.0.0-20230313231516-25b66236df73 // indirect
-	github.com/katzenpost/chacha20 v0.0.0-20190910113340-7ce890d6a556 // indirect
+	github.com/katzenpost/chacha20 v0.0.1 // indirect
 	github.com/katzenpost/circl v1.3.9-0.20240222183521-1cd9a34e9a0c // indirect
 	github.com/katzenpost/nyquist v0.0.10 // indirect
 	github.com/katzenpost/sntrup4591761 v0.0.0-20231024131303-8755eb1986b8 // indirect
@@ -63,7 +63,6 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.48.2 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
-	github.com/schwarmco/go-cartesian-product v0.0.0-20230921023625-e02d1c150053 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	gitlab.com/yawning/aez.git v0.0.0-20211027044916-e49e68abd344 // indirect
@@ -74,10 +73,10 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e // indirect
 	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
