@@ -268,6 +268,9 @@ func (a *App) streamWorker(s *client.Session) {
 
 	for {
 		select {
+		case <-a.HaltCh():
+			a.stopAllTransports()
+			return
 		case <-s.HaltCh():
 			a.stopAllTransports()
 			return

@@ -14,6 +14,7 @@ func (a *App) handleGioEvents(e interface{}) error {
 	case key.FocusEvent:
 		// XXX: figure out what this is useful for
 	case app.DestroyEvent:
+		a.Halt()
 		return errors.New("system.DestroyEvent receieved")
 	case app.FrameEvent:
 		gtx := app.NewContext(a.ops, e)

@@ -47,13 +47,6 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		return
 	}
 
-	// halt the db at app shutdown
-	a.Go(func() {
-		<-a.HaltCh()
-		a.db.Close()
-		a.db = nil
-	})
-
 	var cfg *config.Config
 	if len(*clientConfigFile) != 0 {
 		cfg, err = config.LoadFile(*clientConfigFile)
@@ -84,6 +77,14 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		result <- err
 		return
 	}
+
+	// halt the client at app shutdown
+	a.Go(func() {
+		<-a.HaltCh()
+		c.Shutdown()
+		a.db.Close()
+		a.db = nil
+	})
 
 	// start connecting automatically, if enabled
 
