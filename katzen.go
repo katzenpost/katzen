@@ -244,8 +244,9 @@ func (a *App) stopTransport(id uint64) error {
 	l.Debugf("transport.Wait")
 	transport.Wait()
 	l.Debugf("PutStream %d", id)
-	a.db.PutStream(id, transport) // save transport
-	return nil
+	err = a.db.PutStream(id, transport) // save transport
+	l.Debugf("stream Put: %v", err)
+	return err
 }
 
 func (a *App) stopAllTransports() {
