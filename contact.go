@@ -415,14 +415,3 @@ func (p *AddContactPage) layoutQr(gtx C) D {
 	return dims
 
 }
-
-func button(th *material.Theme, button *widget.Clickable, icon *widget.Icon) material.IconButtonStyle {
-	return material.IconButtonStyle{
-		Background: th.Palette.Bg,
-		Color:      th.Palette.ContrastFg,
-		Icon:       icon,
-		Size:       unit.Dp(20),
-		Inset:      layout.UniformInset(unit.Dp(8)),
-		Button:     button,
-	}
-}

@@ -3,6 +3,8 @@ package main
 import (
 	"gioui.org/layout"
 	"gioui.org/unit"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
 )
 
 var (
@@ -29,3 +31,14 @@ var (
 		Inset: layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(0), Right: unit.Dp(0)},
 	}
 )
+
+func button(th *material.Theme, button *widget.Clickable, icon *widget.Icon) material.IconButtonStyle {
+	return material.IconButtonStyle{
+		Background: th.Palette.Bg,
+		Color:      th.Palette.ContrastFg,
+		Icon:       icon,
+		Size:       unit.Dp(20),
+		Inset:      layout.UniformInset(unit.Dp(8)),
+		Button:     button,
+	}
+}
