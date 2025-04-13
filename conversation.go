@@ -99,7 +99,6 @@ type conversationPage struct {
 	msgpaste       *LongPress
 	msgdetails     *widget.Clickable
 	messageClicked uint64
-	messageClicks  map[uint64]*gesture.Click
 	updateCh       chan struct{}
 }
 
@@ -214,15 +213,6 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			return EditConversation{ID: c.id}
 		}
 	}
-	for msg, click := range c.messageClicks {
-		if _, ok := click.Update(gtx.Source); ok {
-			c.messageClicked = msg
-		}
-	}
-
-	if _, ok := c.cancel.Update(gtx.Source); ok {
-		c.messageClicked = 0
-	}
 
 	if e, ok := shortcutEvents(gtx); ok {
 		if e.State == key.Release {
@@ -334,34 +324,23 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 		}),
 		// layout message list
 		layout.Flexed(2, func(gtx C) D {
+			// style bgList
 			return bgList.Layout(gtx, func(ctx C) D {
+				// if there are no Messages, return empty
 				if len(c.conversation.Messages) == 0 {
 					return fill{th.Bg}.Layout(ctx)
 				}
-				dims := messageList.Layout(gtx, len(c.conversation.Messages), c.layoutConversation)
-				if c.messageClicked != 0 {
-					a := clip.Rect(image.Rectangle{Max: dims.Size})
-					t := a.Push(gtx.Ops)
-					c.cancel.Add(gtx.Ops)
-					t.Pop()
-				}
-				return dims
+				return messageList.Layout(gtx, len(c.conversation.Messages), c.layoutConversation)
 			})
 		}),
+
+		// layout the message composition editor
 		layout.Rigid(func(gtx C) D {
-			// return the menu laid out for message actions
-			if c.messageClicked != 0 {
-				return bg.Layout(gtx, func(gtx C) D {
-					return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Baseline}.Layout(gtx,
-						layout.Rigid(material.Button(th, c.msgcopy, "copy").Layout),
-						layout.Flexed(1, fill{th.Bg}.Layout),
-						layout.Rigid(material.Button(th, c.msgdetails, "details").Layout),
-					)
-				})
-			}
 			return bgList.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
+					// padding aligned for our speech bubble
 					layout.Flexed(1, fill{th.Bg}.Layout),
+					// editor box
 					layout.Flexed(5, func(gtx C) D {
 						dims := bgSender.Layout(gtx, material.Editor(th, c.compose, "").Layout)
 						t := pointer.PassOp{}.Push(gtx.Ops)
@@ -372,6 +351,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 						event.Op(gtx.Ops, c.msgpaste)
 						return dims
 					}),
+					// send button
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, button(th, c.send, sendIcon).Layout)
 					}),
@@ -384,10 +364,6 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 	messages := c.conversation.Messages
 	expires := c.conversation.MessageExpiration
-	if _, ok := c.messageClicks[messages[i]]; !ok {
-		c.messageClicks[messages[i]] = new(gesture.Click)
-	}
-
 	// make message bubbles separated when different people speak
 	if i > 0 {
 		msg1, err1 := c.a.db.GetMessage(messages[i-1])
@@ -401,7 +377,10 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 		}
 	}
 	var dims D
-	isSelected := messages[i] == c.messageClicked
+	isSelected := false
+	if gtx.Focused(messages[i]) {
+		isSelected = true
+	}
 	msg, err := c.a.db.GetMessage(messages[i])
 	if err != nil {
 		panic(err)
@@ -433,7 +412,6 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 	}
 	a := clip.Rect(image.Rectangle{Max: dims.Size})
 	t := a.Push(gtx.Ops)
-	c.messageClicks[messages[i]].Add(gtx.Ops)
 	t.Pop()
 	return dims
 }
@@ -452,19 +430,18 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 	}
 
 	p := &conversationPage{a: a,
-		l:             new(sync.Mutex),
-		id:            conversationId,
-		conversation:  conv,
-		compose:       ed,
-		messageClicks: make(map[uint64]*gesture.Click),
-		back:          &widget.Clickable{},
-		msgcopy:       &widget.Clickable{},
-		msgpaste:      NewLongPress(a.w.Invalidate, 800*time.Millisecond),
-		msgdetails:    &widget.Clickable{},
-		cancel:        new(gesture.Click),
-		send:          &widget.Clickable{},
-		edit:          new(gesture.Click),
-		updateCh:      make(chan struct{}, 1),
+		l:            new(sync.Mutex),
+		id:           conversationId,
+		conversation: conv,
+		compose:      ed,
+		back:         &widget.Clickable{},
+		msgcopy:      &widget.Clickable{},
+		msgpaste:     NewLongPress(a.w.Invalidate, 800*time.Millisecond),
+		msgdetails:   &widget.Clickable{},
+		cancel:       new(gesture.Click),
+		send:         &widget.Clickable{},
+		edit:         new(gesture.Click),
+		updateCh:     make(chan struct{}, 1),
 		//messages:      []*Message, cache messages
 	}
 	return p
