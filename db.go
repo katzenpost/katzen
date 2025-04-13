@@ -75,6 +75,10 @@ func versionKey() []byte {
 	return []byte("katzen_version")
 }
 
+func chunkKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("chunk:%d", id))
+}
+
 func contactsKey() []byte {
 	return []byte("contacts")
 }
@@ -662,6 +666,42 @@ func (a *BadgerStore) UseTor() bool {
 		useTor = false
 	}
 	return useTor
+}
+
+// PutChunk places Chunk in db
+func (a *BadgerStore) PutChunk(chunk *Chunk) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		serialized, err := cbor.Marshal(chunk)
+		if err != nil {
+			return err
+		}
+		return txn.Set(chunkKey(chunk.ID), serialized)
+	})
+}
+
+// RemoveChunk removes a Chunk from the db
+func (a *BadgerStore) RemoveChunk(chunkId uint64) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(chunkKey(chunkId))
+	})
+}
+
+// GetChunk returns Chunk
+func (a *BadgerStore) GetChunk(chunkId uint64) (*Chunk, error) {
+	chunk := new(Chunk)
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(chunkKey(chunkId))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, chunk)
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return chunk, nil
 }
 
 func (a *BadgerStore) Close() {
