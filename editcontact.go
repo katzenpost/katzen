@@ -142,7 +142,7 @@ func (p *EditContactPage) Event(gtx layout.Context) interface{} {
 func (p *EditContactPage) Start(stop <-chan struct{}) {
 }
 
-func (EditContactPage) Update() {}
+func (EditContactPage) Update(item interface{}) {}
 
 func newEditContactPage(a *App, id uint64) *EditContactPage {
 	p := &EditContactPage{a: a, id: id, back: &widget.Clickable{},

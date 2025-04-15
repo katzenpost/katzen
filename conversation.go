@@ -115,7 +115,7 @@ func (c *conversationPage) Start(stop <-chan struct{}) {
 	}()
 }
 
-func (c *conversationPage) Update() {
+func (c *conversationPage) Update(item interface{}) {
 	select {
 	case c.updateCh <- struct{}{}:
 	default:
@@ -168,7 +168,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		err := c.a.db.SendMessage(c.id, msg)
 		if err == nil {
 			c.compose.SetText("")
-			c.Update()
+			c.Update(nil)
 			return MessageSent{conversation: c.id}
 		} else {
 			shortNotify("Send failed", err.Error())

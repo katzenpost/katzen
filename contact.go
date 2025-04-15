@@ -359,7 +359,7 @@ func (p *AddContactPage) Event(gtx layout.Context) interface{} {
 func (p *AddContactPage) Start(stop <-chan struct{}) {
 }
 
-func (AddContactPage) Update() {}
+func (AddContactPage) Update(item interface{}) {}
 
 func newAddContactPage(a *App) *AddContactPage {
 	p := &AddContactPage{}

@@ -211,7 +211,7 @@ func (p *connectingPage) Layout(gtx layout.Context) layout.Dimensions {
 func (p *connectingPage) Start(stop <-chan struct{}) {
 }
 
-func (connectingPage) Update() {}
+func (connectingPage) Update(item interface{}) {}
 
 type connectError struct {
 	err error

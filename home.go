@@ -269,10 +269,10 @@ func (p *HomePage) Start(stop <-chan struct{}) {
 			}
 		}
 	}()
-	p.Update()
+	p.Update(nil)
 }
 
-func (h *HomePage) Update() {
+func (h *HomePage) Update(item interface{}) {
 	select {
 	case h.updateCh <- struct{}{}:
 	default:
