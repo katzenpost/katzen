@@ -41,7 +41,6 @@ type HomePage struct {
 	connectIcon   *connectIcon
 	showSettings  *widget.Clickable
 	convoClicks   map[uint64]*gesture.Click
-	contacts      []*Contact
 	conversations []*Conversation
 	updateCh      chan interface{}
 }
@@ -132,10 +131,6 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 											layout.Rigid(func(gtx C) D {
 												return layout.Flex{Axis: layout.Vertical, Alignment: layout.Start, Spacing: layout.SpaceEnd}.Layout(gtx,
 													layout.Rigid(func(gtx C) D {
-														// XXX: how does this apply to multiparty conversations
-														//if contacts[i].IsPending {
-														//	return pandaIcon.Layout(gtx, th.Palette.ContrastBg)
-														//}
 														return fill{th.Bg}.Layout(gtx)
 													}),
 													layout.Rigid(func(gtx C) D {
@@ -246,7 +241,7 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 		if e.Name == key.NameReturn {
 			p.l.Lock()
 			defer p.l.Unlock()
-			if len(p.contacts) < selectedIdx+1 {
+			if len(p.conversations) < selectedIdx+1 {
 				return nil
 			}
 			return ChooseConvoClick{id: p.conversations[selectedIdx].ID}
