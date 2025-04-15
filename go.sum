@@ -22,6 +22,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
+github.com/agl/gcmsiv v0.0.0-20190418185415-e8dcd2f151dc h1:MB338WDPuyQ8qXRiSRK2NVTv0EmLYsHXZAevEiQO1+c=
+github.com/agl/gcmsiv v0.0.0-20190418185415-e8dcd2f151dc/go.mod h1:5joDAvk82M2Cx1X8mAL5Orvhy5lfW4BjrTCW65wbvRo=
 github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac h1:MfwGHGEDx/J97m3qcdmYiE1wSXaXii1U2Mr0PTGPr9I=
 github.com/benc-uk/gofract v0.0.0-20211012214247-47caccaf3aac/go.mod h1:KbGRuVLK7gmvphUeSywghvFOEkhnByTMExZF7NWDamk=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
@@ -115,10 +117,10 @@ github.com/katzenpost/chacha20 v0.0.1 h1:Scu6Pqyginw083FhypKMIBmCI2gQTC1RFD6vqpW
 github.com/katzenpost/chacha20 v0.0.1/go.mod h1:/LIJK/8cUXVJrCh5NypZ8So3gDfQCoQT8lRvy1rYQZA=
 github.com/katzenpost/circl v1.3.9-0.20240222183521-1cd9a34e9a0c h1:FYy03rLIjdyjklBOI6YSCb3q7OubTx0dVDWYOgDsvA8=
 github.com/katzenpost/circl v1.3.9-0.20240222183521-1cd9a34e9a0c/go.mod h1:+EBrwiGYs9S+qZqaqxujN1CReTNCMAG6p+31KkEDeeA=
-github.com/katzenpost/hpqc v0.0.53 h1:hodmAPM4AyHK2pF9dMUxkokc3GHAuy5FM44ez+37w3U=
-github.com/katzenpost/hpqc v0.0.53/go.mod h1:yaVqoZyKeBmgiKnGBpgLNf+nfO4ll81f54RAnaL6OpI=
-github.com/katzenpost/katzenpost v0.0.47 h1:JN5sPnkXKNYzQYJVCKb5hmBCxWR1VuqwXSYce9CzWEI=
-github.com/katzenpost/katzenpost v0.0.47/go.mod h1:AcFYZq8RGD/kYYYnQIViaFEjeX24Cyxin5psns9yoro=
+github.com/katzenpost/hpqc v0.0.55 h1:dRdk3k+sJsvRb5Z2CLVUmxOhY/WhgQ6JkAGWYFUNdLg=
+github.com/katzenpost/hpqc v0.0.55/go.mod h1:yaVqoZyKeBmgiKnGBpgLNf+nfO4ll81f54RAnaL6OpI=
+github.com/katzenpost/katzenpost v0.0.48 h1:nyvWYvVu5r+0UgPRCGnPyC/Jn7Dst9UluWsJ4XB7OCs=
+github.com/katzenpost/katzenpost v0.0.48/go.mod h1:FcNs9Kc6PiJQ7t8g6iNYGAtlempt627iLQvUlrV3HHc=
 github.com/katzenpost/nyquist v0.0.10 h1:rh9TCEXCsutsg+cvbV6ASVFnzSAYBisWQ3fnwQSPa34=
 github.com/katzenpost/nyquist v0.0.10/go.mod h1:tyK92JiCptgsaE0iUAMlt5W2v2Rdw6mnUpIdIidIGHo=
 github.com/katzenpost/sntrup4591761 v0.0.0-20231024131303-8755eb1986b8 h1:TsKxH0x2RUwf5rBw67k15bqVM3oVbexA9oaTZQLIy3Y=

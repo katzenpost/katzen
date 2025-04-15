@@ -13,8 +13,8 @@ require (
 	github.com/dgraph-io/badger/v4 v4.3.1
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
-	github.com/katzenpost/hpqc v0.0.53
-	github.com/katzenpost/katzenpost v0.0.47
+	github.com/katzenpost/hpqc v0.0.55
+	github.com/katzenpost/katzenpost v0.0.48
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.36.0
@@ -31,6 +31,7 @@ require (
 	git.sr.ht/~jackmordaunt/go-toast v1.0.0 // indirect
 	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/agl/gcmsiv v0.0.0-20190418185415-e8dcd2f151dc // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v1.0.0 // indirect
