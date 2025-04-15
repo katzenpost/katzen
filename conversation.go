@@ -79,6 +79,10 @@ func (c *Conversation) Destroy() error {
 	return nil
 }
 
+type NewTransfer struct {
+	ID uint64
+}
+
 type EditConversation struct {
 	ID uint64
 }
@@ -178,7 +182,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 	if c.attach.Clicked(gtx) {
-		return NewChooser{}
+		return NewTransfer{}
 	}
 	if c.back.Clicked(gtx) {
 		return BackEvent{}
