@@ -392,8 +392,19 @@ func (a *App) update(gtx layout.Context) {
 	}
 
 	page := a.stack.Current()
+
+	// get the next event for the current page
 	if e := page.Event(gtx); e != nil {
 		switch e := e.(type) {
+		case NewChooser:
+			a.stack.Push(newChooser(a, e.Path))
+		case ChooserChoseDir:
+			a.stack.Pop()
+			a.stack.Push(newChooser(a, e.Path))
+		case ChooserChoseFile:
+			f := e.Path
+			a.stack.Pop()
+			a.stack.Current().Update(f)
 		case RedrawEvent:
 			a.w.Invalidate()
 		case BackEvent:

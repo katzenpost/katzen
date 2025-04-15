@@ -35,6 +35,7 @@ var (
 	sentIcon, _      = widget.NewIcon(icons.ActionDone)
 	deliveredIcon, _ = widget.NewIcon(icons.ActionDoneAll)
 	pandaIcon, _     = widget.NewIcon(icons.ActionPets)
+	attachIcon, _    = widget.NewIcon(icons.EditorAttachFile)
 
 	ErrConversationNotFound = errors.New("Conversation not found")
 	ErrHalted               = errors.New("Halted")
@@ -93,6 +94,7 @@ type conversationPage struct {
 	edit           *gesture.Click
 	compose        *widget.Editor
 	send           *widget.Clickable
+	attach         *widget.Clickable
 	back           *widget.Clickable
 	cancel         *gesture.Click
 	msgcopy        *widget.Clickable
@@ -174,6 +176,9 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 			shortNotify("Send failed", err.Error())
 			return nil
 		}
+	}
+	if c.attach.Clicked(gtx) {
+		return NewChooser{}
 	}
 	if c.back.Clicked(gtx) {
 		return BackEvent{}
@@ -351,6 +356,10 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 						event.Op(gtx.Ops, c.msgpaste)
 						return dims
 					}),
+					// attach button
+					layout.Rigid(func(gtx C) D {
+						return layout.Inset{Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, button(th, c.attach, attachIcon).Layout)
+					}),
 					// send button
 					layout.Rigid(func(gtx C) D {
 						return layout.Inset{Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, button(th, c.send, sendIcon).Layout)
@@ -440,6 +449,7 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		msgdetails:   &widget.Clickable{},
 		cancel:       new(gesture.Click),
 		send:         &widget.Clickable{},
+		attach:       &widget.Clickable{},
 		edit:         new(gesture.Click),
 		updateCh:     make(chan struct{}, 1),
 		//messages:      []*Message, cache messages
