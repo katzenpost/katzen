@@ -35,10 +35,6 @@ type Chooser struct {
 	chosen  fs.File
 }
 
-func (c *Chooser) Chosen() fs.File {
-	return c.chosen
-}
-
 // ClickDirEntry widget displays a thumbnail if possible or filename and has a gesture.Click associated
 type ClickDirEntry struct {
 	Path     string
