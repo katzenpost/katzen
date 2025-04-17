@@ -224,29 +224,27 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	}
 
 	if e, ok := shortcutEvents(gtx); ok {
-		if e.State == key.Release {
-			switch e.Name {
-			case key.NameEscape:
-				return BackEvent{}
-			case key.NameUpArrow:
-				messageList.ScrollToEnd = false
-				if messageList.Position.First > 0 {
-					messageList.Position.First = messageList.Position.First - 1
-				}
-			case key.NameDownArrow:
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + 1
-			case key.NamePageUp:
-				messageList.ScrollToEnd = false
-				if messageList.Position.First-messageList.Position.Count > 0 {
-					messageList.Position.First = messageList.Position.First - messageList.Position.Count
-				}
-			case key.NamePageDown:
-				messageList.ScrollToEnd = true
-				messageList.Position.First = messageList.Position.First + messageList.Position.Count
+		switch e.Name {
+		case key.NameEscape:
+			return BackEvent{}
+		case key.NameUpArrow:
+			messageList.ScrollToEnd = false
+			if messageList.Position.First > 0 {
+				messageList.Position.First = messageList.Position.First - 1
 			}
-			return RedrawEvent{}
+		case key.NameDownArrow:
+			messageList.ScrollToEnd = true
+			messageList.Position.First = messageList.Position.First + 1
+		case key.NamePageUp:
+			messageList.ScrollToEnd = false
+			if messageList.Position.First-messageList.Position.Count > 0 {
+				messageList.Position.First = messageList.Position.First - messageList.Position.Count
+			}
+		case key.NamePageDown:
+			messageList.ScrollToEnd = true
+			messageList.Position.First = messageList.Position.First + messageList.Position.Count
 		}
+		return RedrawEvent{}
 	}
 	return nil
 }
