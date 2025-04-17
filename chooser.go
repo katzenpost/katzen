@@ -207,6 +207,7 @@ func (p *Chooser) Start(stop <-chan struct{}) {
 					o.entry.tl.Lock()
 					o.entry.Thumb = th
 					o.entry.tl.Unlock()
+					p.a.w.Invalidate()
 				case <-stop:
 					return
 				}

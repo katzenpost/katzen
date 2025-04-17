@@ -129,13 +129,13 @@ func (d *Downloader) worker() {
 		if err != nil {
 			return
 		}
-		// XXX: create a context that times out after some delay
-		ctx := context.Background()
+		ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
 
 		// fetch the box
 		// XXX: FIXME: obtain signature along with payload fromt he client; requires api change
 		sig := [64]byte{'f', 'm', 'l'}
 		ciphertext /*sig,*/, err := d.transport.GetWithContext(ctx, boxID.Bytes())
+		cancelFn()
 		if err != nil {
 			// retry
 			continue
