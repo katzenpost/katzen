@@ -69,7 +69,7 @@ func NewUploadHeader(path string) (*UploadHeader, error) {
 	if fileInfo.Size() <= 0 {
 		return nil, fmt.Errorf("Empty or System file: %s", fileInfo.Name())
 	}
-	sum, err := sum256fileInfo(path)
+	sum, err := sum256file(path)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (u *Uploader) worker() {
 	}
 }
 
-func sum256fileInfo(path string) ([]byte, error) {
+func sum256file(path string) ([]byte, error) {
 	r, err := os.Open(path)
 	if err != nil {
 		return nil, err
