@@ -150,6 +150,12 @@ func (p *Chooser) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (p *Chooser) Event(gtx C) interface{} {
+	if p.up.Clicked(gtx) {
+		path, err := filepath.Abs(filepath.Join(p.path, ".."))
+		if err == nil {
+			return ChooserChoseDir{Path: path}
+		}
+	}
 	if p.back.Clicked(gtx) {
 		return BackEvent{}
 	}
