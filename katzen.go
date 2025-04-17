@@ -451,6 +451,7 @@ func (a *App) update(gtx layout.Context) {
 		case MessageSent:
 		case NewTransfer:
 			a.stack.Push(newTransferPage(a))
+			a.stack.Push(newChooser(a, ""))
 		}
 	}
 }
