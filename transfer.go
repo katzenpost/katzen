@@ -176,7 +176,6 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	if e, ok := shortcutEvents(gtx); ok {
 		switch e.Name {
 		case key.NameEscape:
-			panic("wtf")
 			return BackEvent{}
 		}
 
