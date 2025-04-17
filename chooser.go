@@ -163,14 +163,13 @@ func (p *Chooser) Event(gtx C) interface{} {
 	for _, clickable := range p.entries {
 		if e, ok := clickable.Click.Update(gtx.Source); ok {
 			if e.Kind == gesture.KindClick {
-				if u, err := filepath.Abs(filepath.Join(p.path, clickable.DirEntry.Name())); err == nil {
-					if clickable.DirEntry.IsDir() {
-						return ChooserChoseDir{Path: u}
-					}
+				u := filepath.Join(p.path, clickable.DirEntry.Name())
+				if clickable.DirEntry.IsDir() {
+					return ChooserChoseDir{Path: u}
+				}
 
-					if _, err := os.Stat(u); err == nil {
-						return ChooserChoseFile{Path: u}
-					}
+				if _, err := os.Stat(u); err == nil {
+					return ChooserChoseFile{Path: u}
 				}
 			}
 		}
@@ -217,10 +216,6 @@ func (p *Chooser) Start(stop <-chan struct{}) {
 }
 
 func (c *Chooser) Update(item interface{}) {
-	f, ok := item.(fs.File)
-	if ok {
-		c.chosen = f
-	}
 }
 
 func makeThumb(d *ClickDirEntry, sz int) image.Image {
