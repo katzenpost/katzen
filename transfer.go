@@ -185,7 +185,7 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	for i, ul := range t.uploads {
 		if ul.startBtn.Clicked(gtx) {
 			ul.Start()
-			return nil
+			return TransferStarted{}
 		}
 		if ul.cancelBtn.Clicked(gtx) {
 			ul.Halt()
@@ -196,24 +196,22 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 			t.uploads = append(t.uploads[:i], t.uploads[i+1:]...)
 			return TransferRemoved{}
 		}
-		if ul.BytesWritten == ul.Header.Length {
-			ul.Halt()
-			return TransferCompleted{}
-		}
 	}
 	// check if any downloader buttons are clicked
 	for i, dl := range t.downloads {
+		if dl.startBtn.Clicked(gtx) {
+			dl.Start()
+			return TransferStarted{}
+		}
+
 		if dl.cancelBtn.Clicked(gtx) {
 			dl.Halt()
+			return TransferCancelled{}
 		}
 		if dl.deleteBtn.Clicked(gtx) {
 			dl.Halt()
 			t.downloads = append(t.downloads[:i], t.downloads[i+1:]...)
-		}
-		if dl.BytesRead == dl.Header.Length {
-			// all of the source bytes have been read
-			// and we can now produce the Sum256 of the file
-			// XXX: do that
+			return TransferRemoved{}
 		}
 	}
 	return nil
