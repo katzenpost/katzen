@@ -244,11 +244,7 @@ func scan(path string) []*ClickDirEntry {
 	for i, de := range dirEntries {
 		paths[i] = &ClickDirEntry{Path: path, DirEntry: de, Click: new(gesture.Click), tl: new(sync.Mutex)}
 	}
-
-	newpath := filepath.Join(path, "/..")
-	fi, _ := os.Stat(newpath)
-	updir := &ClickDirEntry{Path: path, DirEntry: fs.FileInfoToDirEntry(fi), Click: new(gesture.Click), tl: new(sync.Mutex)}
-	return append([]*ClickDirEntry{updir}, paths...)
+	return paths
 }
 
 func newChooser(a *App, path string) *Chooser {
