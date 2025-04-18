@@ -206,8 +206,8 @@ func (u *Uploader) worker() {
 	}
 	payloadSize := u.transport.PayloadSize()
 
+	buf := make([]byte, payloadSize)
 	for u.Upload.State.Length < u.Upload.Header.Length {
-		buf := make([]byte, payloadSize)
 		n, err := io.ReadFull(u.source, buf)
 		switch err {
 		case nil, io.ErrUnexpectedEOF:
