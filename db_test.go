@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/katzenpost/hpqc/rand"
+	"github.com/katzenpost/hpqc/sign/ed25519"
 	"github.com/stretchr/testify/require"
+	"io"
 	"testing"
 )
 
@@ -284,5 +286,35 @@ func TestBadgerSendMessage(t *testing.T) {
 		}
 		_, err := q.Pop()
 		require.Error(err, ErrQueueEmpty)
+	}
+}
+
+func TestBadgerPutRemoveChunk(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+	chunks := make([]*Chunk, 42)
+	m := rand.NewMath()
+	for i := 0; i < 42; i++ {
+		sK, pK, err := ed25519.NewKeypair(rand.Reader)
+		require.NoError(err)
+		buf := make([]byte, 4242)
+		_, err = io.ReadFull(rand.Reader, buf)
+		require.NoError(err)
+		sig := sK.SignMessage(buf)
+		ch := &Chunk{ID: m.Uint64(), Payload: buf}
+		copy(ch.Key[:], pK.Bytes())
+		copy(ch.Signature[:], sig)
+		err = bs.PutChunk(ch)
+		require.NoError(err)
+	}
+
+	for _, ch := range chunks {
+		ch2, err := bs.GetChunk(ch.ID)
+		require.NoError(err)
+		require.Equal(ch2.ID, ch.ID)
+		require.Equal(ch2.Key, ch.Key)
+		require.Equal(ch2.Signature, ch.Signature)
+		require.Equal(ch2.Payload, ch.Payload)
 	}
 }
