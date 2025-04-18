@@ -171,7 +171,7 @@ type Uploader struct {
 	Upload *Upload
 
 	db        *BadgerStore
-	source    io.Reader
+	source    io.ReadSeeker
 	transport *mClient.Client
 
 	startBtn  *widget.Clickable
@@ -179,7 +179,7 @@ type Uploader struct {
 	deleteBtn *widget.Clickable
 }
 
-func NewUploader(db *BadgerStore, ul *Upload, source io.Reader) *Uploader {
+func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
 	uploader := &Uploader{Upload: ul,
 		db: db,
 		source: source,
@@ -215,6 +215,12 @@ func (u *Uploader) worker() {
 
 	buf := make([]byte, payloadSize)
 	for u.Upload.State.Length < u.Upload.Header.Length {
+		// seek reader to current upload offset
+		_, err := u.source.Seek(int64(u.Upload.State.Length), 0)
+		if err != nil {
+			panic(err)
+		}
+		// read one payload worth from source and send chunk to chunkuploader
 		n, err := io.ReadFull(u.source, buf)
 		switch err {
 		case nil, io.ErrUnexpectedEOF:
