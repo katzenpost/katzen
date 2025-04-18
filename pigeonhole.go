@@ -165,6 +165,7 @@ const (
 type Uploader struct {
 	startOnce *sync.Once
 	worker.Worker
+	Upload *Upload
 
 	db        *BadgerStore
 	source    io.Reader
