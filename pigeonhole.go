@@ -38,7 +38,7 @@ type Downloader struct {
 	deleteBtn *widget.Clickable
 }
 
-func NewDownloader(db *BadgerStore, transport *mClient.Client, dl *Download, dest io.Writer) *Downloader {
+func NewDownloader(db *BadgerStore, dl *Download, dest io.Writer) *Downloader {
 	dloader := &Downloader{Download: dl,
 		startOnce: new(sync.Once),
 		dest: dest,
@@ -50,7 +50,15 @@ func NewDownloader(db *BadgerStore, transport *mClient.Client, dl *Download, des
 	return dloader
 }
 
+func (u *Downloader) StartWithTransport(t *mClient.Client) {
+	d.transport = t
+	d.Start()
+}
+
 func (d *Downloader) Start() {
+	if transport == nil  {
+		panic("no transport")
+	}
 	d.startOnce.Do(func() {
 		d.Go(d.worker)
 		<-d.HaltCh()
