@@ -179,7 +179,7 @@ type Uploader struct {
 	deleteBtn *widget.Clickable
 }
 
-func NewUploader(db *BadgerStore, transport *mClient.Client, ul *Upload, source io.Reader) *Uploader {
+func NewUploader(db *BadgerStore, ul *Upload, source io.Reader) *Uploader {
 	uploader := &Uploader{Upload: ul,
 		db: db,
 		source: source,
