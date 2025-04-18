@@ -111,6 +111,18 @@ func streamKey(id uint64) []byte {
 	return []byte(fmt.Sprintf("stream:%d", id))
 }
 
+func transferKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("transfer:%d", id))
+}
+
+func uploadKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("upload:%d", id))
+}
+
+func downloadKey(id uint64) []byte {
+	return []byte(fmt.Sprintf("download:%d", id))
+}
+
 // RemoveContact removes a contact from the db
 func (a *BadgerStore) RemoveContact(contactID uint64) error {
 	return a.db.Update(func(txn *badger.Txn) error {
@@ -702,6 +714,112 @@ func (a *BadgerStore) GetChunk(chunkId uint64) (*Chunk, error) {
 		return nil, err
 	}
 	return chunk, nil
+}
+
+// NewUpload returns an Upload with TransferState and using the specified UploadHeader
+func (a *BadgerStore) NewUpload(header *UploadHeader) (*Upload, error) {
+	id := rand.NewMath().Uint64()
+	ts := &TransferState{Chunks: []uint64{}, Length: 0}
+	ul := &Upload{ID: id, Header: header, State: ts}
+	return ul, nil
+}
+
+// PutUpload stores an Upload in the db
+func (a *BadgerStore) PutUpload(ul *Upload) error {
+	// TODO: add index of uploads
+	return a.db.Update(func(txn *badger.Txn) error {
+		// save the transferstate
+		serialized, err := cbor.Marshal(ul)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(uploadKey(ul.ID), serialized)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// GetUpload returns the upload state and header
+func (a *BadgerStore) GetUpload(ulId uint64) (*Upload, error) {
+	ul := new(Upload)
+	// initialize concrete types to deserialize into
+	// TODO: TransferState could be stored/retrieved under a different key and updated independently
+	ul.State = new(TransferState)
+	ul.Header = new(UploadHeader)
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(uploadKey(ulId))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, ul)
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ul, nil
+}
+
+// RemoveDownload removes the Upload state and header from db
+func (a *BadgerStore) RemoveUpload(ulId uint64) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(uploadKey(ulId))
+	})
+}
+
+// NewDownload returns a new Download using the specified DownloadHeader
+func (a *BadgerStore) NewDownload(header *DownloadHeader) (*Download, error) {
+	id := rand.NewMath().Uint64()
+	ts := &TransferState{Chunks: []uint64{}, Length: 0}
+	dl := &Download{ID: id, Header: header, State: ts}
+	return dl, nil
+}
+
+// PutDownload stores a Download in the db
+func (a *BadgerStore) PutDownload(dl *Download) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		// save the transferstate
+		serialized, err := cbor.Marshal(dl)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(uploadKey(dl.ID), serialized)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// GetDownload returns the Download state and header from db
+func (a *BadgerStore) GetDownload(dlId uint64) (*Download, error) {
+	dl := new(Download)
+	// initialize concrete types to deserialize into
+	dl.State = new(TransferState)
+	dl.Header = new(DownloadHeader)
+	err := a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(downloadKey(dlId))
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, dl)
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dl, nil
+}
+
+// RemoveDownload removes the Download state and header from db
+func (a *BadgerStore) RemoveDownload(dlId uint64) error {
+	return a.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(downloadKey(dlId))
+	})
 }
 
 func (a *BadgerStore) Close() {
