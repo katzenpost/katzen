@@ -209,7 +209,11 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if uploader buttons are clicked and do the action
 	for i, ul := range t.uploads {
 		if ul.startBtn.Clicked(gtx) {
-			ul.Start()
+			transport, err := mClient.NewClient(t.a.Session())
+			if err != nil {
+				return TransferFailure{Error: err}
+			}
+			ul.StartWithTransport(transport)
 			return TransferStarted{}
 		}
 		if ul.cancelBtn.Clicked(gtx) {
@@ -225,7 +229,11 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if any downloader buttons are clicked
 	for i, dl := range t.downloads {
 		if dl.startBtn.Clicked(gtx) {
-			dl.Start()
+			transport, err := mClient.NewClient(t.a.Session())
+			if err != nil {
+				return TransferFailure{Error: err}
+			}
+			dl.StartWithTransport(transport)
 			return TransferStarted{}
 		}
 
