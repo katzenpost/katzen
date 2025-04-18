@@ -36,6 +36,15 @@ type DownloadHeader struct {
 	Sum256  []byte                  // the hash of the Payload
 }
 
+// TransferState holds state needed to resume a transfer, the chunks sent or receive and the bytes so far
+type TransferState struct {
+	// Chunks is the ordered Chunk ids comprising the transfer
+	Chunks []uint64
+
+	// Number of bytes transferred in these chunks
+	Length uint64
+}
+
 // DownloadHeader returns the Header used to start a download
 func (u *UploadHeader) DownloadHeader() *DownloadHeader {
 	d := new(DownloadHeader)
@@ -46,13 +55,26 @@ func (u *UploadHeader) DownloadHeader() *DownloadHeader {
 	return d
 }
 
+// Upload holds the State of a Transfer of the content in Header
+type Upload struct {
+	ID uint64
+	Header *UploadHeader
+	State *TransferState
+}
+
+// Download holds the State of a Transfer of the content in Header
+type Download struct {
+	ID uint64
+	Header *DownloadHeader
+	State *TransferState
+}
+
 // Chunk holds each bacap message
 type Chunk struct {
 	ID        uint64
 	Key       [ed25519.PublicKeySize]byte
 	Signature [ed25519.SignatureSize]byte
 	Payload   []byte
-	Sent      bool
 }
 
 // TransferPage tracks the uploads and downloads in progress and provides UI to stop/start/cancel transfers
