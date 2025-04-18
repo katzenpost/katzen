@@ -92,6 +92,10 @@ type TransferPage struct {
 type TransferCancelled struct{}
 type TransferCompleted struct{}
 type TransferRemoved struct{}
+type TransferStarted struct{}
+type TransferFailure struct {
+	Error error
+}
 
 func (t *TransferPage) Start(stop <-chan struct{}) {
 	go func() {
