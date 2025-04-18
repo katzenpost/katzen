@@ -22,6 +22,7 @@ import (
 // Downloader
 type Downloader struct {
 	worker.Worker
+	startOnce *sync.Once
 	transport mClient.ReadWriteClient
 	db        *BadgerStore
 
@@ -35,7 +36,26 @@ type Downloader struct {
 	startBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
 	deleteBtn *widget.Clickable
+}
 
+func NewDownloader(db *BadgerStore, transport *mClient.Client, dl *Download, dest io.Writer) *Downloader {
+	dloader := &Downloader{Download: dl,
+		startOnce: new(sync.Once),
+		dest: dest,
+		db: db,
+		startBtn:  &widget.Clickable{},
+		cancelBtn: &widget.Clickable{},
+		deleteBtn: &widget.Clickable{},
+	}
+	return dloader
+}
+
+func (d *Downloader) Start() {
+	d.startOnce.Do(func() {
+		d.Go(d.worker)
+		<-d.HaltCh()
+		d.startOnce = new(sync.Once)
+	})
 }
 
 // NewUploadHeader returns an UploadHeader created for the File
@@ -62,23 +82,6 @@ func NewUploadHeader(path string) (*UploadHeader, error) {
 	}
 
 	return header, nil
-}
-
-// NewDownloader returns a new Downloader with the
-func NewUploader(transport *mClient.Client, db *BadgerStore, h *UploadHeader, source io.Reader) (*Uploader, error) {
-	// XXX: set db
-	ul := &Uploader{startOnce: new(sync.Once), Header: h, db: db, source: source, startBtn: new(widget.Clickable), cancelBtn: new(widget.Clickable), deleteBtn: new(widget.Clickable)}
-	return ul, nil
-}
-
-func NewDownloader(session *client.Session, h *DownloadHeader, dest io.Writer) *Downloader {
-	dloader := &Downloader{State: Proposed,
-		Header: h, dest: dest, cmdCh: make(chan Command),
-		startBtn:  &widget.Clickable{},
-		cancelBtn: &widget.Clickable{},
-		deleteBtn: &widget.Clickable{},
-	}
-	return dloader
 }
 
 // bacapworker receives command to start/stop reading and storing bytes
@@ -161,15 +164,26 @@ type Uploader struct {
 
 	db        *BadgerStore
 	source    io.Reader
-	transport mClient.ReadWriteClient
-
+	transport *mClient.Client
 
 	startBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
 	deleteBtn *widget.Clickable
 }
 
-func (u *Uploader) Start() {
+func NewUploader(db *BadgerStore, transport *mClient.Client, ul *Upload, source io.Reader) *Uploader {
+	uploader := &Uploader{Upload: ul,
+		db: db,
+		source: source,
+		startBtn:  &widget.Clickable{},
+		cancelBtn: &widget.Clickable{},
+		deleteBtn: &widget.Clickable{},
+	}
+	return uploader
+}
+
+func (u *Uploader) StartWithTransport(t *mClient.Client) {
+	u.transport = t
 	u.startOnce.Do(func() {
 		u.Go(u.worker)
 		<-u.HaltCh()
