@@ -84,7 +84,7 @@ func NewDownloader(session *client.Session, h *DownloadHeader, dest io.Writer) *
 
 // bacapworker receives command to start/stop reading and storing bytes
 func (d *Downloader) worker() {
-	reader, err := bacap.NewStatefulReader(d.Header.ReadCap, d.Header.Sum256)
+	reader, err := bacap.NewStatefulReader(d.Download.Header.ReadCap, d.Download.Header.Sum256)
 	if err != nil {
 		panic(err)
 	}
