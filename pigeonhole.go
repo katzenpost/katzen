@@ -36,7 +36,6 @@ type Downloader struct {
 	cancelBtn *widget.Clickable
 	deleteBtn *widget.Clickable
 
-	cmdCh chan Command
 }
 
 // NewUploadHeader returns an UploadHeader created for the File
@@ -93,13 +92,6 @@ func (d *Downloader) worker() {
 		select {
 		case <-d.HaltCh():
 			return
-		case cmd := <-d.cmdCh:
-			switch cmd {
-			case Start:
-			case Stop:
-				return
-			default:
-			}
 		default:
 
 		}
