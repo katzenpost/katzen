@@ -192,6 +192,13 @@ func NewUploader(db *BadgerStore, ul *Upload, source io.Reader) *Uploader {
 
 func (u *Uploader) StartWithTransport(t *mClient.Client) {
 	u.transport = t
+	u.Start()
+}
+
+func (u *Uploader) Start() {
+	if u.transport == nil {
+		panic("no transport")
+	}
 	u.startOnce.Do(func() {
 		u.Go(u.worker)
 		<-u.HaltCh()
