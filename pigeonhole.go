@@ -25,28 +25,11 @@ type Downloader struct {
 	transport mClient.ReadWriteClient
 	db        *BadgerStore
 
-	// State is the State of the Downloader
-	State DownloadState
-
-	// Header contains metadata Name, Sum256, Size
-	Header *DownloadHeader
-
-	// Sum256 is the current hash.Hash.Sum256 of the bytes received
-	Sum256 []byte
+	// Download holds the TransferState and DownloadHeader
+	Download *Download
 
 	// io.Writer is where received bytes get written
 	dest io.Writer
-
-	// each upload or download consists of a number of chunks
-	// which are stored with a uint64 key in a db
-	Chunks []uint64
-
-	// Number of read Chunks
-	BytesRead uint64
-
-	// We need a structure to hold a reference to each payload response
-	// that we received from pigeonhole in our database
-	// so that
 
 	// UI buttons associated with each Downloader
 	startBtn  *widget.Clickable
@@ -121,7 +104,7 @@ func (d *Downloader) worker() {
 
 		}
 		// is already read
-		if d.BytesRead == d.Header.Length {
+		if d.Download.State.Length == d.Download.Header.Length {
 			// set state to complted
 			return
 		}
@@ -141,7 +124,7 @@ func (d *Downloader) worker() {
 			continue
 		}
 		// obtain plaintext. a decryption failure is a fatal error
-		plaintext, err := reader.DecryptNext(d.Header.Sum256, boxID.ByteArray(), ciphertext, sig)
+		plaintext, err := reader.DecryptNext(d.Download.Header.Sum256, boxID.ByteArray(), ciphertext, sig)
 		if err != nil {
 			// XXX: log or handle this error
 			return
@@ -156,7 +139,7 @@ func (d *Downloader) worker() {
 		}
 
 		// update how many bytes have been read
-		d.BytesRead += uint64(len(plaintext))
+		d.Download.State.Length += uint64(len(plaintext))
 	}
 }
 
@@ -183,16 +166,10 @@ type Uploader struct {
 	startOnce *sync.Once
 	worker.Worker
 
-	Header    *UploadHeader
 	db        *BadgerStore
 	source    io.Reader
 	transport mClient.ReadWriteClient
 
-	// Total bytes written
-	BytesWritten uint64
-
-	// Chunk IDs of the Chunks created
-	Chunks []uint64
 
 	startBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
@@ -214,7 +191,7 @@ func (u *Uploader) worker() {
 	}
 	payloadSize := u.transport.PayloadSize()
 
-	for u.BytesWritten < u.Header.Length {
+	for u.Upload.State.Length < u.Upload.Header.Length {
 		buf := make([]byte, payloadSize)
 		n, err := io.ReadFull(u.source, buf)
 		switch err {
@@ -231,8 +208,8 @@ func (u *Uploader) worker() {
 			if err != nil {
 				panic(err)
 			}
-			u.Chunks = append(u.Chunks, ch.ID)
-			u.BytesWritten += uint64(len(ciphertext))
+			u.Upload.State.Chunks = append(u.Upload.State.Chunks, ch.ID)
+			u.Upload.State.Length += uint64(len(ciphertext))
 
 			ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
 			//err = u.transport.PutWithContext(ctx, box_id[:], sig[:], ciphertext)
