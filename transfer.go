@@ -123,7 +123,6 @@ func (t *TransferPage) Update(item interface{}) {
 		}
 		// XXX: requires a non nil session (ie, be online)
 		// in order to create an Uploader, which is lame.
-		t.a.Session()
 		transport, err := mClient.NewClient(t.a.Session())
 		if err != nil {
 			return
