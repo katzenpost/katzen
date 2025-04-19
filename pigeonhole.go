@@ -40,8 +40,8 @@ type Downloader struct {
 func NewDownloader(db *BadgerStore, dl *Download, dest io.Writer) *Downloader {
 	dloader := &Downloader{Download: dl,
 		startOnce: new(sync.Once),
-		dest: dest,
-		db: db,
+		dest:      dest,
+		db:        db,
 		startBtn:  &widget.Clickable{},
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
@@ -180,8 +180,8 @@ type Uploader struct {
 
 func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
 	uploader := &Uploader{Upload: ul,
-		db: db,
-		source: source,
+		db:        db,
+		source:    source,
 		startBtn:  &widget.Clickable{},
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
