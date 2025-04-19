@@ -6,7 +6,6 @@ import (
 	"gioui.org/layout"
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
-	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
 	mClient "github.com/katzenpost/katzenpost/pigeonhole/client"
 	"golang.org/x/crypto/blake2b"
