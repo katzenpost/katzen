@@ -206,7 +206,7 @@ func (u *Uploader) Start() {
 }
 
 func (u *Uploader) worker() {
-	writer, err := bacap.NewStatefulWriter(u.Header.WriteCap, u.Header.Sum256)
+	writer, err := bacap.NewStatefulWriter(u.Upload.Header.WriteCap, u.Upload.Header.Sum256)
 	if err != nil {
 		panic(err)
 	}
