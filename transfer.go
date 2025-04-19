@@ -57,16 +57,16 @@ func (u *UploadHeader) DownloadHeader() *DownloadHeader {
 
 // Upload holds the State of a Transfer of the content in Header
 type Upload struct {
-	ID uint64
+	ID     uint64
 	Header *UploadHeader
-	State *TransferState
+	State  *TransferState
 }
 
 // Download holds the State of a Transfer of the content in Header
 type Download struct {
-	ID uint64
+	ID     uint64
 	Header *DownloadHeader
-	State *TransferState
+	State  *TransferState
 }
 
 // Chunk holds each bacap message
