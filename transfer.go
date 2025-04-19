@@ -148,7 +148,7 @@ func newTransferPage(a *App) *TransferPage {
 
 // Layout the view for a Downloader
 func (d *Downloader) Layout(gtx layout.Context) layout.Dimensions {
-	progress := float32(d.BytesRead) / float32(d.Header.Length)
+	progress := float32(d.Download.State.Length) / float32(d.Download.Header.Length)
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(material.Caption(th, d.Header.Name).Layout),
 		layout.Rigid(material.ProgressBar(th, progress).Layout),
@@ -167,7 +167,7 @@ func (d *Downloader) Layout(gtx layout.Context) layout.Dimensions {
 // Layout the view for a Uploader
 // Shown is the file name and size, a progress bar, and start/stop
 func (u *Uploader) Layout(gtx layout.Context) layout.Dimensions {
-	progress := float32(u.BytesWritten) / float32(u.Header.Length)
+	progress := float32(u.Upload.State.Length) / float32(u.Upload.Header.Length)
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(material.Caption(th, u.Header.Name).Layout),
 		layout.Rigid(material.Caption(th, base64.StdEncoding.EncodeToString(u.Header.Sum256)).Layout),
