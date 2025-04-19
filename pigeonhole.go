@@ -22,7 +22,7 @@ import (
 type Downloader struct {
 	worker.Worker
 	startOnce *sync.Once
-	transport mClient.ReadWriteClient
+	transport *mClient.Client
 	db        *BadgerStore
 
 	// Download holds the TransferState and DownloadHeader
