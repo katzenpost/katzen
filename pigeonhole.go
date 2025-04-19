@@ -49,13 +49,13 @@ func NewDownloader(db *BadgerStore, dl *Download, dest io.Writer) *Downloader {
 	return dloader
 }
 
-func (u *Downloader) StartWithTransport(t *mClient.Client) {
+func (d *Downloader) StartWithTransport(t *mClient.Client) {
 	d.transport = t
 	d.Start()
 }
 
 func (d *Downloader) Start() {
-	if transport == nil  {
+	if d.transport == nil {
 		panic("no transport")
 	}
 	d.startOnce.Do(func() {
