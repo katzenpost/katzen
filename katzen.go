@@ -12,7 +12,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/katzenpost/katzenpost/client"
 	"github.com/katzenpost/katzenpost/core/worker"
-	mClient "github.com/katzenpost/katzenpost/pigeonhole/client"
+	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"github.com/katzenpost/katzenpost/stream"
 	"time"
 
@@ -169,30 +169,19 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 		return ErrAlreadyReading
 	}
 	a.Unlock()
-	transport, err := a.db.GetStream(id)
+	stream, err := a.db.GetStream(id)
 	if err != nil {
 		l.Errorf("error startTransport: GetStream %d: %v", id, err)
 		return err
 	}
 
-	// initialize a pigeonhole client with session and make it the current transport
-	c, _ := mClient.NewClient(session)
-	l.Debugf("transport.Stream: %v", transport.Stream)
-	l.Debugf("transport.Stream.Addr: %v", transport.Stream.Addr)
-	s := transport.Stream
-	if s == nil {
-		panic("nil stream")
-	}
-	addr := s.LocalAddr()
-	if addr == nil {
-		panic("nil addr") // XXX; wtfbbq
-	}
-	trans := mClient.DuplexFromSeed(c, transport.Stream.Initiator, []byte(addr.String()))
-	transport.Stream.SetTransport(trans)
+	// initialize a scratch client with session and make it the transport
+	scratchClient, _ := sClient.NewClient(session)
+	stream.Stream.SetTransport(scratchClient)
 
 	a.Lock()
 	a.transports[id] = transport
-	a.messageChans[id] = a.ReadMessages(transport, transport.HaltCh())
+	a.messageChans[id] = a.ReadMessages(stream, transport.HaltCh())
 	a.Unlock()
 	transport.Start()
 	return nil
