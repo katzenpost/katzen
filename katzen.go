@@ -183,10 +183,10 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	stream.Stream.SetTransport(scratchClient)
 
 	a.Lock()
-	a.transports[id] = transport
-	a.messageChans[id] = a.ReadMessages(stream, transport.HaltCh())
+	a.transports[id] = stream
+	a.messageChans[id] = a.ReadMessages(stream, stream.HaltCh())
 	a.Unlock()
-	transport.Start()
+	stream.Start()
 	return nil
 }
 
