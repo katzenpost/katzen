@@ -176,7 +176,10 @@ func (a *App) startTransport(session *client.Session, id uint64) error {
 	}
 
 	// initialize a scratch client with session and make it the transport
-	scratchClient, _ := sClient.NewClient(session)
+	scratchClient, err := sClient.NewClient(session)
+	if err != nil {
+		return err
+	}
 	stream.Stream.SetTransport(scratchClient)
 
 	a.Lock()
