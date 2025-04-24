@@ -6,7 +6,7 @@ import (
 	"gioui.org/layout"
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/sign/ed25519"
-	mClient "github.com/katzenpost/katzenpost/pigeonhole/client"
+	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"os"
 
@@ -209,7 +209,7 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if uploader buttons are clicked and do the action
 	for i, ul := range t.uploads {
 		if ul.startBtn.Clicked(gtx) {
-			transport, err := mClient.NewClient(t.a.Session())
+			transport, err := sClient.NewClient(t.a.Session())
 			if err != nil {
 				return TransferFailure{Error: err}
 			}
@@ -229,7 +229,7 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if any downloader buttons are clicked
 	for i, dl := range t.downloads {
 		if dl.startBtn.Clicked(gtx) {
-			transport, err := mClient.NewClient(t.a.Session())
+			transport, err := sClient.NewClient(t.a.Session())
 			if err != nil {
 				return TransferFailure{Error: err}
 			}

@@ -9,6 +9,7 @@ import (
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
 	panda "github.com/katzenpost/katzenpost/panda/crypto"
+	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"github.com/katzenpost/katzenpost/stream"
 	"golang.org/x/crypto/nacl/secretbox"
 )
