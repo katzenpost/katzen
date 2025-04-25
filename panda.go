@@ -1,15 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/katzenpost/hpqc/rand"
 	pclient "github.com/katzenpost/katzenpost/panda/client"
 	pCommon "github.com/katzenpost/katzenpost/panda/common"
 	panda "github.com/katzenpost/katzenpost/panda/crypto"
-	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"github.com/katzenpost/katzenpost/stream"
 	"golang.org/x/crypto/nacl/secretbox"
 )
@@ -52,8 +49,8 @@ func (a *App) doPANDAExchange(id uint64) error {
 		l.Errorf("Failed to get %s: %s", pCommon.PandaCapability, err)
 		return err
 	}
-	// minimum blob size to exchange a ecdh.PublicKey
-	blobSize := 24 /* nonce */ + 4 /* length */ + necdh.PublicKeySize() + secretbox.Overhead
+	// minimum blob size to exchange necdh.PublicKey and eddsa.Pub
+	blobSize := 24 /* nonce */ + 4 /* length */ + signScheme.PublicKeySize() + nikeScheme.PublicKeySize() + secretbox.Overhead
 
 	meetingPlace := pclient.New(blobSize, s, l, p.Name, p.Provider)
 	// get the current document and shared random
@@ -68,8 +65,16 @@ func (a *App) doPANDAExchange(id uint64) error {
 	var kx *panda.KeyExchange
 	pandaChan := make(chan panda.PandaUpdate)
 
-	// our ecdh public key
-	myPublic := necdh.DerivePublicKey(c.MyIdentity)
+	ex, err := NewReadCapExchange()
+	if err != nil {
+		return err
+	}
+
+	kxBytes, err := ex.ExchangeBytes()
+	if err != nil {
+		return err
+	}
+
 	if c.PandaKeyExchange != nil {
 		kx, err = panda.UnmarshalKeyExchange(rand.Reader, l, meetingPlace, c.PandaKeyExchange, id, pandaChan, s.HaltCh())
 		if err != nil {
@@ -77,7 +82,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 		}
 		kx.SetSharedRandom(sharedRandom)
 	} else {
-		kx, err = panda.NewKeyExchange(rand.Reader, l, meetingPlace, sharedRandom, c.SharedSecret, myPublic.Bytes(), id, pandaChan, s.HaltCh())
+		kx, err = panda.NewKeyExchange(rand.Reader, l, meetingPlace, sharedRandom, c.SharedSecret, kxBytes, id, pandaChan, s.HaltCh())
 		if err != nil {
 			return err
 		}
@@ -144,40 +149,32 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		c.PandaKeyExchange = nil
 		c.IsPending = false
 
-		// get the exchanged keys and figure out who goes first
-		theirPublic, err := necdh.UnmarshalBinaryPublicKey(update.Result)
+		msg := &ReadCapExchangeMessage{}
+		err = msg.UnmarshalBinary(update.Result)
 		if err != nil {
-			err = fmt.Errorf("failed to parse contact public key bytes: %s", err)
+			err = fmt.Errorf("failed to parse exchange bytes: %s", err)
 			l.Error(err.Error())
 			c.PandaResult = err.Error()
 			return false, err
 		}
-		c.Identity = theirPublic
-
-		// get our nike (ecdh) public key for this contact
-		myPublic := necdh.DerivePublicKey(c.MyIdentity)
-		streamSecret := base64.StdEncoding.EncodeToString(necdh.DeriveSecret(c.MyIdentity, theirPublic))
-
-		// XXX: ideally Stream is not actually started here, but both ListenDuplex and DialDuplex call Start..
-		var transport *stream.BufferedStream
-		if bytes.Compare(myPublic.Bytes(), theirPublic.Bytes()) == 1 {
-			// we go first, so we are the "listener"
-			l.Notice("Listening with %x", streamSecret)
-			st, err := stream.ListenDuplex(a.Session(), "", string(streamSecret))
-			if err != nil {
-				panic(err)
-			}
-			transport = &stream.BufferedStream{Stream: st}
-		} else {
-			l.Notice("Dialing with %x", streamSecret)
-			st, err := stream.DialDuplex(a.Session(), "", string(streamSecret))
-			if err != nil {
-				panic(err)
-			}
-			transport = &stream.BufferedStream{Stream: st}
+		ownerCap, readCap, err := c.ReadCapExchange.CompleteExchange(msg)
+		if err != nil {
+			err = fmt.Errorf("failed to complete exchange: %s", err)
+			l.Error(err.Error())
+			c.PandaResult = err.Error()
+			return false, err
 		}
-		// store stream in db
-		transport.Halt()
+
+		// save these initial capabilities
+		c.ReadCap = readCap
+		c.WriteCap = ownerCap
+
+		// XXX: derive a unique shared first context
+		context := []byte("first-contact")
+
+		// create a stream to exchange messages with this contact
+		st := stream.NewStream(ownerCap, readCap, context)
+		transport := &stream.BufferedStream{Stream: st}
 		err = a.db.PutStream(c.ID, transport)
 		if err != nil {
 			panic(err)
