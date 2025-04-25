@@ -7,7 +7,7 @@ import (
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/katzenpost/core/worker"
-	mClient "github.com/katzenpost/katzenpost/pigeonhole/client"
+	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/crypto/blake2b"
 	"io"
 	"os"
@@ -22,7 +22,7 @@ import (
 type Downloader struct {
 	worker.Worker
 	startOnce *sync.Once
-	transport *mClient.Client
+	transport *sClient.Client
 	db        *BadgerStore
 
 	// Download holds the TransferState and DownloadHeader
@@ -49,7 +49,7 @@ func NewDownloader(db *BadgerStore, dl *Download, dest io.Writer) *Downloader {
 	return dloader
 }
 
-func (d *Downloader) StartWithTransport(t *mClient.Client) {
+func (d *Downloader) StartWithTransport(t *sClient.Client) {
 	d.transport = t
 	d.Start()
 }
@@ -119,7 +119,7 @@ func (d *Downloader) worker() {
 		// fetch the box
 		// XXX: FIXME: obtain signature along with payload fromt he client; requires api change
 		sig := [64]byte{'f', 'm', 'l'}
-		ciphertext /*sig,*/, err := d.transport.GetWithContext(ctx, boxID.Bytes())
+		ciphertext, sig, err := d.transport.Get(ctx, boxID.ByteArray())
 		cancelFn()
 		if err != nil {
 			// retry
@@ -171,7 +171,7 @@ type Uploader struct {
 
 	db        *BadgerStore
 	source    io.ReadSeeker
-	transport *mClient.Client
+	transport *sClient.Client
 
 	startBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
@@ -182,6 +182,7 @@ func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
 	uploader := &Uploader{Upload: ul,
 		db:        db,
 		source:    source,
+		startOnce: new(sync.Once),
 		startBtn:  &widget.Clickable{},
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
@@ -189,7 +190,7 @@ func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
 	return uploader
 }
 
-func (u *Uploader) StartWithTransport(t *mClient.Client) {
+func (u *Uploader) StartWithTransport(t *sClient.Client) {
 	u.transport = t
 	u.Start()
 }
@@ -238,9 +239,10 @@ func (u *Uploader) worker() {
 			u.Upload.State.Chunks = append(u.Upload.State.Chunks, ch.ID)
 			u.Upload.State.Length += uint64(len(ciphertext))
 
+			var sig64 [64]byte
+			copy(sig64[:], sig)
 			ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
-			//err = u.transport.PutWithContext(ctx, box_id[:], sig[:], ciphertext)
-			err = u.transport.PutWithContext(ctx, box_id[:], ciphertext)
+			err = u.transport.Put(ctx, box_id, sig64, ciphertext)
 			cancelFn()
 			if err != nil {
 				panic(err)
