@@ -14,7 +14,6 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/katzenpost/hpqc/nike/schemes"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/katzenpost/stream"
 	"golang.org/x/crypto/hkdf"
@@ -23,7 +22,6 @@ import (
 var (
 	ErrConversationAlreadyExists = errors.New("Conversation already exists")
 	DBVersion                    = []byte("0.0.0")
-	necdh                        = schemes.ByName("x25519")
 )
 
 // BadgerStore holds katzen data and wraps a BadgerDB instance
@@ -154,11 +152,14 @@ func (a *BadgerStore) RemoveContact(contactID uint64) error {
 
 // NewContact creates a new Contact from a shared secret (dialer)
 func (a *BadgerStore) NewContact(nickname string, secret []byte) (*Contact, error) {
-	sK := necdh.GeneratePrivateKey(rand.Reader)
-	emptyPk := necdh.NewEmptyPublicKey()
+	// create a new ReadCapExchange
+	rc, err := NewReadCapExchange()
+	if err != nil {
+		return nil, err
+	}
 	contactID := rand.NewMath().Uint64()
-	contact := &Contact{ID: contactID, Nickname: nickname, Identity: emptyPk, MyIdentity: sK, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
-	err := a.PutContact(contact)
+	contact := &Contact{ID: contactID, Nickname: nickname, ReadCapExchange: rc, SharedSecret: secret, IsPending: true, Outbound: rand.NewMath().Uint64()}
+	err = a.PutContact(contact)
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +173,6 @@ func (a *BadgerStore) NewConversation(contactID uint64) (*Conversation, error) {
 	err := a.db.Update(func(txn *badger.Txn) error {
 		// Create a Contact to deserialize into
 		contact := new(Contact)
-		contact.MyIdentity = necdh.NewEmptyPrivateKey()
-		contact.Identity = necdh.NewEmptyPublicKey()
 		// verify that the contact exists, and retrieve it
 		i, err := txn.Get(contactKey(contactID))
 		if err != nil {
@@ -378,8 +377,6 @@ func (a *BadgerStore) GetContactIDs() []uint64 {
 func (a *BadgerStore) GetContact(contactID uint64) (*Contact, error) {
 	contact := new(Contact)
 	// initialize concrete types to deserialize into
-	contact.MyIdentity = necdh.NewEmptyPrivateKey()
-	contact.Identity = necdh.NewEmptyPublicKey()
 	err := a.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(contactKey(contactID))
 		if err != nil {
