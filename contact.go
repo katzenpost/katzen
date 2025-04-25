@@ -24,7 +24,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/benc-uk/gofract/pkg/colors"
 	"github.com/benc-uk/gofract/pkg/fractals"
-	"github.com/katzenpost/hpqc/nike"
+	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	qrcode "github.com/skip2/go-qrcode"
 	"golang.org/x/exp/shiny/materialdesign/icons"
@@ -75,11 +75,14 @@ type Contact struct {
 	// which allows for offline composition to contacts
 	Outbound uint64
 
-	// MyIdentity is the nike.PrivateKey used with PANDA
-	MyIdentity nike.PrivateKey
+	// ReadCapExchnage holds keys used to exchange ReadCap with PANDA
+	ReadCapExchange *ReadCapExchange
 
-	// Identity is the nike.PublicKey learned from PANDA
-	Identity nike.PublicKey
+	// ReadCap is the read capabilty for this contact
+	ReadCap *bacap.UniversalReadCap
+
+	// WriteCap is the write capability to this contact
+	WriteCap *bacap.BoxOwnerCap
 
 	// SharedSecret is the passphrase used to add the contact.
 	SharedSecret []byte
