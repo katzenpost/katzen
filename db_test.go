@@ -303,6 +303,7 @@ func TestBadgerPutRemoveChunk(t *testing.T) {
 		require.NoError(err)
 		sig := sK.SignMessage(buf)
 		ch := &Chunk{ID: m.Uint64(), Payload: buf}
+		chunks[i] = ch
 		copy(ch.Key[:], pK.Bytes())
 		copy(ch.Signature[:], sig)
 		err = bs.PutChunk(ch)
