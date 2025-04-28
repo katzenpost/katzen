@@ -8,7 +8,6 @@ import (
 	"github.com/katzenpost/hpqc/sign/ed25519"
 	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/exp/shiny/materialdesign/icons"
-	"os"
 
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -60,6 +59,7 @@ type Upload struct {
 	ID     uint64
 	Header *UploadHeader
 	State  *TransferState
+	Path   string
 }
 
 // Download holds the State of a Transfer of the content in Header
@@ -67,6 +67,7 @@ type Download struct {
 	ID     uint64
 	Header *DownloadHeader
 	State  *TransferState
+	Path   string
 }
 
 // Chunk holds each bacap message
@@ -111,29 +112,47 @@ func (t *TransferPage) Start(stop <-chan struct{}) {
 
 // Update is called by the Chooser with the path chosen
 func (t *TransferPage) Update(item interface{}) {
-	switch i := item.(type) {
+	switch path := item.(type) {
 	case string:
-		uh, err := NewUploadHeader(i)
+		uh, err := NewUploadHeader(path)
 		if err != nil {
 			return
 		}
-		ul, err := t.a.db.NewUpload(uh)
+		ul, err := t.a.db.NewUpload(uh, path)
 		if err != nil {
 			return
 		}
-		f, err := os.Open(i)
-		if err != nil {
-			return
+		dl, err := NewUploader(t.a.db, ul)
+		if err == nil {
+			t.uploads = append(t.uploads, dl)
 		}
-		dl := NewUploader(t.a.db, ul, f)
-		t.uploads = append(t.uploads, dl)
 	}
 }
 
 func newTransferPage(a *App) *TransferPage {
+	ulIDs := a.db.GetUploadIDs()
+	dlIDs := a.db.GetDownloadIDs()
+	uploads := make([]*Uploader, 0, len(ulIDs))
+	downloads := make([]*Downloader, 0, len(dlIDs))
+
+	for _, ulID := range ulIDs {
+		if ul, err := a.db.GetUpload(ulID); err == nil {
+			if ulr, err := NewUploader(a.db, ul); err == nil {
+				uploads = append(uploads, ulr)
+			}
+		}
+	}
+	for _, dlID := range dlIDs {
+		if dl, err := a.db.GetDownload(dlID); err == nil {
+			if dlr, err := NewDownloader(a.db, dl); err == nil {
+				downloads = append(downloads, dlr)
+			}
+		}
+	}
+
 	t := &TransferPage{a: a,
-		uploads:   []*Uploader{},
-		downloads: []*Downloader{},
+		uploads:   uploads,
+		downloads: downloads,
 		add:       &widget.Clickable{},
 		back:      &widget.Clickable{},
 		updateCh:  make(chan struct{}, 1),
@@ -145,7 +164,7 @@ func newTransferPage(a *App) *TransferPage {
 func (d *Downloader) Layout(gtx layout.Context) layout.Dimensions {
 	progress := float32(d.Download.State.Length) / float32(d.Download.Header.Length)
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
-		layout.Rigid(material.Caption(th, d.Header.Name).Layout),
+		layout.Rigid(material.Caption(th, d.Download.Header.Name).Layout),
 		layout.Rigid(material.ProgressBar(th, progress).Layout),
 
 		layout.Rigid(func(gtx C) D {
@@ -218,6 +237,10 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 		if ul.deleteBtn.Clicked(gtx) {
 			ul.Halt()
 			t.uploads = append(t.uploads[:i], t.uploads[i+1:]...)
+			err := t.a.db.RemoveUpload(ul.Upload.ID)
+			if err != nil {
+				return TransferFailure{Error: err}
+			}
 			return TransferRemoved{}
 		}
 	}
@@ -239,6 +262,10 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 		if dl.deleteBtn.Clicked(gtx) {
 			dl.Halt()
 			t.downloads = append(t.downloads[:i], t.downloads[i+1:]...)
+			err := t.a.db.RemoveDownload(dl.Download.ID)
+			if err != nil {
+				return TransferFailure{Error: err}
+			}
 			return TransferRemoved{}
 		}
 	}

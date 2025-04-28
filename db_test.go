@@ -331,7 +331,7 @@ func TestBadgerNewUpload(t *testing.T) {
 	header := &UploadHeader{
 		WriteCap: nil, Name: "test upload name", Length: 4242, Sum256: make([]byte, 32),
 	}
-	ul, err := bs.NewUpload(header)
+	ul, err := bs.NewUpload(header, "nopath")
 	require.NoError(err)
 	require.Equal(ul.Header.Name, header.Name)
 }
@@ -347,7 +347,7 @@ func TestBadgerPutGetUploads(t *testing.T) {
 		header := &UploadHeader{
 			WriteCap: nil, Name: fmt.Sprintf("upload #: %d", i), Length: 4242, Sum256: make([]byte, 32),
 		}
-		ul, err := bs.NewUpload(header)
+		ul, err := bs.NewUpload(header, "nopath")
 		require.NoError(err)
 
 		uploads = append(uploads, ul)
@@ -374,7 +374,7 @@ func TestBadgerRemoveUpload(t *testing.T) {
 		header := &UploadHeader{
 			WriteCap: nil, Name: fmt.Sprintf("upload #: %d", i), Length: 4242, Sum256: make([]byte, 32),
 		}
-		ul, err := bs.NewUpload(header)
+		ul, err := bs.NewUpload(header, "nopath")
 		require.NoError(err)
 
 		uploads = append(uploads, ul)
@@ -406,7 +406,7 @@ func TestBadgerPutGetDownloads(t *testing.T) {
 		header := &DownloadHeader{
 			ReadCap: nil, Name: fmt.Sprintf("download #: %d", i), Length: 4242, Sum256: make([]byte, 32),
 		}
-		dl, err := bs.NewDownload(header)
+		dl, err := bs.NewDownload(header, "nopath")
 		require.NoError(err)
 
 		downloads = append(downloads, dl)

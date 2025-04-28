@@ -732,10 +732,10 @@ func (a *BadgerStore) GetChunk(chunkId uint64) (*Chunk, error) {
 }
 
 // NewUpload returns an Upload with TransferState and using the specified UploadHeader
-func (a *BadgerStore) NewUpload(header *UploadHeader) (*Upload, error) {
+func (a *BadgerStore) NewUpload(header *UploadHeader, path string) (*Upload, error) {
 	id := rand.NewMath().Uint64()
 	ts := &TransferState{Chunks: []uint64{}, Length: 0}
-	ul := &Upload{ID: id, Header: header, State: ts}
+	ul := &Upload{ID: id, Header: header, State: ts, Path: path}
 	err := a.PutUpload(ul)
 	if err != nil {
 		return nil, err
@@ -851,10 +851,10 @@ func (a *BadgerStore) RemoveUpload(ulId uint64) error {
 }
 
 // NewDownload returns a new Download using the specified DownloadHeader
-func (a *BadgerStore) NewDownload(header *DownloadHeader) (*Download, error) {
+func (a *BadgerStore) NewDownload(header *DownloadHeader, path string) (*Download, error) {
 	id := rand.NewMath().Uint64()
 	ts := &TransferState{Chunks: []uint64{}, Length: 0}
-	dl := &Download{ID: id, Header: header, State: ts}
+	dl := &Download{ID: id, Header: header, State: ts, Path: path}
 	err := a.PutDownload(dl)
 	if err != nil {
 		return nil, err

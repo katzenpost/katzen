@@ -37,7 +37,12 @@ type Downloader struct {
 	deleteBtn *widget.Clickable
 }
 
-func NewDownloader(db *BadgerStore, dl *Download, dest io.Writer) *Downloader {
+// NewDownloader initializes and returns a Downloader
+func NewDownloader(db *BadgerStore, dl *Download) (*Downloader, error) {
+	dest, err := os.Open(dl.Path)
+	if err != nil {
+		return nil, err
+	}
 	dloader := &Downloader{Download: dl,
 		startOnce: new(sync.Once),
 		dest:      dest,
@@ -178,7 +183,11 @@ type Uploader struct {
 	deleteBtn *widget.Clickable
 }
 
-func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
+func NewUploader(db *BadgerStore, ul *Upload) (*Uploader, error) {
+	source, err := os.Open(ul.Path)
+	if err != nil {
+		return nil, err
+	}
 	uploader := &Uploader{Upload: ul,
 		db:        db,
 		source:    source,
@@ -187,11 +196,12 @@ func NewUploader(db *BadgerStore, ul *Upload, source io.ReadSeeker) *Uploader {
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
 	}
-	return uploader
+	return uploader, nil
 }
 
 func (u *Uploader) StartWithTransport(t *sClient.Client) {
 	u.transport = t
+
 	u.Start()
 }
 
@@ -201,8 +211,10 @@ func (u *Uploader) Start() {
 	}
 	u.startOnce.Do(func() {
 		u.Go(u.worker)
-		<-u.HaltCh()
-		u.startOnce = new(sync.Once)
+		u.Go(func() {
+			<-u.HaltCh()
+			u.startOnce = new(sync.Once)
+		})
 	})
 }
 
