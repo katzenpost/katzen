@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/hpqc/sign/ed25519"
+	"github.com/katzenpost/katzenpost/stream"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
@@ -226,9 +228,6 @@ func TestBadgerDeliverMessage(t *testing.T) {
 	}
 }
 
-/*
-// XXX: we do not have a handle on session
-// stream is being refactored to not depend on session
 // Verify that fields of Stream are stored correctly
 func TestBadgerPutLoadStream(t *testing.T) {
 	require := require.New(t)
@@ -237,17 +236,21 @@ func TestBadgerPutLoadStream(t *testing.T) {
 	require.NoError(bs.InitDB())
 
 	// initialize a stream
-	session := client.Session{}
-	st := &stream.NewStream(session)
+	writeCap, err := bacap.NewBoxOwnerCap(rand.Reader)
+	require.NoError(err)
+	readCap := writeCap.UniversalReadCap()
+	st := stream.NewStream(writeCap, readCap, []byte("some ctx"))
 	buf := &stream.BufferedStream{Stream: st}
 	bs.PutStream(1, buf)
 	buf2, err := bs.GetStream(1)
 	require.NoError(err)
 
-	require.Equal(buf.Stream.Initiator, buf2.Stream.Initiator)
-	require.Equal(buf.Stream.Addr.Snetwork, buf2.Stream.Addr.Snetwork)
+	dbWCbytes, err := buf2.Stream.WriteCap.MarshalBinary()
+	require.NoError(err)
+	myWCbytes, err := writeCap.MarshalBinary()
+	require.NoError(err)
+	require.Equal(dbWCbytes, myWCbytes)
 }
-*/
 
 func TestBadgerSendMessage(t *testing.T) {
 	require := require.New(t)
