@@ -319,3 +319,102 @@ func TestBadgerPutRemoveChunk(t *testing.T) {
 		require.Equal(ch2.Payload, ch.Payload)
 	}
 }
+
+func TestBadgerNewUpload(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	header := &UploadHeader{
+		WriteCap: nil, Name: "test upload name", Length: 4242, Sum256: make([]byte, 32),
+	}
+	ul, err := bs.NewUpload(header)
+	require.NoError(err)
+	require.Equal(ul.Header.Name, header.Name)
+}
+
+func TestBadgerPutGetUploads(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	uploads := make([]*Upload, 0)
+	// create 42 uploads and make sure the index is created and correctly fetches each upload
+	for i := 0; i < 42; i++ {
+		header := &UploadHeader{
+			WriteCap: nil, Name: fmt.Sprintf("upload #: %d", i), Length: 4242, Sum256: make([]byte, 32),
+		}
+		ul, err := bs.NewUpload(header)
+		require.NoError(err)
+
+		uploads = append(uploads, ul)
+	}
+	ids := bs.GetUploadIDs()
+	require.Equal(len(ids), 42)
+	for _, id := range ids {
+		ul, err := bs.GetUpload(id)
+		require.NoError(err)
+		require.Equal(ul.ID, id)
+		require.NotNil(ul.Header)
+		require.Equal(ul.Header.Length, uint64(4242))
+	}
+}
+
+func TestBadgerRemoveUpload(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	uploads := make([]*Upload, 0)
+	// create 42 uploads and make sure the index is created and correctly fetches each upload
+	for i := 0; i < 42; i++ {
+		header := &UploadHeader{
+			WriteCap: nil, Name: fmt.Sprintf("upload #: %d", i), Length: 4242, Sum256: make([]byte, 32),
+		}
+		ul, err := bs.NewUpload(header)
+		require.NoError(err)
+
+		uploads = append(uploads, ul)
+	}
+
+	toRemove := uploads[24].ID
+	err := bs.RemoveUpload(toRemove)
+	require.NoError(err)
+	ids := bs.GetUploadIDs()
+	require.Equal(len(ids), 41)
+
+	for _, id := range ids {
+		require.NotEqual(id, toRemove)
+	}
+
+	noUpload, err := bs.GetUpload(toRemove)
+	require.Nil(noUpload)
+	require.Error(err)
+}
+
+func TestBadgerPutGetDownloads(t *testing.T) {
+	require := require.New(t)
+	bs := badgerStore(t)
+	require.NoError(bs.InitDB())
+
+	downloads := make([]*Download, 0)
+	// create 42 downloads and make sure the index is created and correctly fetches each download
+	for i := 0; i < 42; i++ {
+		header := &DownloadHeader{
+			ReadCap: nil, Name: fmt.Sprintf("download #: %d", i), Length: 4242, Sum256: make([]byte, 32),
+		}
+		dl, err := bs.NewDownload(header)
+		require.NoError(err)
+
+		downloads = append(downloads, dl)
+	}
+	ids := bs.GetDownloadIDs()
+	require.Equal(len(ids), 42)
+	for _, id := range ids {
+		ul, err := bs.GetDownload(id)
+		require.NoError(err)
+		require.Equal(ul.ID, id)
+		require.NotNil(ul.Header)
+		require.Equal(ul.Header.Length, uint64(4242))
+	}
+}

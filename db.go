@@ -39,12 +39,22 @@ func (a *BadgerStore) InitDB() error {
 			// initialize keys
 			contactsIdx, _ := cbor.Marshal(make(map[uint64]struct{}))
 			conversationIdx, _ := cbor.Marshal(make(map[uint64]struct{}))
+			downloadIdx, _ := cbor.Marshal(make(map[uint64]struct{}))
+			uploadIdx, _ := cbor.Marshal(make(map[uint64]struct{}))
 
 			err = txn.Set(contactsKey(), contactsIdx)
 			if err != nil {
 				return err
 			}
 			err = txn.Set(conversationsKey(), conversationIdx)
+			if err != nil {
+				return err
+			}
+			err = txn.Set(downloadsKey(), downloadIdx)
+			if err != nil {
+				return err
+			}
+			err = txn.Set(uploadsKey(), uploadIdx)
 			if err != nil {
 				return err
 			}
@@ -115,6 +125,14 @@ func transferKey(id uint64) []byte {
 
 func uploadKey(id uint64) []byte {
 	return []byte(fmt.Sprintf("upload:%d", id))
+}
+
+func downloadsKey() []byte {
+	return []byte("downloads")
+}
+
+func uploadsKey() []byte {
+	return []byte("uploads")
 }
 
 func downloadKey(id uint64) []byte {
@@ -718,12 +736,15 @@ func (a *BadgerStore) NewUpload(header *UploadHeader) (*Upload, error) {
 	id := rand.NewMath().Uint64()
 	ts := &TransferState{Chunks: []uint64{}, Length: 0}
 	ul := &Upload{ID: id, Header: header, State: ts}
+	err := a.PutUpload(ul)
+	if err != nil {
+		return nil, err
+	}
 	return ul, nil
 }
 
 // PutUpload stores an Upload in the db
 func (a *BadgerStore) PutUpload(ul *Upload) error {
-	// TODO: add index of uploads
 	return a.db.Update(func(txn *badger.Txn) error {
 		// save the transferstate
 		serialized, err := cbor.Marshal(ul)
@@ -734,8 +755,48 @@ func (a *BadgerStore) PutUpload(ul *Upload) error {
 		if err != nil {
 			return err
 		}
+		// fetch the index of all uploads
+		i, err := txn.Get(uploadsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			uploadsIdx := make(map[uint64]struct{})
+			err := cbor.Unmarshal(val, &uploadsIdx)
+			if err != nil {
+				return err
+			}
+
+			// add upload to index
+			uploadsIdx[ul.ID] = struct{}{}
+			serialized, err := cbor.Marshal(uploadsIdx)
+			if err != nil {
+				return err
+			}
+			return txn.Set(uploadsKey(), serialized)
+		})
+
 		return nil
 	})
+}
+
+// GetUploadIDs returns a slice of all Upload IDs
+func (a *BadgerStore) GetUploadIDs() []uint64 {
+	var uploadIDs map[uint64]struct{}
+	a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(uploadsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, &uploadIDs)
+		})
+	})
+	ids := make([]uint64, 0, len(uploadIDs))
+	for k, _ := range uploadIDs {
+		ids = append(ids, k)
+	}
+	return ids
 }
 
 // GetUpload returns the upload state and header
@@ -760,10 +821,32 @@ func (a *BadgerStore) GetUpload(ulId uint64) (*Upload, error) {
 	return ul, nil
 }
 
-// RemoveDownload removes the Upload state and header from db
+// RemoveUpload removes the Upload state and header from db
 func (a *BadgerStore) RemoveUpload(ulId uint64) error {
 	return a.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete(uploadKey(ulId))
+		i, err := txn.Get(uploadsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+
+			uploadIDs := make(map[uint64]struct{})
+			err := cbor.Unmarshal(val, &uploadIDs)
+			if err != nil {
+				return err
+			}
+			delete(uploadIDs, ulId)
+			serialized, err := cbor.Marshal(uploadIDs)
+			if err != nil {
+				return err
+			}
+			err = txn.Set(uploadsKey(), serialized)
+			if err != nil {
+				return err
+			}
+
+			return txn.Delete(uploadKey(ulId))
+		})
 	})
 }
 
@@ -772,7 +855,30 @@ func (a *BadgerStore) NewDownload(header *DownloadHeader) (*Download, error) {
 	id := rand.NewMath().Uint64()
 	ts := &TransferState{Chunks: []uint64{}, Length: 0}
 	dl := &Download{ID: id, Header: header, State: ts}
+	err := a.PutDownload(dl)
+	if err != nil {
+		return nil, err
+	}
 	return dl, nil
+}
+
+// GetDownloadIDs returns a slice of all Download IDs
+func (a *BadgerStore) GetDownloadIDs() []uint64 {
+	var downloadIDs map[uint64]struct{}
+	a.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(downloadsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			return cbor.Unmarshal(val, &downloadIDs)
+		})
+	})
+	ids := make([]uint64, 0, len(downloadIDs))
+	for k, _ := range downloadIDs {
+		ids = append(ids, k)
+	}
+	return ids
 }
 
 // PutDownload stores a Download in the db
@@ -783,10 +889,31 @@ func (a *BadgerStore) PutDownload(dl *Download) error {
 		if err != nil {
 			return err
 		}
-		err = txn.Set(uploadKey(dl.ID), serialized)
+		err = txn.Set(downloadKey(dl.ID), serialized)
 		if err != nil {
 			return err
 		}
+
+		// fetch the index of all downloads
+		i, err := txn.Get(downloadsKey())
+		if err != nil {
+			return err
+		}
+		return i.Value(func(val []byte) error {
+			downloadsIdx := make(map[uint64]struct{})
+			err := cbor.Unmarshal(val, &downloadsIdx)
+			if err != nil {
+				return err
+			}
+
+			// add download to index
+			downloadsIdx[dl.ID] = struct{}{}
+			serialized, err := cbor.Marshal(downloadsIdx)
+			if err != nil {
+				return err
+			}
+			return txn.Set(downloadsKey(), serialized)
+		})
 		return nil
 	})
 }
