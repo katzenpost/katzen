@@ -313,8 +313,9 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 
 func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 	c.l.Lock() // protect modification of c.conversation throughout Layout
-	defer c.l.Unlock()
-	title := c.conversation.Title
+	conv := c.conversation
+	c.l.Unlock()
+	title := conv.Title
 	// set focus on composition
 	gtx.Execute(key.FocusCmd{Tag: c.compose})
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
@@ -334,10 +335,10 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			// style bgList
 			return bgList.Layout(gtx, func(ctx C) D {
 				// if there are no Messages, return empty
-				if len(c.conversation.Messages) == 0 {
+				if len(conv.Messages) == 0 {
 					return fill{th.Bg}.Layout(ctx)
 				}
-				return messageList.Layout(gtx, len(c.conversation.Messages), c.layoutConversation)
+				return messageList.Layout(gtx, len(conv.Messages), c.layoutConversation)
 			})
 		}),
 
@@ -373,8 +374,10 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
+	c.l.Lock()
 	messages := c.conversation.Messages
 	expires := c.conversation.MessageExpiration
+	c.l.Unlock()
 	// make message bubbles separated when different people speak
 	if i > 0 {
 		msg1, err1 := c.a.db.GetMessage(messages[i-1])
