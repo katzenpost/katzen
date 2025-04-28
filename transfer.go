@@ -117,20 +117,15 @@ func (t *TransferPage) Update(item interface{}) {
 		if err != nil {
 			return
 		}
+		ul, err := t.a.db.NewUpload(uh)
+		if err != nil {
+			return
+		}
 		f, err := os.Open(i)
 		if err != nil {
 			return
 		}
-		// XXX: requires a non nil session (ie, be online)
-		// in order to create an Uploader, which is lame.
-		transport, err := mClient.NewClient(t.a.Session())
-		if err != nil {
-			return
-		}
-		dl, err := NewUploader(transport, t.a.db, uh, f)
-		if err != nil {
-			return
-		}
+		dl := NewUploader(t.a.db, ul, f)
 		t.uploads = append(t.uploads, dl)
 	}
 }
@@ -169,8 +164,8 @@ func (d *Downloader) Layout(gtx layout.Context) layout.Dimensions {
 func (u *Uploader) Layout(gtx layout.Context) layout.Dimensions {
 	progress := float32(u.Upload.State.Length) / float32(u.Upload.Header.Length)
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
-		layout.Rigid(material.Caption(th, u.Header.Name).Layout),
-		layout.Rigid(material.Caption(th, base64.StdEncoding.EncodeToString(u.Header.Sum256)).Layout),
+		layout.Rigid(material.Caption(th, u.Upload.Header.Name).Layout),
+		layout.Rigid(material.Caption(th, base64.StdEncoding.EncodeToString(u.Upload.Header.Sum256)).Layout),
 		layout.Rigid(material.ProgressBar(th, progress).Layout),
 		layout.Rigid(func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(
