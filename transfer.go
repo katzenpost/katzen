@@ -39,6 +39,15 @@ type DownloadHeader struct {
 	Sum256  []byte                  // the hash of the Payload
 }
 
+// TransferStatus holds the state of the upoad or download
+type TransferStatus uint8
+
+const (
+	InProgress TransferStatus = iota
+	Completed
+	Failed
+)
+
 // TransferState holds state needed to resume a transfer, the chunks sent or receive and the bytes so far
 type TransferState struct {
 	// Chunks is the ordered Chunk ids comprising the transfer
@@ -46,6 +55,8 @@ type TransferState struct {
 
 	// Number of bytes transferred in these chunks
 	Length uint64
+
+	Status TransferStatus
 }
 
 // DownloadHeader returns the Header used to start a download

@@ -154,16 +154,6 @@ func (d *Downloader) worker() {
 // it has state proposed, rejected, inprogress, completed
 // a new Downlaod starts in state Proposed, and proceeds to Rejected or InProgress state
 // on starting, and reaches state Completed or Failed
-type DownloadState uint8
-
-const (
-	Proposed DownloadState = iota
-	Rejected
-	InProgress
-	Completed
-	Failed
-)
-
 type Uploader struct {
 	startOnce *sync.Once
 	worker.Worker
