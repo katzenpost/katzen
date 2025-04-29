@@ -65,24 +65,32 @@ func TestCompleteExchange(t *testing.T) {
 	r2Ex, err := r2.ExchangeBytes()
 	require.NoError(err)
 
-	rcem := &ReadCapExchangeMessage{}
+	rcem1 := &ReadCapExchangeMessage{}
+	rcem2 := &ReadCapExchangeMessage{}
 
 	// complete exchange for r1
-	err = rcem.UnmarshalBinary(r2Ex)
+	err = rcem1.UnmarshalBinary(r2Ex)
 	require.NoError(err)
-	r1ownerCap, _, err := r1.CompleteExchange(rcem)
+	r1ownerCap, r2readCap, err := r1.CompleteExchange(rcem1)
 	require.NoError(err)
 
 	// complete exchange for r2
-	err = rcem.UnmarshalBinary(r1Ex)
+	err = rcem2.UnmarshalBinary(r1Ex)
 	require.NoError(err)
-	_, r2readCap, err := r2.CompleteExchange(rcem)
-
-	r1ReadCapForr2, err := r1ownerCap.UniversalReadCap().MarshalBinary()
+	r2ownerCap, r1readCap, err := r2.CompleteExchange(rcem2)
 	require.NoError(err)
 
-	// show that r1's BoxOwnerCap produces r2's UniversalReadCap
+	// show that readcap held by r1 equals readcap created by r2
+	r2readCapBytesByOwner, err := r2ownerCap.UniversalReadCap().MarshalBinary()
+	require.NoError(err)
 	r2readCapBytes, err := r2readCap.MarshalBinary()
 	require.NoError(err)
-	require.Equal(r2readCapBytes, r1ReadCapForr2)
+	require.Equal(r2readCapBytes, r2readCapBytesByOwner)
+
+	// show that readcap held by r2 equals readcap created by r1
+	r1readCapBytesByOwner, err := r1ownerCap.UniversalReadCap().MarshalBinary()
+	require.NoError(err)
+	r1readCapBytes, err := r1readCap.MarshalBinary()
+	require.NoError(err)
+	require.Equal(r1readCapBytes, r1readCapBytesByOwner)
 }
