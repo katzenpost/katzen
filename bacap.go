@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"hash"
 	"io"
 
@@ -163,12 +162,20 @@ func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) (*bacap.Bo
 	switch k := k.edPrivKey.(type) {
 	case *ed25519.PrivateKey:
 		// ed25519.PrivateKey.Blind(fac []byte) returns ed25519.BlindedPrivateKey
-		// ... so marshal the key and unmarshal to get the right type
+		// sigh ... so marshal the key and unmarshal to get the right type
 		blindedPrivateKey := k.Blind(blindingFactor)
-		b, _ := blindedPrivateKey.MarshalBinary()
-		converted := append(b, blindedPrivateKey.PublicKey().Bytes()...)
+		blindedPublicKey := blindedPrivateKey.PublicKey()
+		blindedPrivateKeyBytes, err := blindedPrivateKey.MarshalBinary()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// pack the bytes and ship it
+		converted := make([]byte, 64)
+		copy(converted[:32], blindedPrivateKeyBytes)
+		copy(converted[32:], blindedPublicKey.Bytes())
 		ownerCapPrivateKey := ed25519.NewEmptyPrivateKey()
-		err := ownerCapPrivateKey.UnmarshalBinary(converted)
+		err = ownerCapPrivateKey.UnmarshalBinary(converted)
 		if err != nil {
 			return nil, nil, err
 		}
