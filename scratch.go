@@ -238,7 +238,7 @@ func (u *Uploader) worker() {
 		if err != nil {
 			panic(err)
 		}
-		// read one payload worth from source and send chunk to chunkuploader
+		// read one payload of data
 		n, err := io.ReadFull(u.source, buf)
 		switch err {
 		case nil, io.ErrUnexpectedEOF:
@@ -247,9 +247,27 @@ func (u *Uploader) worker() {
 			if err != nil {
 				panic(err)
 			}
-			// create and save the Chunk locally
+			// create Chunk
 			ch := &Chunk{ID: rand.NewMath().Uint64(), Key: box_id, Payload: ciphertext}
 			copy(ch.Signature[:], sig)
+
+			// watch for cancellation signal
+			ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
+			u.Go(func() {
+				select {
+				case <-ctx.Done():
+				case <-u.HaltCh():
+				}
+				cancelFn()
+			})
+			var sig64 [64]byte
+			copy(sig64[:], sig)
+			err = u.transport.Put(ctx, box_id, sig64, ciphertext)
+			if err != nil {
+				return
+			}
+
+			// save state of upload if chunk was successfully uploaded
 			err = u.db.PutChunk(ch)
 			if err != nil {
 				panic(err)
@@ -259,21 +277,6 @@ func (u *Uploader) worker() {
 
 			// save the state of uploader
 			err = u.db.PutUpload(u.Upload)
-			if err != nil {
-				panic(err)
-			}
-
-			var sig64 [64]byte
-			copy(sig64[:], sig)
-			ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
-			u.Go(func() {
-				select {
-				case <-ctx.Done():
-				case <-u.HaltCh():
-				}
-				cancelFn()
-			})
-			err = u.transport.Put(ctx, box_id, sig64, ciphertext)
 			if err != nil {
 				panic(err)
 			}
