@@ -99,15 +99,16 @@ type TransferFailure struct {
 }
 
 func (t *TransferPage) Start(stop <-chan struct{}) {
-	go func() {
+	t.a.Go(func() {
 		for {
 			select {
+			case <-t.a.HaltCh():
 			case <-stop:
 				return
 			case <-t.updateCh:
 			}
 		}
-	}()
+	})
 }
 
 // Update is called by the Chooser with the path chosen
