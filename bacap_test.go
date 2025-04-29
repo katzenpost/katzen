@@ -1,9 +1,55 @@
 package main
 
 import (
+	"fmt"
+	"github.com/katzenpost/hpqc/bacap"
+	"github.com/katzenpost/hpqc/rand"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+func TestAdvanceCaps(t *testing.T) {
+	// ctx agreedout of band
+	ctx := []byte("TestAdvanceCaps")
+	// write three entries of data
+	require := require.New(t)
+	ownerCap, err := bacap.NewBoxOwnerCap(rand.Reader)
+	require.NoError(err)
+	readCap := ownerCap.UniversalReadCap()
+
+	sw, err := bacap.NewStatefulWriter(ownerCap, ctx)
+	require.NoError(err)
+	type ctsig struct {
+		ct  []byte
+		sig []byte
+	}
+	ctmap := make(map[[32]byte](*ctsig))
+
+	msg := func(i int) []byte {
+		return []byte(fmt.Sprintf("msg #%d", i))
+	}
+	for i := 0; i < 43; i++ {
+		boxID, ct, sig, err := sw.EncryptNext(msg(i))
+		ctmap[boxID] = &ctsig{ct: ct, sig: sig}
+		require.NoError(err)
+	}
+
+	readCap42, err := AdvanceReadCapBy(readCap, 42)
+	require.NoError(err)
+
+	sr, err := bacap.NewStatefulReader(readCap42, ctx)
+	require.NoError(err)
+	boxID, err := sr.NextBoxID()
+	require.NoError(err)
+	c, ok := ctmap[boxID.ByteArray()]
+	require.True(ok)
+	var sig64 [64]byte
+	copy(sig64[:], c.sig)
+
+	m, err := sr.DecryptNext(ctx, boxID.ByteArray(), c.ct, sig64)
+	require.NoError(err)
+	require.Equal(m, msg(42))
+}
 
 func TestCompleteExchange(t *testing.T) {
 	require := require.New(t)

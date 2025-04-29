@@ -189,3 +189,51 @@ func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) (*bacap.Bo
 		return nil, nil, errors.New("Unsupported sign.Scheme")
 	}
 }
+
+func AdvanceOwnerCapBy(c *bacap.BoxOwnerCap, count uint64) (*bacap.BoxOwnerCap, error) {
+	rawBytes, _ := c.MarshalBinary()
+	mbiBytes := rawBytes[ed25519.PrivateKeySize:]
+	mbi := &bacap.MessageBoxIndex{}
+	err := mbi.UnmarshalBinary(mbiBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newmbi, err := mbi.AdvanceIndexTo(mbi.Idx64 + count)
+	if err != nil {
+		return nil, err
+	}
+	newmbiBytes, err := newmbi.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	newCap := &bacap.BoxOwnerCap{}
+	err = newCap.UnmarshalBinary(append(rawBytes[:ed25519.PrivateKeySize], newmbiBytes...))
+	if err != nil {
+		return nil, err
+	}
+	return newCap, nil
+
+}
+
+func AdvanceReadCapBy(c *bacap.UniversalReadCap, count uint64) (*bacap.UniversalReadCap, error) {
+	rawBytes, _ := c.MarshalBinary()
+	mbiBytes := rawBytes[ed25519.PublicKeySize:]
+	mbi := &bacap.MessageBoxIndex{}
+	err := mbi.UnmarshalBinary(mbiBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	newmbi, err := mbi.AdvanceIndexTo(mbi.Idx64 + count)
+	if err != nil {
+		return nil, err
+	}
+	newmbiBytes, err := newmbi.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	newCap := &bacap.UniversalReadCap{}
+	newCap.UnmarshalBinary(append(rawBytes[:ed25519.PublicKeySize], newmbiBytes...))
+	return newCap, nil
+}
