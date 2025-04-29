@@ -3,12 +3,15 @@ package main
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/katzenpost/hpqc/bacap"
+	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/hpqc/sign/ed25519"
 	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/exp/shiny/materialdesign/icons"
+	"os"
 
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -57,6 +60,32 @@ type TransferState struct {
 	Length uint64
 
 	Status TransferStatus
+}
+
+// NewUploadHeader returns an UploadHeader created for the File
+func NewUploadHeader(path string) (*UploadHeader, error) {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	ownerCap, err := bacap.NewBoxOwnerCap(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	if fileInfo.Size() <= 0 {
+		return nil, fmt.Errorf("Empty or System file: %s", fileInfo.Name())
+	}
+	sum, err := sum256file(path)
+	if err != nil {
+		return nil, err
+	}
+	header := &UploadHeader{WriteCap: ownerCap,
+		Name:   fileInfo.Name(),
+		Length: uint64(fileInfo.Size()),
+		Sum256: sum,
+	}
+
+	return header, nil
 }
 
 // DownloadHeader returns the Header used to start a download

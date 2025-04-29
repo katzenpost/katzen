@@ -75,32 +75,6 @@ func (d *Downloader) Start() {
 	})
 }
 
-// NewUploadHeader returns an UploadHeader created for the File
-func NewUploadHeader(path string) (*UploadHeader, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-	ownerCap, err := bacap.NewBoxOwnerCap(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	if fileInfo.Size() <= 0 {
-		return nil, fmt.Errorf("Empty or System file: %s", fileInfo.Name())
-	}
-	sum, err := sum256file(path)
-	if err != nil {
-		return nil, err
-	}
-	header := &UploadHeader{WriteCap: ownerCap,
-		Name:   fileInfo.Name(),
-		Length: uint64(fileInfo.Size()),
-		Sum256: sum,
-	}
-
-	return header, nil
-}
-
 // bacapworker receives command to start/stop reading and storing bytes
 func (d *Downloader) worker() {
 	reader, err := bacap.NewStatefulReader(d.Download.Header.ReadCap, d.Download.Header.Sum256)
