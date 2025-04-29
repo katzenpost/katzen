@@ -70,8 +70,10 @@ func (d *Downloader) Start() {
 	}
 	d.startOnce.Do(func() {
 		d.Go(d.worker)
-		<-d.HaltCh()
-		d.startOnce = new(sync.Once)
+		d.Go(func() {
+			<-d.HaltCh()
+			d.startOnce = new(sync.Once)
+		})
 	})
 }
 
