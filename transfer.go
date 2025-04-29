@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"github.com/katzenpost/hpqc/bacap"
@@ -17,6 +18,7 @@ var (
 	startIcon, _  = widget.NewIcon(icons.AVPlayArrow)
 	stopIcon, _   = widget.NewIcon(icons.NavigationCancel)
 	deleteIcon, _ = widget.NewIcon(icons.ActionDelete)
+	OfflineErr    = errors.New("Error, client is offline")
 )
 
 // UploadHeader contains the metadata for uploading a file and producing a DownloadHeader
@@ -224,6 +226,9 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if uploader buttons are clicked and do the action
 	for i, ul := range t.uploads {
 		if ul.startBtn.Clicked(gtx) {
+			if t.a.Session() == nil {
+				return TransferFailure{Error: OfflineErr}
+			}
 			transport, err := sClient.NewClient(t.a.Session())
 			if err != nil {
 				return TransferFailure{Error: err}
@@ -248,6 +253,9 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	// check if any downloader buttons are clicked
 	for i, dl := range t.downloads {
 		if dl.startBtn.Clicked(gtx) {
+			if t.a.Session() == nil {
+				return TransferFailure{Error: OfflineErr}
+			}
 			transport, err := sClient.NewClient(t.a.Session())
 			if err != nil {
 				return TransferFailure{Error: err}
