@@ -19,6 +19,8 @@ var (
 	stopIcon, _   = widget.NewIcon(icons.NavigationCancel)
 	deleteIcon, _ = widget.NewIcon(icons.ActionDelete)
 	OfflineErr    = errors.New("Error, client is offline")
+	downloadList  = &layout.List{Axis: layout.Vertical}
+	uploadList    = &layout.List{Axis: layout.Vertical}
 )
 
 // UploadHeader contains the metadata for uploading a file and producing a DownloadHeader

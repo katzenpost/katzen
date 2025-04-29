@@ -150,11 +150,6 @@ func (d *Downloader) worker() {
 	}
 }
 
-var (
-	downloadList = &layout.List{Axis: layout.Vertical}
-	uploadList   = &layout.List{Axis: layout.Vertical}
-)
-
 // DownloadState indicates the state of the Downloader
 // it has state proposed, rejected, inprogress, completed
 // a new Downlaod starts in state Proposed, and proceeds to Rejected or InProgress state
