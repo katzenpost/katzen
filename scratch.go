@@ -233,11 +233,6 @@ func (u *Uploader) worker() {
 
 	buf := make([]byte, payloadSize)
 	for u.Upload.State.Length < u.Upload.Header.Length {
-		select {
-		case <-u.HaltCh():
-			return
-		default:
-		}
 		// seek reader to current upload offset
 		_, err := u.source.Seek(int64(u.Upload.State.Length), 0)
 		if err != nil {
