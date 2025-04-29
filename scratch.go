@@ -39,7 +39,7 @@ type Downloader struct {
 
 // NewDownloader initializes and returns a Downloader
 func NewDownloader(db *BadgerStore, dl *Download) (*Downloader, error) {
-	dest, err := os.Open(dl.Path)
+	dest, err := os.OpenFile(dl.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func NewDownloader(db *BadgerStore, dl *Download) (*Downloader, error) {
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
 	}
-	return dloader
+	return dloader, nil
 }
 
 func (d *Downloader) StartWithTransport(t *sClient.Client) {
