@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"gioui.org/layout"
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/katzenpost/core/worker"
-	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/crypto/blake2b"
 	"io"
 	"os"
@@ -18,11 +16,18 @@ import (
 	"gioui.org/widget"
 )
 
+// Transport describes the interface to Get or Put Frames
+type Transport interface {
+	Get(ctx context.Context, addr [32]byte) (ciphertext []byte, signature [64]byte, err error)
+	Put(ctx context.Context, addr [32]byte, signature [64]byte, payload []byte) error
+	PayloadSize() int
+}
+
 // Downloader
 type Downloader struct {
 	worker.Worker
 	startOnce *sync.Once
-	transport *sClient.Client
+	transport Transport
 	db        *BadgerStore
 
 	// Download holds the TransferState and DownloadHeader
@@ -54,7 +59,7 @@ func NewDownloader(db *BadgerStore, dl *Download) (*Downloader, error) {
 	return dloader, nil
 }
 
-func (d *Downloader) StartWithTransport(t *sClient.Client) {
+func (d *Downloader) StartWithTransport(t Transport) {
 	d.transport = t
 	d.Start()
 }
@@ -161,7 +166,7 @@ type Uploader struct {
 
 	db        *BadgerStore
 	source    io.ReadSeeker
-	transport *sClient.Client
+	transport Transport
 
 	startBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
@@ -184,9 +189,8 @@ func NewUploader(db *BadgerStore, ul *Upload) (*Uploader, error) {
 	return uploader, nil
 }
 
-func (u *Uploader) StartWithTransport(t *sClient.Client) {
+func (u *Uploader) StartWithTransport(t Transport) {
 	u.transport = t
-
 	u.Start()
 }
 
