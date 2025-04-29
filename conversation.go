@@ -36,6 +36,7 @@ var (
 	deliveredIcon, _ = widget.NewIcon(icons.ActionDoneAll)
 	pandaIcon, _     = widget.NewIcon(icons.ActionPets)
 	attachIcon, _    = widget.NewIcon(icons.EditorAttachFile)
+	transfersIcon, _ = widget.NewIcon(icons.NotificationSync)
 
 	ErrConversationNotFound = errors.New("Conversation not found")
 	ErrHalted               = errors.New("Halted")
@@ -79,6 +80,9 @@ func (c *Conversation) Destroy() error {
 	return nil
 }
 
+type ShowTransfers struct {
+}
+
 type NewTransfer struct {
 	ID uint64
 }
@@ -96,6 +100,7 @@ type conversationPage struct {
 	conversation   *Conversation
 	avatar         *widget.Image
 	edit           *gesture.Click
+	transfers      *widget.Clickable
 	compose        *widget.Editor
 	send           *widget.Clickable
 	attach         *widget.Clickable
@@ -221,6 +226,9 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		if e.Kind == gesture.KindClick {
 			return EditConversation{ID: c.id}
 		}
+
+	if c.transfers.Clicked(gtx) {
+		return ShowTransfers{}
 	}
 
 	if e, ok := shortcutEvents(gtx); ok {
@@ -326,6 +334,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 					layout.Rigid(button(th, c.back, backIcon).Layout),
 					layout.Rigid(material.Caption(th, title).Layout),
 					layout.Flexed(1, fill{th.Bg}.Layout),
+					layout.Rigid(button(th, c.transfers, transfersIcon).Layout),
 				)
 			},
 			)
@@ -456,6 +465,7 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		send:         &widget.Clickable{},
 		attach:       &widget.Clickable{},
 		edit:         new(gesture.Click),
+		transfers:    &widget.Clickable{},
 		updateCh:     make(chan struct{}, 1),
 		//messages:      []*Message, cache messages
 	}

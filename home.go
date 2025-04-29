@@ -40,6 +40,7 @@ type HomePage struct {
 	connect       *widget.Clickable
 	connectIcon   *connectIcon
 	showSettings  *widget.Clickable
+	showTransfers *widget.Clickable
 	convoClicks   map[uint64]*gesture.Click
 	conversations []*Conversation
 	updateCh      chan interface{}
@@ -78,6 +79,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 					layout.Flexed(1, fill{th.Bg}.Layout),
 					layout.Rigid(p.connectIcon.Layout),
 					layout.Rigid(button(th, p.showSettings, settingsIcon).Layout),
+					layout.Rigid(button(th, p.showTransfers, transfersIcon).Layout),
 					layout.Rigid(button(th, p.addContact, addContactIcon).Layout),
 				)
 			}),
@@ -211,6 +213,9 @@ func (p *HomePage) Event(gtx layout.Context) interface{} {
 	if p.addContact.Clicked(gtx) {
 		return AddContactClick{}
 	}
+	if p.showTransfers.Clicked(gtx) {
+		return ShowTransfers{}
+	}
 	if p.showSettings.Clicked(gtx) {
 		return ShowSettingsClick{}
 	}
@@ -289,14 +294,15 @@ func (h *HomePage) updateConversations() {
 func newHomePage(a *App) *HomePage {
 	connectButton := &widget.Clickable{}
 	p := &HomePage{
-		a:            a,
-		l:            new(sync.Mutex),
-		updateCh:     make(chan interface{}, 1),
-		addContact:   &widget.Clickable{},
-		connect:      connectButton,
-		connectIcon:  NewConnectIcon(a, th, connectButton),
-		showSettings: &widget.Clickable{},
-		convoClicks:  make(map[uint64]*gesture.Click),
+		a:             a,
+		l:             new(sync.Mutex),
+		updateCh:      make(chan interface{}, 1),
+		addContact:    &widget.Clickable{},
+		connect:       connectButton,
+		connectIcon:   NewConnectIcon(a, th, connectButton),
+		showSettings:  &widget.Clickable{},
+		showTransfers: &widget.Clickable{},
+		convoClicks:   make(map[uint64]*gesture.Click),
 	}
 	return p
 }

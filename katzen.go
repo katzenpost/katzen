@@ -441,6 +441,8 @@ func (a *App) update(gtx layout.Context) {
 		case EditConversationComplete:
 			a.stack.Pop()
 		case MessageSent:
+		case ShowTransfers:
+			a.stack.Push(newTransferPage(a))
 		case NewTransfer:
 			a.stack.Push(newTransferPage(a))
 			a.stack.Push(newChooser(a, ""))
