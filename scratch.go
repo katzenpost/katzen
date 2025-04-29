@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/katzenpost/core/worker"
