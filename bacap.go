@@ -170,8 +170,6 @@ func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) (*bacap.Bo
 		ownerCapPrivateKey := ed25519.NewEmptyPrivateKey()
 		err := ownerCapPrivateKey.UnmarshalBinary(converted)
 		if err != nil {
-			fmt.Println("size of key: ", len(b))
-			panic(err)
 			return nil, nil, err
 		}
 		ownerCap = sClient.NewOwnerCapFromSeed(ownerCapPrivateKey, boxIndexSeed)
