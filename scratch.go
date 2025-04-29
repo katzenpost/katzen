@@ -219,7 +219,13 @@ func (u *Uploader) Start() {
 }
 
 func (u *Uploader) worker() {
-	writer, err := bacap.NewStatefulWriter(u.Upload.Header.WriteCap, u.Upload.Header.Sum256)
+	// advance the writeCap by the previous state
+	numChunks := uint64(len(u.Upload.State.Chunks))
+	writeCap, err := AdvanceOwnerCapBy(u.Upload.Header.WriteCap, numChunks)
+	if err != nil {
+		panic(err)
+	}
+	writer, err := bacap.NewStatefulWriter(writeCap, u.Upload.Header.Sum256)
 	if err != nil {
 		panic(err)
 	}
@@ -227,6 +233,11 @@ func (u *Uploader) worker() {
 
 	buf := make([]byte, payloadSize)
 	for u.Upload.State.Length < u.Upload.Header.Length {
+		select {
+		case <-u.HaltCh():
+			return
+		default:
+		}
 		// seek reader to current upload offset
 		_, err := u.source.Seek(int64(u.Upload.State.Length), 0)
 		if err != nil {
@@ -251,14 +262,25 @@ func (u *Uploader) worker() {
 			u.Upload.State.Chunks = append(u.Upload.State.Chunks, ch.ID)
 			u.Upload.State.Length += uint64(len(ciphertext))
 
+			// save the state of uploader
+			err = u.db.PutUpload(u.Upload)
+			if err != nil {
+				panic(err)
+			}
+
 			var sig64 [64]byte
 			copy(sig64[:], sig)
 			ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
+			u.Go(func() {
+				select {
+				case <-ctx.Done():
+				case <-u.HaltCh():
+				}
+				cancelFn()
+			})
 			err = u.transport.Put(ctx, box_id, sig64, ciphertext)
-			cancelFn()
 			if err != nil {
 				panic(err)
-				// Chunk should have a flag on whether it has been uploaded
 			}
 		default:
 			panic(err)
