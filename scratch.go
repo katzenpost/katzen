@@ -129,10 +129,7 @@ func (d *Downloader) worker() {
 	}
 }
 
-// DownloadState indicates the state of the Downloader
-// it has state proposed, rejected, inprogress, completed
-// a new Downlaod starts in state Proposed, and proceeds to Rejected or InProgress state
-// on starting, and reaches state Completed or Failed
+// Uploader manages sending an attachment to scratch service
 type Uploader struct {
 	startOnce *sync.Once
 	worker.Worker
@@ -147,6 +144,7 @@ type Uploader struct {
 	deleteBtn *widget.Clickable
 }
 
+// NewUploader returns an Uploader with db and Upload reference
 func NewUploader(db *BadgerStore, ul *Upload) (*Uploader, error) {
 	source, err := os.Open(ul.Path)
 	if err != nil {
