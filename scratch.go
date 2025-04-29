@@ -84,27 +84,30 @@ func (d *Downloader) worker() {
 		panic(err)
 	}
 
-	for {
-		select {
-		case <-d.HaltCh():
+	for d.Download.State.Length < d.Download.Header.Length {
+		// is failed
+		if d.Download.State.Status == Failed {
 			return
-		default:
-
 		}
-		// is already read
 		if d.Download.State.Length == d.Download.Header.Length {
-			// set state to complted
+			d.Download.State.Status = Completed
 			return
 		}
 		boxID, err := reader.NextBoxID()
 		if err != nil {
+			d.Download.State.Status = Failed
 			return
 		}
 		ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
+		d.Go(func() {
+			select {
+			case <-ctx.Done():
+			case <-d.HaltCh():
+				cancelFn()
+			}
+		})
 
 		// fetch the box
-		// XXX: FIXME: obtain signature along with payload fromt he client; requires api change
-		sig := [64]byte{'f', 'm', 'l'}
 		ciphertext, sig, err := d.transport.Get(ctx, boxID.ByteArray())
 		cancelFn()
 		if err != nil {
@@ -114,20 +117,19 @@ func (d *Downloader) worker() {
 		// obtain plaintext. a decryption failure is a fatal error
 		plaintext, err := reader.DecryptNext(d.Download.Header.Sum256, boxID.ByteArray(), ciphertext, sig)
 		if err != nil {
-			// XXX: log or handle this error
+			d.Download.State.Status = Failed
 			return
 		}
 
 		// write bytes to dest. failure to write is a fatal error
 		n, err := d.dest.Write(plaintext)
 		if err != nil || n != len(plaintext) {
-			// XXX: log or handle this error
-			panic(err)
+			d.Download.State.Status = Failed
 			return
 		}
 
 		// update how many bytes have been read
-		d.Download.State.Length += uint64(len(plaintext))
+		d.Download.State.Length += uint64(n)
 	}
 }
 
@@ -205,7 +207,8 @@ func (u *Uploader) worker() {
 		n, err := io.ReadFull(u.source, buf)
 		switch err {
 		case nil, io.ErrUnexpectedEOF:
-			// XXX: does EncryptNext do padding?
+			// payloadLen is transported bytes not including ciphertext overhead
+			payloadLen := len(buf[:n])
 			box_id, ciphertext, sig, err := writer.EncryptNext(buf[:n])
 			if err != nil {
 				panic(err)
@@ -236,7 +239,7 @@ func (u *Uploader) worker() {
 				panic(err)
 			}
 			u.Upload.State.Chunks = append(u.Upload.State.Chunks, ch.ID)
-			u.Upload.State.Length += uint64(len(ciphertext))
+			u.Upload.State.Length += uint64(payloadLen)
 
 			// save the state of uploader
 			err = u.db.PutUpload(u.Upload)
@@ -246,6 +249,11 @@ func (u *Uploader) worker() {
 		default:
 			panic(err)
 		}
+	}
+	u.Upload.State.Status = Completed
+	err = u.db.PutUpload(u.Upload)
+	if err != nil {
+		panic(err)
 	}
 }
 
