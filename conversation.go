@@ -29,6 +29,7 @@ import (
 var (
 	messageList      = &layout.List{Axis: layout.Vertical, ScrollToEnd: true}
 	messageField     = &widget.Editor{SingleLine: true}
+	editIcon, _      = widget.NewIcon(icons.ActionSettings)
 	backIcon, _      = widget.NewIcon(icons.NavigationChevronLeft)
 	sendIcon, _      = widget.NewIcon(icons.NavigationChevronRight)
 	queuedIcon, _    = widget.NewIcon(icons.NotificationSync)
@@ -99,7 +100,7 @@ type conversationPage struct {
 	id             uint64
 	conversation   *Conversation
 	avatar         *widget.Image
-	edit           *gesture.Click
+	edit           *widget.Clickable
 	transfers      *widget.Clickable
 	compose        *widget.Editor
 	send           *widget.Clickable
@@ -222,10 +223,9 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 		}
 	}
 
-	if e, ok := c.edit.Update(gtx.Source); ok {
-		if e.Kind == gesture.KindClick {
-			return EditConversation{ID: c.id}
-		}
+	if c.edit.Clicked(gtx) {
+		return EditConversation{ID: c.id}
+	}
 
 	if c.transfers.Clicked(gtx) {
 		return ShowTransfers{}
@@ -332,6 +332,7 @@ func (c *conversationPage) Layout(gtx layout.Context) layout.Dimensions {
 			return bgList.Layout(gtx, func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(button(th, c.back, backIcon).Layout),
+					layout.Rigid(button(th, c.edit, editIcon).Layout),
 					layout.Rigid(material.Caption(th, title).Layout),
 					layout.Flexed(1, fill{th.Bg}.Layout),
 					layout.Rigid(button(th, c.transfers, transfersIcon).Layout),
@@ -464,7 +465,7 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		cancel:       new(gesture.Click),
 		send:         &widget.Clickable{},
 		attach:       &widget.Clickable{},
-		edit:         new(gesture.Click),
+		edit:         &widget.Clickable{},
 		transfers:    &widget.Clickable{},
 		updateCh:     make(chan struct{}, 1),
 		//messages:      []*Message, cache messages
