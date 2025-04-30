@@ -154,7 +154,13 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 										if lastMsg != nil {
 											return in.Layout(gtx, func(gtx C) D {
 												// TODO: set the color based on sent or received
-												return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
+												switch lastMsg.Type {
+												case Text:
+													return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
+												case Attachment:
+													return layoutAttachment(gtx, lastMsg)
+												}
+												return D{}
 											})
 										} else {
 											return fill{th.Bg}.Layout(gtx)
