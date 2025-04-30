@@ -169,8 +169,8 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		c.ReadCap = readCap
 		c.WriteCap = ownerCap
 
-		// XXX: derive a unique shared first context
-		context := []byte("first-contact")
+		// XXX: all zero initial context
+		context := make([]byte, 32)
 
 		// create a stream to exchange messages with this contact
 		st := stream.NewStream(ownerCap, readCap, context)
