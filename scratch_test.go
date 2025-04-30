@@ -116,7 +116,7 @@ func TestPutGetStartStream(t *testing.T) {
 	require.NoError(bs.InitDB())
 
 	// create a stream
-	local, remote := newStreamsFromExchange()
+	local, remote := newStreams()
 
 	// save it in db
 	id := uint64(42)
