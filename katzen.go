@@ -441,6 +441,9 @@ func (a *App) update(gtx layout.Context) {
 		case EditConversationComplete:
 			a.stack.Pop()
 		case MessageSent:
+		case ShareTransfer:
+			a.stack.Pop()
+			a.stack.Current().Update(e.Header)
 		case ShowTransfers:
 			a.stack.Push(newTransferPage(a))
 		case NewTransfer:

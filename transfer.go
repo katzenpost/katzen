@@ -18,12 +18,15 @@ import (
 )
 
 var (
-	startIcon, _  = widget.NewIcon(icons.AVPlayArrow)
-	stopIcon, _   = widget.NewIcon(icons.NavigationCancel)
-	deleteIcon, _ = widget.NewIcon(icons.ActionDelete)
-	OfflineErr    = errors.New("Error, client is offline")
-	downloadList  = &layout.List{Axis: layout.Vertical}
-	uploadList    = &layout.List{Axis: layout.Vertical}
+	startIcon, _    = widget.NewIcon(icons.AVPlayArrow)
+	uploadIcon, _   = widget.NewIcon(icons.FileFileUpload)
+	downloadIcon, _ = widget.NewIcon(icons.FileFileDownload)
+	stopIcon, _     = widget.NewIcon(icons.NavigationCancel)
+	shareIcon, _    = widget.NewIcon(icons.SocialShare)
+	deleteIcon, _   = widget.NewIcon(icons.ActionDelete)
+	OfflineErr      = errors.New("Error, client is offline")
+	downloadList    = &layout.List{Axis: layout.Vertical}
+	uploadList      = &layout.List{Axis: layout.Vertical}
 )
 
 // UploadHeader contains the metadata for uploading a file and producing a DownloadHeader
@@ -142,6 +145,10 @@ type TransferFailure struct {
 	Error error
 }
 
+type ShareTransfer struct {
+	Header *DownloadHeader
+}
+
 func (t *TransferPage) Start(stop <-chan struct{}) {
 	t.a.Go(func() {
 		for {
@@ -215,7 +222,8 @@ func (d *Downloader) Layout(gtx layout.Context) layout.Dimensions {
 		layout.Rigid(func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(
 				gtx,
-				layout.Rigid(button(th, d.startBtn, startIcon).Layout),
+				layout.Rigid(button(th, d.startBtn, downloadIcon).Layout),
+				layout.Rigid(button(th, d.shareBtn, shareIcon).Layout),
 				layout.Rigid(button(th, d.cancelBtn, cancelIcon).Layout),
 				layout.Rigid(button(th, d.deleteBtn, deleteIcon).Layout),
 			)
@@ -234,7 +242,8 @@ func (u *Uploader) Layout(gtx layout.Context) layout.Dimensions {
 		layout.Rigid(func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(
 				gtx,
-				layout.Rigid(button(th, u.startBtn, startIcon).Layout),
+				layout.Rigid(button(th, u.startBtn, uploadIcon).Layout),
+				layout.Rigid(button(th, u.shareBtn, shareIcon).Layout),
 				layout.Rigid(button(th, u.cancelBtn, cancelIcon).Layout),
 				layout.Rigid(button(th, u.deleteBtn, deleteIcon).Layout),
 			)
@@ -291,6 +300,9 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 			}
 			return TransferRemoved{}
 		}
+		if ul.shareBtn.Clicked(gtx) {
+			return ShareTransfer{Header: ul.Upload.Header.DownloadHeader()}
+		}
 	}
 	// check if any downloader buttons are clicked
 	for i, dl := range t.downloads {
@@ -318,6 +330,9 @@ func (t *TransferPage) Event(gtx layout.Context) interface{} {
 				return TransferFailure{Error: err}
 			}
 			return TransferRemoved{}
+		}
+		if dl.shareBtn.Clicked(gtx) {
+			return ShareTransfer{Header: dl.Download.Header}
 		}
 	}
 	return nil

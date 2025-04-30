@@ -21,6 +21,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/hako/durafmt"
 	"github.com/katzenpost/hpqc/rand"
 	"golang.org/x/exp/shiny/materialdesign/icons"
@@ -128,6 +129,21 @@ func (c *conversationPage) Start(stop <-chan struct{}) {
 }
 
 func (c *conversationPage) Update(item interface{}) {
+	switch i := item.(type) {
+	case *DownloadHeader:
+		serialized, err := cbor.Marshal(i)
+		if err == nil {
+			msg := &Message{
+				ID:           rand.NewMath().Uint64(),
+				Sent:         time.Now(),
+				Type:         Attachment,
+				Conversation: c.id,
+				Body:         serialized,
+			}
+			c.a.db.SendMessage(c.id, msg)
+		}
+	default:
+	}
 	select {
 	case c.updateCh <- struct{}{}:
 	default:
@@ -257,6 +273,17 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	return nil
 }
 
+func layoutAttachment(gtx C, msg *Message) D {
+	h := &DownloadHeader{}
+	_, err := cbor.UnmarshalFirst(msg.Body, h)
+	if err != nil {
+		return material.Caption(th, "Invalid Attachment").Layout(gtx)
+	}
+	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
+		layout.Rigid(material.Caption(th, h.Name).Layout),
+	)
+}
+
 func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) D {
 
 	var statusIcon *widget.Icon
@@ -274,7 +301,15 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 	}
 
 	return layout.Flex{Axis: layout.Vertical, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
-		layout.Rigid(material.Body1(th, string(msg.Body)).Layout),
+		layout.Rigid(func(gtx C) D {
+			switch msg.Type {
+			case Text:
+				return material.Body1(th, string(msg.Body)).Layout(gtx)
+			case Attachment:
+				return layoutAttachment(gtx, msg)
+			}
+			return D{}
+		}),
 		layout.Rigid(func(gtx C) D {
 			in := layout.Inset{Top: unit.Dp(8), Bottom: unit.Dp(0), Left: unit.Dp(8), Right: unit.Dp(8)}
 			return in.Layout(gtx, func(gtx C) D {

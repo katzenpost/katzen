@@ -37,6 +37,7 @@ type Downloader struct {
 
 	// UI buttons associated with each Downloader
 	startBtn  *widget.Clickable
+	shareBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
 	deleteBtn *widget.Clickable
 }
@@ -52,6 +53,7 @@ func NewDownloader(db *BadgerStore, dl *Download) (*Downloader, error) {
 		dest:      dest,
 		db:        db,
 		startBtn:  &widget.Clickable{},
+		shareBtn:  &widget.Clickable{},
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
 	}
@@ -143,6 +145,7 @@ type Uploader struct {
 	transport Transport
 
 	startBtn  *widget.Clickable
+	shareBtn  *widget.Clickable
 	cancelBtn *widget.Clickable
 	deleteBtn *widget.Clickable
 }
@@ -158,6 +161,7 @@ func NewUploader(db *BadgerStore, ul *Upload) (*Uploader, error) {
 		source:    source,
 		startOnce: new(sync.Once),
 		startBtn:  &widget.Clickable{},
+		shareBtn:  &widget.Clickable{},
 		cancelBtn: &widget.Clickable{},
 		deleteBtn: &widget.Clickable{},
 	}
