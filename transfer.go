@@ -251,11 +251,7 @@ func (u *Uploader) Layout(gtx layout.Context) layout.Dimensions {
 	)
 }
 
-// after the download is complete the buttons change to close
-//
-// each upload list item laid out has the file name and size, a progress bar, and cancel / repair / delete buttons
-// clicking delete removes the attachment from the list
-// Event checks to see if any of the UX elements have changed and does the corresponding actions
+// Event checks UX elements and does corresponding actions
 func (t *TransferPage) Event(gtx layout.Context) interface{} {
 	if t.add.Clicked(gtx) {
 		return NewChooser{}
@@ -363,7 +359,6 @@ func (t *TransferPage) Layout(gtx layout.Context) layout.Dimensions {
 				})
 			})
 		}),
-
 		// layout download list
 		layout.Flexed(2, func(gtx C) D {
 			return bgList.Layout(gtx, func(ctx C) D {
