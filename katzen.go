@@ -237,7 +237,6 @@ func (a *App) stopTransport(id uint64) error {
 	transport.Wait()
 	l.Debugf("PutStream %d", id)
 	err = a.db.PutStream(id, transport) // save transport
-	l.Debugf("stream Put: %v", err)
 	return err
 }
 
