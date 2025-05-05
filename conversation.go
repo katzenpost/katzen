@@ -317,7 +317,8 @@ func (c *conversationPage) layoutMessage(gtx C, msg *Message, expires time.Durat
 				} else {
 					whenExpires = durafmt.ParseShort(ts.Add(expires).Sub(time.Now().Round(0).Truncate(time.Minute))).Format(units) + " remaining"
 				}
-				if isSelected {
+
+				if gtx.Focused(msg) {
 					timeLabel = ts.Truncate(time.Minute).Format(time.RFC822)
 					if msg.Sender == 0 {
 						timeLabel = "Sent: " + timeLabel
@@ -427,10 +428,6 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 		}
 	}
 	var dims D
-	isSelected := false
-	if gtx.Focused(messages[i]) {
-		isSelected = true
-	}
 	msg, err := c.a.db.GetMessage(messages[i])
 	if err != nil {
 		panic(err)
