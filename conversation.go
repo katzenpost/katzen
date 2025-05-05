@@ -263,7 +263,7 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	return nil
 }
 
-func layoutAttachment(gtx C, msg *Message) D {
+func layoutAttachment(gtx C, click *widget.Clickable, msg *Message) D {
 	h := &DownloadHeader{}
 	_, err := cbor.UnmarshalFirst(msg.Body, h)
 	if err != nil {
@@ -271,10 +271,11 @@ func layoutAttachment(gtx C, msg *Message) D {
 	}
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
 		layout.Rigid(material.Caption(th, h.Name).Layout),
+		layout.Rigid(button(th, click, attachIcon).Layout),
 	)
 }
 
-func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) D {
+func (c *conversationPage) layoutMessage(gtx C, msg *Message, expires time.Duration) D {
 
 	var statusIcon *widget.Icon
 	if msg.Sender == 0 { // self
@@ -296,7 +297,7 @@ func layoutMessage(gtx C, msg *Message, isSelected bool, expires time.Duration) 
 			case Text:
 				return material.Body1(th, string(msg.Body)).Layout(gtx)
 			case Attachment:
-				return layoutAttachment(gtx, msg)
+				return layoutAttachment(gtx, c.transfers, msg)
 			}
 			return D{}
 		}),
@@ -441,7 +442,7 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 			layout.Flexed(5, func(gtx C) D {
 				return inbetween.Layout(gtx, func(gtx C) D {
 					return bgSender.Layout(gtx, func(gtx C) D {
-						return layoutMessage(gtx, msg, isSelected, expires)
+						return c.layoutMessage(gtx, msg, expires)
 					})
 				})
 			}),
@@ -452,7 +453,7 @@ func (c *conversationPage) layoutConversation(gtx C, i int) layout.Dimensions {
 			layout.Flexed(5, func(gtx C) D {
 				return inbetween.Layout(gtx, func(gtx C) D {
 					return bgReceiver.Layout(gtx, func(gtx C) D {
-						return layoutMessage(gtx, msg, isSelected, expires)
+						return c.layoutMessage(gtx, msg, expires)
 					})
 				})
 			}),
