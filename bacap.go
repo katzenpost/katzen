@@ -139,7 +139,7 @@ func NewReadCapExchange() (*ReadCapExchange, error) {
 }
 
 // CompleteExchange returns BowOwnerCap and UniversalReadCap for writing and reading to peer
-func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) (*bacap.BoxOwnerCap, *bacap.UniversalReadCap, error) {
+func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) ([]byte, *bacap.BoxOwnerCap, *bacap.UniversalReadCap, error) {
 	// derive secret from nike and create a UniversalReadCap
 	sharedSecret := nikeScheme.DeriveSecret(k.nkPrivKey, kx.nkPubKey)
 	hash := func() hash.Hash {
@@ -150,48 +150,30 @@ func (k ReadCapExchange) CompleteExchange(kx *ReadCapExchangeMessage) (*bacap.Bo
 	boxIndexSeed := make([]byte, 32)
 	_, err := io.ReadFull(h, boxIndexSeed)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	blindingFactor := make([]byte, 32)
-	_, err = io.ReadFull(h, blindingFactor)
+	initialContext := make([]byte, 32)
+	_, err = io.ReadFull(h, initialContext)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var ownerCap *bacap.BoxOwnerCap
 	switch k := k.edPrivKey.(type) {
 	case *ed25519.PrivateKey:
-		// ed25519.PrivateKey.Blind(fac []byte) returns ed25519.BlindedPrivateKey
-		// sigh ... so marshal the key and unmarshal to get the right type
-		blindedPrivateKey := k.Blind(blindingFactor)
-		blindedPublicKey := blindedPrivateKey.PublicKey()
-		blindedPrivateKeyBytes, err := blindedPrivateKey.MarshalBinary()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// pack the bytes and ship it
-		converted := make([]byte, 64)
-		copy(converted[:32], blindedPrivateKeyBytes)
-		copy(converted[32:], blindedPublicKey.Bytes())
-		ownerCapPrivateKey := ed25519.NewEmptyPrivateKey()
-		err = ownerCapPrivateKey.UnmarshalBinary(converted)
-		if err != nil {
-			return nil, nil, err
-		}
-		ownerCap = sClient.NewOwnerCapFromSeed(ownerCapPrivateKey, boxIndexSeed)
+		ownerCap = sClient.NewOwnerCapFromSeed(k, boxIndexSeed)
 	default:
-		return nil, nil, errors.New("Unsupported sign.Scheme")
+		return nil, nil, nil, errors.New("Unsupported sign.Scheme")
 	}
 
 	// Blind is not in sign.Scheme, but ed25519.PublicKey has it.
 	switch k := kx.edPubKey.(type) {
 	case *ed25519.PublicKey:
 		// ed25519.PublicKey.Blind conveniently returns the blinded ed25519.PublicKey
-		readCap := sClient.NewUniversalReadCapFromSeed(k.Blind(blindingFactor), boxIndexSeed)
-		return ownerCap, readCap, nil
+		readCap := sClient.NewUniversalReadCapFromSeed(k, boxIndexSeed)
+		return initialContext, ownerCap, readCap, nil
 	default:
-		return nil, nil, errors.New("Unsupported sign.Scheme")
+		return nil, nil, nil, errors.New("Unsupported sign.Scheme")
 	}
 }
 

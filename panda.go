@@ -157,7 +157,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			c.PandaResult = err.Error()
 			return false, err
 		}
-		ownerCap, readCap, err := c.ReadCapExchange.CompleteExchange(msg)
+		ctx, ownerCap, readCap, err := c.ReadCapExchange.CompleteExchange(msg)
 		if err != nil {
 			err = fmt.Errorf("failed to complete exchange: %s", err)
 			l.Error(err.Error())
@@ -169,11 +169,8 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 		c.ReadCap = readCap
 		c.WriteCap = ownerCap
 
-		// XXX: all zero initial context
-		context := make([]byte, 32)
-
 		// create a stream to exchange messages with this contact
-		st := stream.NewStream(ownerCap, readCap, context)
+		st := stream.NewStream(ownerCap, readCap, ctx)
 		transport := &stream.BufferedStream{Stream: st}
 		err = a.db.PutStream(c.ID, transport)
 		if err != nil {

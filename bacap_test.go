@@ -71,14 +71,16 @@ func TestCompleteExchange(t *testing.T) {
 	// complete exchange for r1
 	err = rcem1.UnmarshalBinary(r2Ex)
 	require.NoError(err)
-	r1ownerCap, r2readCap, err := r1.CompleteExchange(rcem1)
+	ctx, r1ownerCap, r2readCap, err := r1.CompleteExchange(rcem1)
 	require.NoError(err)
 
 	// complete exchange for r2
 	err = rcem2.UnmarshalBinary(r1Ex)
 	require.NoError(err)
-	r2ownerCap, r1readCap, err := r2.CompleteExchange(rcem2)
+	ctx2, r2ownerCap, r1readCap, err := r2.CompleteExchange(rcem2)
 	require.NoError(err)
+
+	require.Equal(ctx, ctx2)
 
 	// show that readcap held by r1 equals readcap created by r2
 	r2readCapBytesByOwner, err := r2ownerCap.UniversalReadCap().MarshalBinary()

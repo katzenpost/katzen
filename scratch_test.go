@@ -167,17 +167,15 @@ func newStreamsFromExchange() (*stream.Stream, *stream.Stream) {
 
 	// complete exchange for r1
 	rcem1.UnmarshalBinary(r2Ex)
-	r1ownerCap, r2readCap, _ := r1.CompleteExchange(rcem1)
+	ctx1, r1ownerCap, r2readCap, _ := r1.CompleteExchange(rcem1)
 
 	// complete exchange for r2
 	rcem2.UnmarshalBinary(r1Ex)
-	r2ownerCap, r1readCap, _ := r2.CompleteExchange(rcem2)
+	ctx2, r2ownerCap, r1readCap, _ := r2.CompleteExchange(rcem2)
 
-	streamCtx := []byte("failure")
-	streamCtx = make([]byte, 32)
 	// initialize streams
-	a := stream.NewStream(r1ownerCap, r2readCap, streamCtx[:])
-	b := stream.NewStream(r2ownerCap, r1readCap, streamCtx[:])
+	a := stream.NewStream(r1ownerCap, r2readCap, ctx1)
+	b := stream.NewStream(r2ownerCap, r1readCap, ctx2)
 	return a, b
 }
 
