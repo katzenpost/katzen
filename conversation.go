@@ -108,7 +108,6 @@ type conversationPage struct {
 	attach         *widget.Clickable
 	back           *widget.Clickable
 	cancel         *gesture.Click
-	msgcopy        *widget.Clickable
 	msgpaste       *LongPress
 	msgdetails     *widget.Clickable
 	messageClicked uint64
@@ -211,15 +210,6 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	}
 	if c.msgdetails.Clicked(gtx) {
 		c.messageClicked = 0 // not implemented
-	}
-	if c.msgcopy.Clicked(gtx) {
-		msg, err := c.a.db.GetMessage(c.messageClicked)
-		if err == nil {
-			gtx.Source.Execute(clipboard.WriteCmd{
-				Data: io.NopCloser(strings.NewReader(string(msg.Body))),
-			})
-			c.messageClicked = 0
-		}
 	}
 	// catch clipboard transfer triggered by long press and update composition
 	if ev, ok := gtx.Event(transfer.TargetFilter{Target: c.msgpaste, Type: "application/text"}); ok {
@@ -494,7 +484,6 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		conversation: conv,
 		compose:      ed,
 		back:         &widget.Clickable{},
-		msgcopy:      &widget.Clickable{},
 		msgpaste:     NewLongPress(a.w.Invalidate, 800*time.Millisecond),
 		msgdetails:   &widget.Clickable{},
 		cancel:       new(gesture.Click),
