@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"hash"
 	"io"
@@ -136,6 +137,18 @@ func NewReadCapExchange() (*ReadCapExchange, error) {
 		edPrivKey: edPrivKey,
 		nkPrivKey: nkPrivKey,
 	}, nil
+}
+
+func readCapStr(readCap *bacap.UniversalReadCap) string {
+	h, _ := blake2b.New256(nil)
+	b, _ := readCap.MarshalBinary()
+	return base64.StdEncoding.EncodeToString(h.Sum(b)[:8])
+}
+
+func ownerCapStr(ownerCap *bacap.BoxOwnerCap) string {
+	h, _ := blake2b.New512(nil)
+	b, _ := ownerCap.UniversalReadCap().MarshalBinary()
+	return "+" + base64.StdEncoding.EncodeToString(h.Sum(b)[:8])
 }
 
 // CompleteExchange returns BowOwnerCap and UniversalReadCap for writing and reading to peer

@@ -177,7 +177,7 @@ func (a *App) processPANDAUpdate(update panda.PandaUpdate) (bool, error) {
 			panic(err)
 		}
 
-		l.Info("Stream initialized with " + c.Nickname)
+		l.Info("Stream (%x) initialized between [%v] [%v] (%s)", ctx, ownerCapStr(c.WriteCap), readCapStr(c.ReadCap), c.Nickname)
 		// c.SharedSecret = nil // XXX: zero original shared secret after exchange ???
 		shortNotify("PANDA Completed", "Contact "+c.Nickname)
 
