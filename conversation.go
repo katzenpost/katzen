@@ -505,7 +505,6 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		compose:      ed,
 		back:         &widget.Clickable{},
 		msgpaste:     NewLongPress(a.w.Invalidate, 800*time.Millisecond),
-		msgdetails:   &widget.Clickable{},
 		send:         &widget.Clickable{},
 		attach:       &widget.Clickable{},
 		edit:         &widget.Clickable{},
