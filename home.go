@@ -158,7 +158,7 @@ func (p *HomePage) Layout(gtx layout.Context) layout.Dimensions {
 												case Text:
 													return material.Body2(th, string(lastMsg.Body)).Layout(gtx)
 												case Attachment:
-													return layoutAttachment(gtx, p.showTransfers, lastMsg)
+													return layoutRawAttachment(gtx, p.showTransfers, lastMsg)
 												}
 												return D{}
 											})

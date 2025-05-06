@@ -447,7 +447,11 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Push(newTransferPage(a))
 		case NewTransfer:
 			a.stack.Push(newTransferPage(a))
-			a.stack.Push(newChooser(a, ""))
+			if e.Header == nil {
+				a.stack.Push(newChooser(a, ""))
+			} else {
+				a.stack.Current().Update(e.Header)
+			}
 		}
 	}
 }

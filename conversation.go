@@ -85,31 +85,35 @@ type ShowTransfers struct {
 }
 
 type NewTransfer struct {
-	ID uint64
+	Header *DownloadHeader
 }
 
 type EditConversation struct {
 	ID uint64
 }
 
+type ClickEvent struct {
+	Click *widget.Clickable
+	Event interface{}
+}
+
 type EditConversationComplete struct{}
 
 type conversationPage struct {
-	l              *sync.Mutex
-	a              *App
-	id             uint64
-	conversation   *Conversation
-	avatar         *widget.Image
-	edit           *widget.Clickable
-	transfers      *widget.Clickable
-	compose        *widget.Editor
-	send           *widget.Clickable
-	attach         *widget.Clickable
-	back           *widget.Clickable
-	msgpaste       *LongPress
-	msgdetails     *widget.Clickable
-	messageClicked uint64
-	updateCh       chan struct{}
+	l            *sync.Mutex
+	a            *App
+	id           uint64
+	conversation *Conversation
+	avatar       *widget.Image
+	edit         *widget.Clickable
+	transfers    *widget.Clickable
+	compose      *widget.Editor
+	send         *widget.Clickable
+	attach       *widget.Clickable
+	back         *widget.Clickable
+	msgpaste     *LongPress
+	updateCh     chan struct{}
+	attachments  map[uint64]*ClickEvent
 }
 
 func (c *conversationPage) Start(stop <-chan struct{}) {
@@ -206,9 +210,6 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	if c.back.Clicked(gtx) {
 		return BackEvent{}
 	}
-	if c.msgdetails.Clicked(gtx) {
-		c.messageClicked = 0 // not implemented
-	}
 	// catch clipboard transfer triggered by long press and update composition
 	if ev, ok := gtx.Event(transfer.TargetFilter{Target: c.msgpaste, Type: "application/text"}); ok {
 		switch e := ev.(type) {
@@ -229,6 +230,12 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 
 	if c.edit.Clicked(gtx) {
 		return EditConversation{ID: c.id}
+	}
+
+	for _, clickEvent := range c.attachments {
+		if clickEvent.Click.Clicked(gtx) {
+			return clickEvent.Event
+		}
 	}
 
 	if c.transfers.Clicked(gtx) {
@@ -261,12 +268,16 @@ func (c *conversationPage) Event(gtx layout.Context) interface{} {
 	return nil
 }
 
-func layoutAttachment(gtx C, click *widget.Clickable, msg *Message) D {
+func layoutRawAttachment(gtx C, click *widget.Clickable, msg *Message) D {
 	h := &DownloadHeader{}
 	_, err := cbor.UnmarshalFirst(msg.Body, h)
 	if err != nil {
 		return material.Caption(th, "Invalid Attachment").Layout(gtx)
 	}
+	return layoutAttachment(gtx, click, h)
+}
+
+func layoutAttachment(gtx C, click *widget.Clickable, h *DownloadHeader) D {
 	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.End, Spacing: layout.SpaceBetween}.Layout(gtx,
 		layout.Rigid(material.Caption(th, h.Name).Layout),
 		layout.Rigid(button(th, click, attachIcon).Layout),
@@ -295,7 +306,20 @@ func (c *conversationPage) layoutMessage(gtx C, msg *Message, expires time.Durat
 			case Text:
 				return material.Body1(th, string(msg.Body)).Layout(gtx)
 			case Attachment:
-				return layoutAttachment(gtx, c.transfers, msg)
+				if a, ok := c.attachments[msg.ID]; ok {
+					if t, ok := a.Event.(NewTransfer); ok {
+						return layoutAttachment(gtx, a.Click, t.Header)
+					}
+				} else {
+					h := &DownloadHeader{}
+					_, err := cbor.UnmarshalFirst(msg.Body, h)
+					if err == nil {
+						ce := &ClickEvent{Click: new(widget.Clickable), Event: NewTransfer{Header: h}}
+						c.attachments[msg.ID] = ce
+						return layoutAttachment(gtx, ce.Click, h)
+					}
+					return material.Caption(th, "Invalid Attachment").Layout(gtx)
+				}
 			}
 			return D{}
 		}),
@@ -487,6 +511,7 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		edit:         &widget.Clickable{},
 		transfers:    &widget.Clickable{},
 		updateCh:     make(chan struct{}, 1),
+		attachments:  make(map[uint64]*ClickEvent),
 		//messages:      []*Message, cache messages
 	}
 	return p
