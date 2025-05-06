@@ -8,6 +8,80 @@ import (
 	"testing"
 )
 
+func TestNewReadCapExchange(t *testing.T) {
+	require := require.New(t)
+	ex, err := NewReadCapExchange()
+	require.NoError(err)
+	require.NotNil(ex.edPubKey)
+	require.NotNil(ex.edPrivKey)
+	require.NotNil(ex.nkPrivKey)
+}
+
+func TestMarshalUnmarshalReadCapExchange(t *testing.T) {
+	require := require.New(t)
+	ex, err := NewReadCapExchange()
+	require.NoError(err)
+	b, err := ex.MarshalBinary()
+	require.NoError(err)
+
+	ex2 := new(ReadCapExchange)
+	err = ex2.UnmarshalBinary(b)
+	require.NoError(err)
+
+	epk1, err := ex.edPubKey.MarshalBinary()
+	require.NoError(err)
+	esk1, err := ex.edPrivKey.MarshalBinary()
+	require.NoError(err)
+	nsk1, err := ex.nkPrivKey.MarshalBinary()
+	require.NoError(err)
+
+	epk2, err := ex2.edPubKey.MarshalBinary()
+	require.NoError(err)
+	esk2, err := ex2.edPrivKey.MarshalBinary()
+	require.NoError(err)
+	nsk2, err := ex2.nkPrivKey.MarshalBinary()
+	require.NoError(err)
+
+	require.Equal(epk1, epk2)
+	require.Equal(esk1, esk2)
+	require.Equal(nsk1, nsk2)
+}
+
+func TestMarshalUnmarshalReadCapExchangeMessage(t *testing.T) {
+	require := require.New(t)
+
+	// create new exchange
+	ex, err := NewReadCapExchange()
+	require.NoError(err)
+
+	// create reference message from exchange
+	// verify that ReadCapExchange.ExchangeBytes() is ReadCapExchangeMessage{}.MarshalBinary()
+	m := &ReadCapExchangeMessage{edPubKey: ex.edPubKey, nkPubKey: ex.nkPrivKey.Public()}
+	b, err := m.MarshalBinary()
+	require.NoError(err)
+	b2, err := ex.ExchangeBytes()
+	require.NoError(err)
+	require.Equal(b, b2)
+
+	// deserialize and verify vs reference
+	m2 := &ReadCapExchangeMessage{}
+	err = m2.UnmarshalBinary(b)
+	require.NoError(err)
+
+	epk1, err := m.edPubKey.MarshalBinary()
+	require.NoError(err)
+	npk1, err := ex.nkPrivKey.Public().MarshalBinary()
+	require.NoError(err)
+
+	epk2, err := m2.edPubKey.MarshalBinary()
+	require.NoError(err)
+	npk2, err := m2.nkPubKey.MarshalBinary()
+	require.NoError(err)
+
+	require.Equal(epk1, epk2)
+	require.Equal(npk1, npk2)
+}
+
 func TestAdvanceCaps(t *testing.T) {
 	// ctx agreedout of band
 	ctx := []byte("TestAdvanceCaps")
