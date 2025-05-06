@@ -112,8 +112,7 @@ func (d *Downloader) worker() {
 		ciphertext, sig, err := d.transport.Get(ctx, boxID.ByteArray())
 		cancelFn()
 		if err != nil {
-			// retry
-			continue
+			return
 		}
 		// obtain plaintext. a decryption failure is a fatal error
 		plaintext, err := reader.DecryptNext(d.Download.Header.Sum256, boxID.ByteArray(), ciphertext, sig)
