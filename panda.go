@@ -65,12 +65,7 @@ func (a *App) doPANDAExchange(id uint64) error {
 	var kx *panda.KeyExchange
 	pandaChan := make(chan panda.PandaUpdate)
 
-	ex, err := NewReadCapExchange()
-	if err != nil {
-		return err
-	}
-
-	kxBytes, err := ex.ExchangeBytes()
+	kxBytes, err := c.ReadCapExchange.ExchangeBytes()
 	if err != nil {
 		return err
 	}
