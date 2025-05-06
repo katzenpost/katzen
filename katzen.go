@@ -89,6 +89,8 @@ type App struct {
 	transports   map[uint64]*stream.BufferedStream
 	messageChans map[uint64]chan *Message
 
+	transferPage *TransferPage
+
 	stack pageStack
 	focus bool
 
@@ -444,9 +446,9 @@ func (a *App) update(gtx layout.Context) {
 			a.stack.Pop()
 			a.stack.Current().Update(e.Header)
 		case ShowTransfers:
-			a.stack.Push(newTransferPage(a))
+			a.stack.Push(a.transferPage)
 		case NewTransfer:
-			a.stack.Push(newTransferPage(a))
+			a.stack.Push(a.transferPage)
 			if e.Header == nil {
 				a.stack.Push(newChooser(a, ""))
 			} else {

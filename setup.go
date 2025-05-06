@@ -47,6 +47,9 @@ func setupClient(a *App, passphrase []byte, result chan interface{}) {
 		return
 	}
 
+	// create transferPage with existing transfers
+	a.transferPage = newTransferPage(a)
+
 	var cfg *config.Config
 	if len(*clientConfigFile) != 0 {
 		cfg, err = config.LoadFile(*clientConfigFile)

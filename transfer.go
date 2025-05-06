@@ -4,17 +4,18 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
 	"github.com/katzenpost/hpqc/bacap"
 	"github.com/katzenpost/hpqc/rand"
 	"github.com/katzenpost/hpqc/sign/ed25519"
 	sClient "github.com/katzenpost/katzenpost/scratch/client"
 	"golang.org/x/exp/shiny/materialdesign/icons"
-	"os"
-
-	"gioui.org/widget"
-	"gioui.org/widget/material"
 )
 
 var (
@@ -134,7 +135,6 @@ type TransferPage struct {
 	uploads   []*Uploader
 	add       *widget.Clickable
 	back      *widget.Clickable
-	updateCh  chan struct{}
 }
 
 type TransferCancelled struct{}
@@ -154,9 +154,11 @@ func (t *TransferPage) Start(stop <-chan struct{}) {
 		for {
 			select {
 			case <-t.a.HaltCh():
+				return
 			case <-stop:
 				return
-			case <-t.updateCh:
+			case <-time.After(1 * time.Second):
+				t.a.w.Invalidate()
 			}
 		}
 	})
@@ -214,7 +216,6 @@ func newTransferPage(a *App) *TransferPage {
 		downloads: downloads,
 		add:       &widget.Clickable{},
 		back:      &widget.Clickable{},
-		updateCh:  make(chan struct{}, 1),
 	}
 	return t
 }
