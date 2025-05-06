@@ -178,6 +178,13 @@ func (t *TransferPage) Update(item interface{}) {
 		if err == nil {
 			t.uploads = append(t.uploads, dl)
 		}
+	case *DownloadHeader:
+		// TODO: display chooser and select output file name...
+		if dl, err := t.a.db.NewDownload(path, "./"+path.Name); err == nil {
+			if dlr, err := NewDownloader(t.a.db, dl); err == nil {
+				t.downloads = append(t.downloads, dlr)
+			}
+		}
 	}
 }
 
