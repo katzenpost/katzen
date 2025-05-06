@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"gioui.org/gesture"
 	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -107,7 +106,6 @@ type conversationPage struct {
 	send           *widget.Clickable
 	attach         *widget.Clickable
 	back           *widget.Clickable
-	cancel         *gesture.Click
 	msgpaste       *LongPress
 	msgdetails     *widget.Clickable
 	messageClicked uint64
@@ -484,7 +482,6 @@ func newConversationPage(a *App, conversationId uint64) *conversationPage {
 		back:         &widget.Clickable{},
 		msgpaste:     NewLongPress(a.w.Invalidate, 800*time.Millisecond),
 		msgdetails:   &widget.Clickable{},
-		cancel:       new(gesture.Click),
 		send:         &widget.Clickable{},
 		attach:       &widget.Clickable{},
 		edit:         &widget.Clickable{},
