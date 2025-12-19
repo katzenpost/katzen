@@ -4,8 +4,8 @@ ldflags=-buildid= -X github.com/katzenpost/katzenpost/core/epochtime.WarpedEpoch
 KEYSTORE := sign.keystore
 KEYPASS := password
 # gogio requires a version string ("%d.%d.%d.%d", &sv.Major, &sv.Minor, &sv.Patch, &sv.VersionCode)
-# this is katzen v1 with katzenpost v0.0.35
-VERSION := 1.35.0
+# this is katzen v1 with katzenpost v0.0.30
+VERSION := 1.30.0
 # this is the app store application version code that must incrememnt with each official release
 VERSIONCODE := 1
 cache_dir=cache
